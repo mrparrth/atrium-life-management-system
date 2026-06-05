@@ -32,6 +32,17 @@ Build a premium local-first life management web application (Vue 3 + Vite + Pini
 - Auto-seeded sample data on first run.
 - 15/16 testing scenarios pass (testing_agent_v3 iteration_1).
 
+## Iteration 2 — Finance overhaul (2026-02-05)
+- All currency display switched to **INR (₹)** using `Intl.NumberFormat('en-IN')` (lakh/crore separators); projections use compact L / Cr.
+- Dexie schema bumped to **v2** with `finance_cashflow` and `finance_categories` tables (auto-upgrade safe).
+- Finance page split into **4 tabs**: Overview, Net worth, Cash flow, Categories.
+- **Cash flow** tracking: income / expense / investment entries; recurring=monthly|yearly|one-time; yearly amounts normalised /12 in totals; one-time excluded from monthly KPIs.
+- **KPIs**: monthly income, expenses, invested, net, savings rate %.
+- **Expense breakdown** chart by category.
+- **Custom categories**: add/remove per scope (asset / liability / income / expense / investment); duplicate guard; new categories propagate instantly to modal dropdowns.
+- Sparkline gradient bug fixed (stable unique id per instance).
+- **15/15 scenarios PASS** in testing_agent_v3 iteration_2.
+
 ## Backlog (next iterations)
 - **P1 — AI assistance**: task decomposition, stale-project detection, emotional workload detection, schedule balancing, insight generation (Claude Sonnet 4.5 via Universal Key).
 - **P1 — Backlinks / [[wiki-links]]** in notes; graph view of relationships.
