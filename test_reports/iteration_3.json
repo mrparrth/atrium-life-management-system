@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 3 frontend testing: Next Steps PASS, Bookmark Pages create/add-bookmark/assign/delete PASS, Note wiki-suggest dropdown + body insertion PASS, Persistence PASS, Regression (Cmd+K, INR finance, tabs) PASS. CRITICAL: Saving edits via db.<table>.put() in stores throws DexieError2, breaking Note edit-save (so wiki-link insertion, backlinks panel, missing pills, all downstream features blocked) AND Bookmark Page Edit save (page-save click leaves user stuck on edit form, h1 never updates).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "NoteDetail.vue (save flow)",
+        "issue": "Clicking [data-testid=note-save] throws Dexie error (page error: DexieError2). editing stays true; rendered view never appears; wiki-link insertion is never persisted; backlinks panel never populates.",
+        "selector": "[data-testid=note-save]",
+        "priority": "CRITICAL"
+      },
+      {
+        "component": "BookmarkPageDetail.vue (saveEdit)",
+        "issue": "Clicking [data-testid=page-save] throws DexieError2. editing.value stays true; h1 never updates; title change does not persist.",
+        "selector": "[data-testid=page-save]",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Note backlinks end-to-end",
+        "issue": "Suggest dropdown works and inserts [[Title]] into textarea, but the subsequent save fails silently in UI (Dexie throws), so rendered HTML, a.wikilink anchors, click-to-navigate, and backlinks-panel (incoming/outgoing/missing pills) cannot be verified.",
+        "affected_selectors": ["[data-testid=note-save]", "[data-testid=note-rendered]", "[data-testid=backlinks-panel]", "[data-testid^=incoming-]", "[data-testid^=outgoing-]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "rca of the issue": "Both failing flows call `db.<table>.put({...obj})` on an object that lives inside Pinia store's reactive `items.value`/`pages.value`. After `Object.assign(n, patch, { updatedAt: now() })`, `n` is a Vue 3 reactive Proxy. The shallow spread `{...n}` creates a plain object whose array fields (e.g. `tags`) are still reactive Proxies. When Dexie/IndexedDB structured-clones the payload, this rejects (manifests as the minified DexieError2 / DataClone). Suggested fix in stores: serialize with `JSON.parse(JSON.stringify(n))` (or use `toRaw` + structuredClone) before `db.notes.put`, `db.bookmark_pages.put`, and any similar `.put` of reactive items. Files to fix: /app/frontend/src/stores/notes.js (update, markViewed), /app/frontend/src/stores/bookmarks.js (update, markViewed, updatePage, removePage's bookmark detach loop). Reproduction: clear IDB, open /#/notes/{id}, Edit, type anything, Save → pageerror DexieError2; editing stays true. Same for /#/bookmarks/page/{id} → Edit → Save.",
+  "test_report_links": ["/app/test_reports/iteration_3.json"],
+  "action_items": [
+    "Fix Pinia stores notes.js and bookmarks.js update/put paths — clone-out of Vue reactive Proxy before db.<table>.put. Recommend `await db.X.put(JSON.parse(JSON.stringify(item)))` or `toRaw` + structuredClone.",
+    "After fix: re-verify (a) Note Edit→Save persists body, (b) typing [[ + ArrowDown + Enter inserts and the saved note rendered HTML contains a.wikilink[data-note-id]; clicking navigates to /#/notes/{otherId}, (c) backlinks-panel shows [data-testid=incoming-{id}] on the target note and outgoing-/outgoing-missing- pills on the source, (d) Bookmark Page edit (page-edit → page-save) updates h1 title and description."
+  ],
+  "critical_code_review_comments": [
+    "Pinia stores use Vue reactive Proxies as the canonical in-memory record AND pass spreads of them to Dexie. Either deep-clone before .put or keep a plain-data shadow.",
+    "Stores swallow errors silently — saveEdit / notes.update lack try/catch and toast on failure, so users see no feedback when Dexie rejects (UI just stays in edit mode).",
+    "BookmarkPageDetail.vue: the edit-save button is inside a plain <div> (not a form). Works but inconsistent with new-page modal which uses a <form @submit.prevent>.",
+    "wikilinks.js `wikilinkPreprocess` writes raw href `#/notes/{id}` — fine for hash routing, but the click handler `onArticleClick` only fires when target has class wikilink AND data-note-id (i.e., existing notes). Missing pills are spans, so OK."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A", "frontend": "70%" },
+  "seed_data_creation": "Used built-in seed (2 notes: On slowness, Reading list — winter; 2 loose bookmarks). Cleared IndexedDB before each run.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After main agent fixes the Dexie .put issue in stores/notes.js and stores/bookmarks.js, re-test specifically: (1) Note edit/save persists, (2) Wiki-link rendered anchor with data-note-id + router navigation, (3) Backlinks panel incoming/outgoing/missing on a fresh A→B link, (4) BookmarkPageDetail Edit→Save updates h1. Next Steps, Bookmark Pages creation/assignment/deletion, Cmd+K, Finance INR/tabs, and persistence on reload were already verified passing in this iteration."
+}

@@ -28,6 +28,12 @@ db.version(2).stores({
   finance_categories: 'id, scope, name, createdAt',
 })
 
+// v3 — Next steps checklist + bookmark pages
+db.version(3).stores({
+  next_steps: 'id, order, done, createdAt, updatedAt',
+  bookmark_pages: 'id, createdAt, updatedAt',
+})
+
 export function newId() { return nanoid(12) }
 export function now() { return new Date().toISOString() }
 

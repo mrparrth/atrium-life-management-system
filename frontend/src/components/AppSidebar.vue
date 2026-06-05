@@ -5,7 +5,7 @@ import { useUIStore } from '@/stores/ui'
 import {
   LayoutGrid, Sun, Moon, CheckSquare, FolderKanban, Compass,
   BookOpen, Archive, Calendar, Target, NotebookPen, Bookmark,
-  Wallet, Sparkles, Settings, Command, Plus
+  Wallet, Sparkles, Settings, Command, Plus, ListChecks
 } from 'lucide-vue-next'
 
 const ui = useUIStore()
@@ -34,6 +34,7 @@ const sections = computed(() => ([
       { to: '/years',  name: 'Years',  icon: Calendar, testid: 'nav-years' },
       { to: '/goals',  name: 'Goals',  icon: Target,   testid: 'nav-goals' },
       { to: '/tasks',  name: 'Tasks',  icon: CheckSquare, testid: 'nav-tasks' },
+      { to: '/next-steps', name: 'Next steps', icon: ListChecks, testid: 'nav-next-steps' },
     ],
   },
   {

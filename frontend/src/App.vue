@@ -11,6 +11,7 @@ import { useBookmarksStore } from '@/stores/bookmarks'
 import { useFinanceStore } from '@/stores/finance'
 import { useAreasStore } from '@/stores/areas'
 import { useReviewsStore } from '@/stores/reviews'
+import { useNextStepsStore } from '@/stores/nextSteps'
 import { db, seedIfEmpty } from '@/db'
 
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -34,6 +35,7 @@ onMounted(async () => {
     useFinanceStore().load(),
     useAreasStore().load(),
     useReviewsStore().load(),
+    useNextStepsStore().load(),
   ])
 
   window.addEventListener('keydown', (e) => {

@@ -1,77 +1,149 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useBookmarksStore } from '@/stores/bookmarks'
+import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
+import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { fromNow } from '@/lib/date'
-import { Plus, X, Bookmark as BookmarkIcon, Trash2, ExternalLink } from 'lucide-vue-next'
+import { Plus, X, Bookmark as BookmarkIcon, Trash2, ExternalLink, FolderOpen, ArrowRight } from 'lucide-vue-next'
 
 const bookmarks = useBookmarksStore()
-const showNew = ref(false)
-const newTitle = ref(''); const newUrl = ref(''); const newCat = ref('General'); const newDesc = ref('')
+const ui = useUIStore()
 
-const grouped = computed(() => {
-  const map = {}
-  for (const b of bookmarks.items) {
-    const k = b.category || 'General'
-    if (!map[k]) map[k] = []
-    map[k].push(b)
-  }
-  return map
-})
+const showNewBm = ref(false)
+const showNewPage = ref(false)
+const newBm = ref({ title: '', url: '', description: '', category: 'General', tags: '', pageId: null })
+const newPage = ref({ title: '', description: '', emoji: '◗', tags: '' })
 
-async function create() {
-  if (!newUrl.value.trim()) return
-  await bookmarks.add({ title: newTitle.value || newUrl.value, url: newUrl.value, category: newCat.value, description: newDesc.value })
-  newTitle.value = ''; newUrl.value = ''; newDesc.value = ''; newCat.value = 'General'; showNew.value = false
+const looseBookmarks = computed(() => bookmarks.looseBookmarks())
+
+function tagsToArr(s) { return (s || '').split(',').map(t => t.trim()).filter(Boolean) }
+function arrToTags(a) { return (a || []).join(', ') }
+
+async function createBookmark() {
+  if (!newBm.value.url.trim()) return
+  await bookmarks.add({ ...newBm.value, tags: tagsToArr(newBm.value.tags) })
+  newBm.value = { title: '', url: '', description: '', category: 'General', tags: '', pageId: null }
+  showNewBm.value = false
 }
-async function open(b) { await bookmarks.markViewed(b.id); window.open(b.url, '_blank') }
+async function createPage() {
+  if (!newPage.value.title.trim()) return
+  await bookmarks.addPage({ ...newPage.value, tags: tagsToArr(newPage.value.tags) })
+  newPage.value = { title: '', description: '', emoji: '◗', tags: '' }
+  showNewPage.value = false
+  ui.showToast('Collection created', 'success')
+}
+async function openBookmark(b) { await bookmarks.markViewed(b.id); window.open(b.url, '_blank') }
 async function remove(b) { if (confirm('Remove bookmark?')) await bookmarks.remove(b.id) }
+async function removePage(p) {
+  if (!confirm(`Remove "${p.title}"? Bookmarks inside it will be detached, not deleted.`)) return
+  await bookmarks.removePage(p.id)
+}
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-5xl mx-auto" data-testid="bookmarks-view">
-    <PageHeader overline="Memory" title="Bookmarks" sub="Pages worth returning to.">
-      <template #right><button class="btn-primary" @click="showNew = true" data-testid="new-bookmark-btn"><Plus class="w-4 h-4" /> Add bookmark</button></template>
+  <div class="px-8 md:px-12 py-10 max-w-6xl mx-auto" data-testid="bookmarks-view">
+    <PageHeader overline="Memory" title="Bookmarks" sub="Pages worth returning to — grouped into collections, or kept loose.">
+      <template #right>
+        <button class="btn-secondary" @click="showNewPage = true" data-testid="new-page-btn"><FolderOpen class="w-4 h-4" /> New collection</button>
+        <button class="btn-primary" @click="showNewBm = true" data-testid="new-bookmark-btn"><Plus class="w-4 h-4" /> Add bookmark</button>
+      </template>
     </PageHeader>
 
-    <div v-if="Object.keys(grouped).length">
-      <section v-for="(items, cat) in grouped" :key="cat" class="mb-10">
-        <div class="overline mb-3">{{ cat }}</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="b in items" :key="b.id" class="card p-5 group hover:border-line-2 transition-all duration-300" :data-testid="`bookmark-card-${b.id}`">
-            <div class="flex items-start gap-3">
-              <BookmarkIcon class="w-4 h-4 text-ink-3 mt-1 shrink-0" />
-              <div class="min-w-0 flex-1">
-                <div class="font-serif text-lg leading-snug">{{ b.title }}</div>
-                <p class="text-xs text-ink-3 truncate mt-1">{{ b.url }}</p>
-                <p v-if="b.description" class="text-sm text-ink-2 mt-2">{{ b.description }}</p>
-                <div class="text-[11px] text-ink-3 mt-3">last opened {{ fromNow(b.lastViewedAt) }}</div>
-              </div>
-              <div class="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
-                <button class="btn-ghost !p-1.5" @click="open(b)" :data-testid="`bookmark-open-${b.id}`"><ExternalLink class="w-3.5 h-3.5" /></button>
-                <button class="btn-ghost !p-1.5 hover:text-pri-critical" @click="remove(b)" :data-testid="`bookmark-delete-${b.id}`"><Trash2 class="w-3.5 h-3.5" /></button>
-              </div>
+    <!-- COLLECTIONS -->
+    <SectionHeader v-if="bookmarks.pages.length" overline="Collections" :title="`${bookmarks.pages.length} pages`" hint="Curated groups of related bookmarks." />
+    <div v-if="bookmarks.pages.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
+      <RouterLink
+        v-for="p in bookmarks.pages"
+        :key="p.id"
+        :to="`/bookmarks/page/${p.id}`"
+        class="card p-6 hover:border-line-2 transition-all duration-300 group flex flex-col gap-3"
+        :data-testid="`bookmark-page-card-${p.id}`"
+      >
+        <div class="flex items-start justify-between">
+          <span class="text-3xl font-serif text-ink-2">{{ p.emoji || '◗' }}</span>
+          <button @click.prevent="removePage(p)" class="btn-ghost !p-1.5 opacity-0 group-hover:opacity-100 hover:text-pri-critical" :data-testid="`bookmark-page-delete-${p.id}`"><Trash2 class="w-3.5 h-3.5" /></button>
+        </div>
+        <div>
+          <div class="font-serif text-xl">{{ p.title }}</div>
+          <p v-if="p.description" class="text-sm text-ink-2 mt-1 line-clamp-2">{{ p.description }}</p>
+        </div>
+        <div v-if="p.tags?.length" class="flex flex-wrap gap-1">
+          <span v-for="t in p.tags" :key="t" class="text-[11px] px-2 py-0.5 rounded-full bg-elevated text-ink-2">{{ t }}</span>
+        </div>
+        <div class="mt-auto pt-3 border-t border-line text-xs text-ink-3 flex items-center justify-between">
+          <span>{{ bookmarks.bookmarksInPage(p.id).length }} bookmark<span v-if="bookmarks.bookmarksInPage(p.id).length !== 1">s</span></span>
+          <ArrowRight class="w-3 h-3" />
+        </div>
+      </RouterLink>
+    </div>
+
+    <!-- LOOSE BOOKMARKS -->
+    <SectionHeader overline="Loose" :title="`${looseBookmarks.length} unfiled`" hint="Bookmarks not yet in a collection." />
+    <div v-if="looseBookmarks.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div v-for="b in looseBookmarks" :key="b.id" class="card p-5 group hover:border-line-2 transition-all duration-300" :data-testid="`bookmark-card-${b.id}`">
+        <div class="flex items-start gap-3">
+          <BookmarkIcon class="w-4 h-4 text-ink-3 mt-1 shrink-0" />
+          <div class="min-w-0 flex-1">
+            <div class="font-serif text-lg leading-snug">{{ b.title }}</div>
+            <p class="text-xs text-ink-3 truncate mt-1">{{ b.url }}</p>
+            <p v-if="b.description" class="text-sm text-ink-2 mt-2">{{ b.description }}</p>
+            <div v-if="b.tags?.length" class="flex flex-wrap gap-1 mt-2">
+              <span v-for="t in b.tags" :key="t" class="text-[11px] px-2 py-0.5 rounded-full bg-elevated text-ink-2">{{ t }}</span>
             </div>
+            <div class="text-[11px] text-ink-3 mt-3">last opened {{ fromNow(b.lastViewedAt) }}</div>
+          </div>
+          <div class="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+            <button class="btn-ghost !p-1.5" @click="openBookmark(b)" :data-testid="`bookmark-open-${b.id}`"><ExternalLink class="w-3.5 h-3.5" /></button>
+            <button class="btn-ghost !p-1.5 hover:text-pri-critical" @click="remove(b)" :data-testid="`bookmark-delete-${b.id}`"><Trash2 class="w-3.5 h-3.5" /></button>
           </div>
         </div>
-      </section>
+      </div>
     </div>
-    <EmptyState v-else title="No bookmarks yet" hint="Save a link worth remembering." />
+    <EmptyState v-else title="No loose bookmarks" hint="Every link has a home." />
 
-    <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNew = false"></div>
-      <form @submit.prevent="create" class="relative w-full max-w-md card p-8 animate-rise-in">
-        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false"><X class="w-4 h-4" /></button>
+    <!-- NEW BOOKMARK -->
+    <div v-if="showNewBm" class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNewBm = false"></div>
+      <form @submit.prevent="createBookmark" class="relative w-full max-w-md card p-8 animate-rise-in">
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewBm = false"><X class="w-4 h-4" /></button>
         <div class="overline">New bookmark</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">Preserve this</h2>
-        <input v-model="newUrl" type="url" placeholder="https://…" class="input-soft mb-3" required data-testid="new-bookmark-url" />
-        <input v-model="newTitle" placeholder="Title (optional)" class="input-soft mb-3" data-testid="new-bookmark-title" />
-        <input v-model="newCat" placeholder="Category" class="input-soft mb-3" />
-        <textarea v-model="newDesc" placeholder="Why save it?" rows="2" class="input-soft resize-none mb-5"></textarea>
+        <input v-model="newBm.url" type="url" placeholder="https://…" class="input-soft mb-3" required data-testid="new-bookmark-url" />
+        <input v-model="newBm.title" placeholder="Title (optional)" class="input-soft mb-3" data-testid="new-bookmark-title" />
+        <input v-model="newBm.tags" placeholder="Tags (comma separated)" class="input-soft mb-3" data-testid="new-bookmark-tags" />
+        <label class="block mb-3"><span class="overline block mb-1">Collection</span>
+          <select v-model="newBm.pageId" class="input-block text-sm" data-testid="new-bookmark-page">
+            <option :value="null">— none (loose) —</option>
+            <option v-for="p in bookmarks.pages" :key="p.id" :value="p.id">{{ p.emoji }} {{ p.title }}</option>
+          </select>
+        </label>
+        <textarea v-model="newBm.description" placeholder="Why save it?" rows="2" class="input-soft resize-none mb-5"></textarea>
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showNew = false">Cancel</button>
+          <button type="button" class="btn-ghost" @click="showNewBm = false">Cancel</button>
           <button type="submit" class="btn-primary" data-testid="new-bookmark-save">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- NEW COLLECTION -->
+    <div v-if="showNewPage" class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4" data-testid="new-page-modal">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNewPage = false"></div>
+      <form @submit.prevent="createPage" class="relative w-full max-w-md card p-8 animate-rise-in">
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewPage = false"><X class="w-4 h-4" /></button>
+        <div class="overline">New collection</div>
+        <h2 class="font-serif text-2xl mt-1 mb-5">A page of related links</h2>
+        <div class="flex gap-3 mb-3">
+          <input v-model="newPage.emoji" maxlength="2" class="input-soft text-2xl !w-16 text-center" data-testid="new-page-emoji" />
+          <input v-model="newPage.title" placeholder="Collection title…" class="input-soft flex-1 text-lg font-serif" required data-testid="new-page-title" />
+        </div>
+        <textarea v-model="newPage.description" placeholder="What's this collection for?" rows="2" class="input-soft resize-none mb-3" data-testid="new-page-desc"></textarea>
+        <input v-model="newPage.tags" placeholder="Tags (comma separated)" class="input-soft mb-5" data-testid="new-page-tags" />
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn-ghost" @click="showNewPage = false">Cancel</button>
+          <button type="submit" class="btn-primary" data-testid="new-page-save">Create</button>
         </div>
       </form>
     </div>
