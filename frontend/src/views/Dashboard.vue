@@ -12,6 +12,7 @@ import { useYearsStore } from '@/stores/years'
 import { useUIStore } from '@/stores/ui'
 import { todayFocus, upcomingTasks, recentlyIgnored, momentumOpportunities, staleProjects, memoryResurfacing, criticalCount, isTaskOpen } from '@/lib/resurface'
 import { fromNow } from '@/lib/date'
+import { inr, inrCompact } from '@/lib/money'
 
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
@@ -50,8 +51,8 @@ const stale = computed(() => staleProjects(projects.items, tasks.items).slice(0,
 const memory = computed(() => memoryResurfacing(notes.items, bookmarks.items))
 
 const sparkData = computed(() => finance.snapshots.map(s => s.netWorth))
-const netWorthFormatted = computed(() => `$${(finance.netWorth ?? 0).toLocaleString()}`)
-const projection5y = computed(() => `$${finance.project(5).toLocaleString()}`)
+const netWorthFormatted = computed(() => inr(finance.netWorth ?? 0))
+const projection5y = computed(() => inrCompact(finance.project(5)))
 
 const lastWeeklyReview = computed(() => reviews.items.find(r => r.type === 'weekly'))
 </script>

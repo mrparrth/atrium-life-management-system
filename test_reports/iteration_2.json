@@ -1,0 +1,50 @@
+{
+  "summary": "Frontend-only E2E of Atrium Finance overhaul (Iteration 2). Cleared IndexedDB to trigger fresh INR seed and validated all 15 listed scenarios via Playwright against the public preview URL. All scenarios PASS. INR (en-IN) formatting with Indian comma grouping is consistent across Finance and Dashboard, lakhs/crores compact rendering works in projections, cashflow CRUD with monthly/yearly normalisation is correct, category add/remove with duplicate guard works and propagates into modal dropdowns, data persists across reload, deletes stay deleted, sparkline gradient id is now unique (spark-XXXXXX), and existing flows (command palette) still work.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_2.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "money.js: inr() and inrCompact() correctly use Intl.NumberFormat('en-IN',{currency:'INR'}). inrShort returns plain en-IN grouping without currency — currently unused in the views surveyed; consider removing or documenting.",
+    "Finance.vue: addCategory normalises name via toLowerCase().replace(/\\s+/_) — good; duplicate guard works (toast 'Category exists or empty'). Liability modal save button does NOT have a data-testid distinct from asset; both reuse new-asset-save which is fine because the modal is shared, but spec language implied separate flows — current shared modal pattern is acceptable and was verified.",
+    "Sparkline.vue: uid is `spark-${Math.random()...}` — unique per instance; fixes the prior color-string-collision bug. Confirmed only one stable id 'spark-crzacfh' in dashboard SVG markup, with proper alpha gradient stops (0.18 → 0). No 'large black filled area' regression.",
+    "finance store monthlyValue(): yearly normalised /12, one_time excluded — verified by adding TEST_Bonus yearly 120000 which produced +10000 monthly delta in kpi-income.",
+    "Dashboard.vue: net-worth-value at path '/' (router uses '/', not '/dashboard') — uses inr() → '₹17,87,000' with Indian comma grouping. Sparkline renders cleanly.",
+    "Modal Cancel buttons / X close work; clicking backdrop also closes. Esc does not close (minor UX nit, not in spec).",
+    "Asset category dropdown is data-driven from finance.categoriesForScope(type); new categories (e.g. 'gold' added under asset scope) appear immediately in the modal options without reload. Confirmed.",
+    "Cashflow row layout uses '+' for income (green) and '-' for expense (red) / investment (orange) — clear, accessible."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (no backend)",
+    "frontend": "100% (15/15 scenarios pass)"
+  },
+  "test_credentials": "N/A (single-user local-first app, no auth)",
+  "seed_data_creation": "Cleared IndexedDB via indexedDB.databases() loop + localStorage.clear() before testing. Fresh seed created: 8 cashflow entries (3 income / 4 expense / 1 investment style mix totalling ₹2,05,000 income, ₹71,700 expense, ₹37,500 invested), 4 seed assets (savings/investments/retirement/crypto totals ₹18,05,000) and 1 liability (credit_card ₹18,000) → net worth ₹17,87,000. Default categories seeded across 5 scopes (asset/liability/income/expense/investment) via ensureDefaultCategories(). Test-created persisted data: TEST_INR_Asset (₹15,00,000 asset/savings), TEST_INR_Liab (₹5,00,000 liability/credit_card), TEST_Bonus (yearly ₹1,20,000 income), TEST_SIP (monthly ₹5,000 investment), category 'gold' under asset scope. Deleted: TEST_Gym expense, 'school_fees' expense category. All persist correctly across reload; deletes stay deleted.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 2 finance overhaul fully verified. Public URL https://calm-system-3.preview.emergentagent.com with hash routing. Dashboard is at '/' (NOT '/dashboard'). To force clean seed: `const ds = await indexedDB.databases(); for (const d of ds) indexedDB.deleteDatabase(d.name); localStorage.clear();` then reload. All finance data-testids documented in review_request work as labelled. Net worth uses inr() (Indian grouping), projections use inrCompact() (L/Cr). Yearly cashflow amounts divided by 12 in totals; one_time excluded from monthly totals. Sparkline gradient id is `spark-<random>` and stable.",
+  "scenario_results": {
+    "finance_view_and_4_tabs": "PASS",
+    "overview_kpis_with_inr_and_indian_grouping": "PASS - net worth ₹17,87,000; kpi-income ₹2,05,000; kpi-expenses ₹71,700; kpi-invest ₹37,500; kpi-net ₹95,800 / Savings rate 65%",
+    "add_asset_modal_creates_asset_row_and_updates_net_worth": "PASS - net worth went 17,87,000 → 32,87,000 after +15L asset",
+    "add_liability_decreases_net_worth": "PASS - net worth went 32,87,000 → 27,87,000 after +5L liability",
+    "cashflow_add_income_yearly_normalised_to_monthly_in_kpis": "PASS - +₹1,20,000/yr added, kpi-income increased by exactly ₹10,000/mo (₹2,05,000 → ₹2,15,000)",
+    "cashflow_add_expense_appears_under_expense_group": "PASS",
+    "cashflow_add_investment_appears_under_investment_group": "PASS",
+    "cashflow_delete_entry_via_flow_delete_id": "PASS - TEST_Gym deleted, gone after reload",
+    "categories_tab_5_scope_groups_visible": "PASS",
+    "category_add_school_fees_to_expense": "PASS",
+    "category_duplicate_add_shows_exists_or_empty_toast": "PASS",
+    "category_remove_via_chip_x_button": "PASS",
+    "new_category_propagates_to_dropdown_in_modal": "PASS - 'gold' visible in asset modal category select immediately",
+    "dashboard_finance_snapshot_inr_and_sparkline_clean": "PASS - net-worth-value=₹17,87,000; gradient id 'spark-crzacfh' (unique), no black flood",
+    "persistence_after_reload_including_deletions": "PASS",
+    "regression_command_palette_cmdk": "PASS"
+  },
+  "rca_of_the_issue": "None — all scenarios pass. Note: my first Playwright run had a Python-side bug (await inside generator expressions) that surfaced as 'async_generator object is not iterable' but the actual UI behaviour was already verified via screenshots and console-evidence (asset/liability/cashflow row counts, exact ₹2,05,000 → ₹2,15,000 income delta proving yearly /12 normalisation, persistence across reload). Re-verified dashboard ₹ and sparkline gradient id in a follow-up run; both pass."
+}

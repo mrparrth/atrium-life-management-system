@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 const props = defineProps({ data: { type: Array, required: true }, height: { type: Number, default: 60 }, color: { type: String, default: 'currentColor' } })
+const uid = `spark-${Math.random().toString(36).slice(2, 9)}`
 const path = computed(() => {
   const d = props.data
   if (!d.length) return ''
@@ -22,12 +23,12 @@ const area = computed(() => {
 <template>
   <svg viewBox="0 0 200 60" :height="height" preserveAspectRatio="none" class="w-full">
     <defs>
-      <linearGradient :id="`grad-${color}`" x1="0" x2="0" y1="0" y2="1">
+      <linearGradient :id="uid" x1="0" x2="0" y1="0" y2="1">
         <stop offset="0%" :stop-color="color" stop-opacity="0.18" />
         <stop offset="100%" :stop-color="color" stop-opacity="0" />
       </linearGradient>
     </defs>
-    <path :d="area" :fill="`url(#grad-${color})`" />
+    <path :d="area" :fill="`url(#${uid})`" />
     <path :d="path" :stroke="color" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
   </svg>
 </template>
