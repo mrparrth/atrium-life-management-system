@@ -11,7 +11,7 @@ import { useBookmarksStore } from '@/stores/bookmarks'
 import { useFinanceStore } from '@/stores/finance'
 import { useAreasStore } from '@/stores/areas'
 import { useReviewsStore } from '@/stores/reviews'
-import { seedIfEmpty } from '@/db'
+import { db, seedIfEmpty } from '@/db'
 
 import AppSidebar from '@/components/AppSidebar.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
@@ -22,6 +22,7 @@ const ui = useUIStore()
 const route = useRoute()
 
 onMounted(async () => {
+  await db.open()
   await seedIfEmpty()
   await Promise.all([
     useYearsStore().load(),
