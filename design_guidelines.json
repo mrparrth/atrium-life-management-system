@@ -1,0 +1,171 @@
+{
+  "project_name": "Premium Local-First Life Management App",
+  "framework": "Vue 3 + Vite + TailwindCSS + Pinia + Dexie.js",
+  "design_philosophy": {
+    "core_principles": [
+      "Calm & Reflective: Interface should never overwhelm the user.",
+      "Intelligently Organized: Progressive disclosure hides complexity.",
+      "Emotionally Lightweight: Avoid enterprise dashboard density and aggressive alerts.",
+      "Tactile & Premium: Soft hover states, organic color palette, distinct typography."
+    ],
+    "archetype": "Archetype 1: Organic & Earthy",
+    "mood": "Serene, intentional, premium, warm, spacious."
+  },
+  "typography": {
+    "primary_font": {
+      "family": "Manrope, sans-serif",
+      "usage": "Main UI, body text, functional labels, task titles",
+      "weights": "400 (Regular), 500 (Medium), 600 (SemiBold)"
+    },
+    "secondary_font": {
+      "family": "Newsreader, serif",
+      "usage": "Reflective sections (Notes, Journaling, Year/Goal Headers, Memory Resurfacing)",
+      "weights": "400 (Regular), 300 (Light), 400 Italic"
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl tracking-tight leading-none font-serif",
+      "h2": "text-2xl md:text-3xl tracking-tight font-serif",
+      "h3": "text-xl md:text-2xl tracking-tight font-sans font-medium",
+      "h4": "text-lg font-sans font-medium",
+      "body": "text-base font-sans leading-relaxed",
+      "caption": "text-sm text-stone-500 dark:text-stone-400 font-sans",
+      "overline": "text-xs uppercase tracking-[0.2em] font-sans text-stone-400 dark:text-stone-500"
+    }
+  },
+  "colors": {
+    "light": {
+      "background": {
+        "base": "#F9F8F6",
+        "surface": "#FFFFFF",
+        "elevated": "#F2F0EA"
+      },
+      "text": {
+        "primary": "#2D2B2A",
+        "secondary": "#7D7975",
+        "muted": "#A8A39D"
+      },
+      "borders": {
+        "default": "#EAE7E0",
+        "focus": "#D4C5B3"
+      },
+      "priority_matrix": {
+        "critical": {
+          "label": "Important + Urgent",
+          "bg": "#FDF6F5",
+          "text": "#A35C52",
+          "border": "#F3E3E0"
+        },
+        "strategic": {
+          "label": "Important + Not Urgent",
+          "bg": "#F5F7F4",
+          "text": "#5A7353",
+          "border": "#E3EBE0"
+        },
+        "interruptive": {
+          "label": "Not Important + Urgent",
+          "bg": "#FCF9F2",
+          "text": "#9E8457",
+          "border": "#EFE6D5"
+        },
+        "backlog": {
+          "label": "Not Important + Not Urgent",
+          "bg": "#F7F6F5",
+          "text": "#7D7975",
+          "border": "#EAE7E0"
+        }
+      },
+      "brand_accents": {
+        "primary": "#2D2B2A",
+        "hover": "#4A4745"
+      }
+    },
+    "dark": {
+      "background": {
+        "base": "#1C1B1A",
+        "surface": "#252423",
+        "elevated": "#21201F"
+      },
+      "text": {
+        "primary": "#EAE7E0",
+        "secondary": "#A8A39D",
+        "muted": "#7D7975"
+      },
+      "borders": {
+        "default": "#363432",
+        "focus": "#5C5854"
+      },
+      "priority_matrix": {
+        "critical": {
+          "bg": "#3B2826",
+          "text": "#E5A8A0",
+          "border": "#4D3532"
+        },
+        "strategic": {
+          "bg": "#293327",
+          "text": "#A3C29D",
+          "border": "#374534"
+        },
+        "interruptive": {
+          "bg": "#3B3224",
+          "text": "#DBC298",
+          "border": "#4D4230"
+        },
+        "backlog": {
+          "bg": "#2B2A29",
+          "text": "#A8A39D",
+          "border": "#363432"
+        }
+      },
+      "brand_accents": {
+        "primary": "#EAE7E0",
+        "hover": "#D4C5B3"
+      }
+    }
+  },
+  "spacing_and_layout": {
+    "spacing_scale": "Use Tailwind generous spacing: p-6, p-8, p-12. Avoid cramped layouts (p-2/p-4) for major sections. Whitespace is a luxury tool here.",
+    "container_max_width": "max-w-7xl mx-auto",
+    "dashboard_grid": "Bento-style 'Control Room' grid but highly spacious. gap-6 or gap-8 between widgets. grid-cols-1 md:grid-cols-3 lg:grid-cols-4. Widgets must stretch 'h-full'.",
+    "sidebar": "Slim, minimal layout (bg-elevated). Soft hover states. No bright active colors, use bold text + higher contrast icon. Include PARA (Projects, Areas, Resources, Archives) elegantly.",
+    "task_card": "Flat surface (bg-surface), 1px subtle border (border-default). NO heavy drop shadows. Very subtle diffuse shadow (shadow-sm) on hover. Rounded corners (rounded-2xl).",
+    "progressive_disclosure": "Hide less important actions behind a smooth fade on hover or inside a context menu. Display only critical data (Task Name, Priority indicator) at first glance."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-text-primary text-background-base rounded-xl px-5 py-2.5 hover:opacity-90 transition-opacity font-sans",
+      "secondary": "bg-background-elevated text-text-primary border border-borders-default rounded-xl px-5 py-2.5 hover:bg-borders-default transition-colors font-sans",
+      "ghost": "text-text-secondary hover:bg-background-elevated hover:text-text-primary rounded-xl px-4 py-2 transition-colors font-sans"
+    },
+    "inputs": "bg-transparent border-b border-borders-default focus:border-text-primary focus:ring-0 px-0 py-2 text-text-primary placeholder:text-text-muted outline-none transition-colors",
+    "checkbox": "w-5 h-5 rounded-md border-2 border-borders-focus text-text-primary focus:ring-text-primary focus:ring-offset-background-base transition-all cursor-pointer"
+  },
+  "motion_philosophy": {
+    "principles": "Calm, slow, and purposeful. No bouncy or erratic animations. Progressive fade-ins for cards.",
+    "durations": "duration-300 to duration-500 for state changes.",
+    "easing": "ease-out for entering elements, ease-in-out for state changes. Use framer-motion-like spring settings if available, or Tailwind smooth easings."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://images.pexels.com/photos/15033155/pexels-photo-15033155.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Peaceful misty hills at dawn with soft pastel sky",
+        "category": "Memory Resurfacing / Weekly Reflection background header"
+      },
+      {
+        "url": "https://images.pexels.com/photos/14807516/pexels-photo-14807516.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Artistic desk setup with planner, coffee mug",
+        "category": "Projects / Areas cover image placeholder"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Build the application using Vue 3 (Composition API), Vite, Tailwind CSS, Pinia, and Dexie.js (for local-first IndexedDB storage).",
+    "Do NOT use React, Next.js, or Shadcn for React. Use pure Vue 3 components, styled via Tailwind with the defined palette.",
+    "Extend Tailwind config (tailwind.config.js) with the provided light/dark colors via CSS variables (e.g., 'surface': 'var(--color-surface)') and font families ('sans': ['Manrope', 'sans-serif'], 'serif': ['Newsreader', 'serif']).",
+    "Ensure the priority matrix is strictly derived from 'Important' and 'Urgent' booleans. Map these directly to the Priority Matrix colors defined above.",
+    "For the 'Finance Snapshot', use simple, clean typography-driven data blocks or minimal sparklines (no dense enterprise charts).",
+    "Add 'data-testid' to all interactive and key informational elements for robust testing (e.g., data-testid='task-checkbox-urgent', data-testid='sidebar-nav-projects').",
+    "Maintain offline-first behavior using Dexie.js.",
+    "Implement the 'Command Palette' pattern for keyboard-centric global search and quick capture."
+  ]
+}
