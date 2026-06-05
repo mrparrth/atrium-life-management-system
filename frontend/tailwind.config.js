@@ -1,82 +1,63 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
-    darkMode: ["class"],
-    content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
-    "./public/index.html"
-  ],
+export default {
+  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
+      fontFamily: {
+        sans: ['Manrope', 'ui-sans-serif', 'system-ui'],
+        serif: ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
       },
       colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))'
+        canvas: 'rgb(var(--canvas) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        elevated: 'rgb(var(--elevated) / <alpha-value>)',
+        ink: {
+          DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
+          2: 'rgb(var(--ink-2) / <alpha-value>)',
+          3: 'rgb(var(--ink-3) / <alpha-value>)',
         },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))'
+        line: {
+          DEFAULT: 'rgb(var(--line) / <alpha-value>)',
+          2: 'rgb(var(--line-2) / <alpha-value>)',
         },
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
+        pri: {
+          critical: 'rgb(var(--pri-critical) / <alpha-value>)',
+          'critical-bg': 'rgb(var(--pri-critical-bg) / <alpha-value>)',
+          'critical-bd': 'rgb(var(--pri-critical-bd) / <alpha-value>)',
+          strategic: 'rgb(var(--pri-strategic) / <alpha-value>)',
+          'strategic-bg': 'rgb(var(--pri-strategic-bg) / <alpha-value>)',
+          'strategic-bd': 'rgb(var(--pri-strategic-bd) / <alpha-value>)',
+          interruptive: 'rgb(var(--pri-interruptive) / <alpha-value>)',
+          'interruptive-bg': 'rgb(var(--pri-interruptive-bg) / <alpha-value>)',
+          'interruptive-bd': 'rgb(var(--pri-interruptive-bd) / <alpha-value>)',
+          backlog: 'rgb(var(--pri-backlog) / <alpha-value>)',
+          'backlog-bg': 'rgb(var(--pri-backlog-bg) / <alpha-value>)',
+          'backlog-bd': 'rgb(var(--pri-backlog-bd) / <alpha-value>)',
         },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))'
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
-        },
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        chart: {
-          '1': 'hsl(var(--chart-1))',
-          '2': 'hsl(var(--chart-2))',
-          '3': 'hsl(var(--chart-3))',
-          '4': 'hsl(var(--chart-4))',
-          '5': 'hsl(var(--chart-5))'
-        }
       },
-      keyframes: {
-        'accordion-down': {
-          from: {
-            height: '0'
-          },
-          to: {
-            height: 'var(--radix-accordion-content-height)'
-          }
-        },
-        'accordion-up': {
-          from: {
-            height: 'var(--radix-accordion-content-height)'
-          },
-          to: {
-            height: '0'
-          }
-        }
+      borderRadius: {
+        '2xl': '1.1rem',
+        '3xl': '1.6rem',
+      },
+      letterSpacing: {
+        overline: '0.22em',
+      },
+      transitionTimingFunction: {
+        calm: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
       },
       animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out'
-      }
-    }
+        'fade-in': 'fadeIn 500ms cubic-bezier(0.22, 0.61, 0.36, 1) both',
+        'rise-in': 'riseIn 600ms cubic-bezier(0.22, 0.61, 0.36, 1) both',
+      },
+      keyframes: {
+        fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+        riseIn: {
+          '0%': { opacity: 0, transform: 'translateY(8px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' },
+        },
+      },
+    },
   },
-  plugins: [require("tailwindcss-animate")],
-};
+  plugins: [],
+}

@@ -1,0 +1,67 @@
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { db, newId, now } from '@/db'
+
+export const useTasksStore = defineStore('tasks', () => {
+  const items = ref([])
+
+  async function load() { items.value = await db.tasks.orderBy('createdAt').reverse().toArray() }
+
+  async function add(payload) {
+    const task = {
+      id: newId(),
+      title: payload.title?.trim() || 'Untitled task',
+      description: payload.description || '',
+      projectId: payload.projectId || null,
+      goalId: payload.goalId || null,
+      dueDate: payload.dueDate || null,
+      scheduledDate: payload.scheduledDate || null,
+      resurfaceDate: payload.resurfaceDate || null,
+      snoozedUntil: null,
+      energy: payload.energy || null,
+      important: !!payload.important,
+      urgent: !!payload.urgent,
+      status: 'open',
+      tags: payload.tags || [],
+      createdAt: now(),
+      updatedAt: now(),
+      lastViewedAt: now(),
+    }
+    await db.tasks.add(task)
+    items.value.unshift(task)
+    return task
+  }
+
+  async function update(id, patch) {
+    const t = items.value.find(x => x.id === id)
+    if (!t) return
+    Object.assign(t, patch, { updatedAt: now() })
+    await db.tasks.put({ ...t })
+  }
+
+  async function toggleComplete(id) {
+    const t = items.value.find(x => x.id === id)
+    if (!t) return
+    const status = (t.status === 'done') ? 'open' : 'done'
+    await update(id, { status, completedAt: status === 'done' ? now() : null })
+  }
+
+  async function remove(id) {
+    await db.tasks.delete(id)
+    items.value = items.value.filter(t => t.id !== id)
+  }
+
+  async function snooze(id, days = 1) {
+    const until = new Date(); until.setDate(until.getDate() + days)
+    await update(id, { snoozedUntil: until.toISOString() })
+  }
+
+  async function markViewed(id) {
+    const t = items.value.find(x => x.id === id)
+    if (!t) return
+    t.lastViewedAt = now()
+    await db.tasks.put({ ...t })
+  }
+
+  return { items, load, add, update, toggleComplete, remove, snooze, markViewed }
+})

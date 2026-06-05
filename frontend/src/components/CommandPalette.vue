@@ -1,0 +1,141 @@
+<script setup>
+import { computed, ref, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUIStore } from '@/stores/ui'
+import { useTasksStore } from '@/stores/tasks'
+import { useProjectsStore } from '@/stores/projects'
+import { useNotesStore } from '@/stores/notes'
+import { useBookmarksStore } from '@/stores/bookmarks'
+import { useGoalsStore } from '@/stores/goals'
+import { Search, ArrowRight, FolderKanban, CheckSquare, NotebookPen, Bookmark, Target, Plus, X } from 'lucide-vue-next'
+
+const ui = useUIStore()
+const router = useRouter()
+const q = ref('')
+const inputEl = ref(null)
+const activeIdx = ref(0)
+
+onMounted(() => inputEl.value?.focus())
+
+const tasks = useTasksStore()
+const projects = useProjectsStore()
+const notes = useNotesStore()
+const bookmarks = useBookmarksStore()
+const goals = useGoalsStore()
+
+const navItems = [
+  { type: 'nav', label: 'Dashboard', to: '/', icon: 'home' },
+  { type: 'nav', label: 'Today focus', to: '/today', icon: 'home' },
+  { type: 'nav', label: 'Tasks', to: '/tasks', icon: 'task' },
+  { type: 'nav', label: 'Projects', to: '/projects', icon: 'project' },
+  { type: 'nav', label: 'Areas', to: '/areas', icon: 'home' },
+  { type: 'nav', label: 'Resources', to: '/resources', icon: 'home' },
+  { type: 'nav', label: 'Archives', to: '/archives', icon: 'home' },
+  { type: 'nav', label: 'Goals', to: '/goals', icon: 'goal' },
+  { type: 'nav', label: 'Years', to: '/years', icon: 'home' },
+  { type: 'nav', label: 'Notes', to: '/notes', icon: 'note' },
+  { type: 'nav', label: 'Bookmarks', to: '/bookmarks', icon: 'bookmark' },
+  { type: 'nav', label: 'Finance', to: '/finance', icon: 'home' },
+  { type: 'nav', label: 'Reviews', to: '/reviews', icon: 'home' },
+]
+
+const results = computed(() => {
+  const term = q.value.trim().toLowerCase()
+  if (!term) {
+    return [
+      { group: 'Quick actions', items: [
+        { type: 'action', label: 'Quick capture a task', kbd: '⌘N', action: () => { ui.closeCommand(); ui.openQuickCapture() } },
+        { type: 'action', label: 'Toggle theme', action: () => { ui.toggleTheme(); ui.closeCommand() } },
+      ]},
+      { group: 'Jump to', items: navItems.slice(0, 8) },
+    ]
+  }
+  const match = (s) => (s || '').toLowerCase().includes(term)
+  const nav = navItems.filter(n => match(n.label))
+  const t = tasks.items.filter(t => match(t.title) || match(t.description)).slice(0, 8).map(t => ({ type: 'task', label: t.title, to: `/tasks`, item: t }))
+  const p = projects.items.filter(p => match(p.title) || match(p.description)).slice(0, 6).map(p => ({ type: 'project', label: p.title, to: `/projects/${p.id}`, item: p }))
+  const n = notes.items.filter(n => match(n.title) || match(n.body)).slice(0, 6).map(n => ({ type: 'note', label: n.title, to: `/notes/${n.id}`, item: n }))
+  const b = bookmarks.items.filter(b => match(b.title) || match(b.url)).slice(0, 6).map(b => ({ type: 'bookmark', label: b.title, url: b.url, item: b }))
+  const g = goals.items.filter(g => match(g.title)).slice(0, 4).map(g => ({ type: 'goal', label: g.title, to: '/goals', item: g }))
+
+  const groups = []
+  if (nav.length) groups.push({ group: 'Jump to', items: nav })
+  if (t.length) groups.push({ group: 'Tasks', items: t })
+  if (p.length) groups.push({ group: 'Projects', items: p })
+  if (n.length) groups.push({ group: 'Notes', items: n })
+  if (b.length) groups.push({ group: 'Bookmarks', items: b })
+  if (g.length) groups.push({ group: 'Goals', items: g })
+  return groups
+})
+
+const flatItems = computed(() => results.value.flatMap(g => g.items))
+watch(q, () => { activeIdx.value = 0 })
+
+function iconFor(type) {
+  return { task: CheckSquare, project: FolderKanban, note: NotebookPen, bookmark: Bookmark, goal: Target, nav: ArrowRight, action: Plus }[type] || ArrowRight
+}
+
+function run(item) {
+  if (item.action) return item.action()
+  if (item.to) { router.push(item.to); ui.closeCommand(); return }
+  if (item.url) { window.open(item.url, '_blank'); ui.closeCommand(); return }
+}
+
+function onKey(e) {
+  if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx.value = Math.min(flatItems.value.length - 1, activeIdx.value + 1) }
+  if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx.value = Math.max(0, activeIdx.value - 1) }
+  if (e.key === 'Enter') { e.preventDefault(); const item = flatItems.value[activeIdx.value]; if (item) run(item) }
+}
+</script>
+
+<template>
+  <div class="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4" data-testid="command-palette">
+    <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="ui.closeCommand"></div>
+    <div class="relative w-full max-w-2xl card overflow-hidden shadow-2xl shadow-black/20 animate-rise-in">
+      <div class="flex items-center gap-3 px-5 py-4 border-b border-line">
+        <Search class="w-4 h-4 text-ink-3" />
+        <input
+          ref="inputEl"
+          v-model="q"
+          @keydown="onKey"
+          placeholder="Search tasks, projects, notes, bookmarks…"
+          class="flex-1 bg-transparent outline-none text-ink placeholder:text-ink-3 text-base"
+          data-testid="command-input"
+        />
+        <button class="btn-ghost !p-1.5" @click="ui.closeCommand" data-testid="command-close"><X class="w-4 h-4" /></button>
+      </div>
+
+      <div class="max-h-[60vh] overflow-y-auto px-2 py-2">
+        <template v-if="flatItems.length">
+          <div v-for="group in results" :key="group.group" class="mb-2">
+            <div class="overline px-3 py-2">{{ group.group }}</div>
+            <ul>
+              <li v-for="(item, i) in group.items"
+                  :key="(item.to || item.label) + i"
+                  :class="[
+                    'flex items-center justify-between gap-3 px-3 py-2 rounded-xl cursor-pointer text-sm transition-colors duration-200',
+                    flatItems.indexOf(item) === activeIdx ? 'bg-elevated text-ink' : 'text-ink-2 hover:bg-elevated/60'
+                  ]"
+                  @mouseenter="activeIdx = flatItems.indexOf(item)"
+                  @click="run(item)"
+                  :data-testid="`command-result-${item.type}`">
+                <span class="flex items-center gap-3 min-w-0">
+                  <component :is="iconFor(item.type)" class="w-4 h-4 text-ink-3 shrink-0" />
+                  <span class="truncate">{{ item.label }}</span>
+                </span>
+                <span v-if="item.kbd" class="kbd">{{ item.kbd }}</span>
+              </li>
+            </ul>
+          </div>
+        </template>
+        <div v-else class="px-5 py-10 text-center text-ink-3 text-sm font-serif italic">Nothing here yet — try a different word.</div>
+      </div>
+
+      <div class="px-4 py-2.5 border-t border-line flex items-center gap-4 text-[11px] text-ink-3">
+        <span class="flex items-center gap-1.5"><span class="kbd">↑</span><span class="kbd">↓</span> navigate</span>
+        <span class="flex items-center gap-1.5"><span class="kbd">↵</span> select</span>
+        <span class="flex items-center gap-1.5 ml-auto"><span class="kbd">esc</span> close</span>
+      </div>
+    </div>
+  </div>
+</template>

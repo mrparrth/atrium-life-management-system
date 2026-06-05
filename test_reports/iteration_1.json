@@ -1,0 +1,70 @@
+{
+  "summary": "Comprehensive frontend-only E2E testing of Atrium (Vue 3 + Pinia + Dexie local-first life management app). Validated all 16 listed test scenarios via Playwright against the public preview URL. 15/16 scenarios fully pass. 1 minor spec deviation on theme toggle (dark class applied to <html> instead of <body>, but theme works visually and persists in localStorage). No backend (local-first, IndexedDB only).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AppSidebar / stores/ui.js (theme toggle)",
+        "issue": "Spec says theme toggle should switch body class to dark, but implementation adds 'dark' class to document.documentElement (<html>) instead of <body>. CSS variables and visual dark mode still apply correctly and persist in localStorage.atrium.theme='dark', so functionality works. Only a spec-conformance nit; main agent can decide whether to mirror class onto <body> for strict spec match.",
+        "selector": "[data-testid=theme-toggle]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Initial seed + parallel store load on first mount",
+        "issue": "A one-time 'DexieError2' page error was observed in the first session right after first-mount seeding+parallel loads, but did not recur on subsequent sessions and did not affect functionality (seed data, persistence, CRUD all work). Likely a transient race between seedIfEmpty() and parallel store .load() calls in App.vue onMounted. Consider awaiting seedIfEmpty() to fully resolve before kicking off parallel loads (already awaited in current code, but Dexie open/upgrade may still race). Non-blocking.",
+        "affected_selectors": []
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_1.json"
+  ],
+  "action_items": [
+    "(Optional / LOW) Theme toggle: mirror the 'dark' class onto document.body in addition to documentElement, or update spec/test expectations. Visual behavior is already correct.",
+    "(Optional / LOW) Investigate one-time DexieError2 emitted on very first load (no functional impact; not reproducible on subsequent loads)."
+  ],
+  "critical_code_review_comments": [
+    "Theme application is on documentElement (html) in stores/ui.js line ~14 (root.classList.add('dark')) — review_request expected body. Cheap fix: also toggle document.body.classList.",
+    "App.vue onMounted runs Promise.all of 9 store loads right after seedIfEmpty; if Dexie is in mid-upgrade this can race. Consider db.open() awaited explicitly before loads, or sequential first-time setup.",
+    "All views and interactive elements correctly expose data-testid attributes — testability is excellent.",
+    "Hash routing (createWebHashHistory) is used as documented; sidebar navigation, command palette, quick capture, and Cmd+K/Cmd+N shortcuts all wired correctly."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (no backend)",
+    "frontend": "94% (15/16 scenarios fully pass; 1 minor spec deviation on theme target element)"
+  },
+  "test_credentials": "N/A (single-user local-first app, no auth)",
+  "seed_data_creation": "App self-seeds via seedIfEmpty() on first mount. Created during testing: TEST_QC_TASK_1 (task, Critical priority), TEST_PROJ_1 (project), TEST_NOTE_1 (note), https://test-example-bookmark.com (bookmark), TEST_ASSET=$12345 (finance asset), one weekly review entry. All persisted across reload via IndexedDB.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Frontend-only Vue 3 + Dexie app. URL: https://calm-system-3.preview.emergentagent.com (hash routing). All flows have data-testid hooks. Seed data is auto-created on first mount via seedIfEmpty(). To re-test, just open root URL and Playwright through the data-testid selectors documented in the review request. Note: theme dark class lands on <html>, not <body>; check documentElement.className or localStorage.atrium.theme to verify toggle.",
+  "scenario_results": {
+    "app_loads_sidebar_dashboard": "PASS",
+    "seed_data_today_focus_and_finance_snapshot": "PASS",
+    "sidebar_nav_all_14_links": "PASS (dashboard, today, tasks, projects, areas, resources, archives, years, goals, notes, bookmarks, finance, reviews, settings — each routes to its *-view root)",
+    "quick_capture_creates_task_with_priority_badge": "PASS (Important+Urgent -> Critical badge derived; task appears in Tasks list)",
+    "priority_derivation_live_in_composer": "PASS (none->backlog, important->strategic, urgent->interruptive, both->critical)",
+    "task_toggle_complete": "PASS",
+    "task_filters_open_done_all": "PASS",
+    "command_palette_open_close": "PASS (Cmd+K opens [data-testid=command-palette], Escape closes)",
+    "create_project": "PASS (TEST_PROJ_1 card appears)",
+    "create_note": "PASS (TEST_NOTE_1 card appears)",
+    "create_bookmark": "PASS",
+    "finance_view_metrics_and_add_asset": "PASS (net-worth, projection-1y/5y/10y/20y present; net worth updates after adding TEST_ASSET)",
+    "weekly_review_create": "PASS (review card with data-testid=review-{id} appears)",
+    "theme_toggle": "PARTIAL — dark class lands on <html>, not <body>; localStorage persists; visual dark mode works",
+    "data_persistence_after_reload": "PASS (TEST_QC_TASK_1 persists)",
+    "settings_export_and_clear_buttons_present": "PASS"
+  },
+  "rca_of_the_issue": {
+    "theme_toggle_spec_deviation": "In /app/frontend/src/stores/ui.js applyTheme() does `document.documentElement.classList.toggle('dark')` instead of `document.body.classList.toggle('dark')`. Fix: either also add to document.body, or update spec/test expectation. CSS works because Tailwind dark variant matches `html.dark`.",
+    "transient_DexieError2_on_first_load": "Observed once on first navigation; not reproducible. Likely a benign race between Dexie schema open and parallel store loads. Recommend explicit `await db.open()` before Promise.all of store loads in App.vue onMounted."
+  }
+}
