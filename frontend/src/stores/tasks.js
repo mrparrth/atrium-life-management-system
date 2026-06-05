@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { db, newId, now } from '@/db'
+import { db, newId, now, plain } from '@/db'
 
 export const useTasksStore = defineStore('tasks', () => {
   const items = ref([])
@@ -36,7 +36,7 @@ export const useTasksStore = defineStore('tasks', () => {
     const t = items.value.find(x => x.id === id)
     if (!t) return
     Object.assign(t, patch, { updatedAt: now() })
-    await db.tasks.put({ ...t })
+    await db.tasks.put(plain(t))
   }
 
   async function toggleComplete(id) {
@@ -60,7 +60,7 @@ export const useTasksStore = defineStore('tasks', () => {
     const t = items.value.find(x => x.id === id)
     if (!t) return
     t.lastViewedAt = now()
-    await db.tasks.put({ ...t })
+    await db.tasks.put(plain(t))
   }
 
   return { items, load, add, update, toggleComplete, remove, snooze, markViewed }

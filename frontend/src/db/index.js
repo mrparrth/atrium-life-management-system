@@ -36,6 +36,8 @@ db.version(3).stores({
 
 export function newId() { return nanoid(12) }
 export function now() { return new Date().toISOString() }
+// Strip Vue reactive proxies before passing to Dexie's structured clone.
+export function plain(obj) { return JSON.parse(JSON.stringify(obj)) }
 
 const DEFAULT_CATEGORIES = [
   // assets

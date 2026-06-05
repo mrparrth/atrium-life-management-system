@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { db, newId, now, ensureDefaultCategories } from '@/db'
+import { db, newId, now, ensureDefaultCategories, plain } from '@/db'
 
 export const useFinanceStore = defineStore('finance', () => {
   const assets = ref([])
@@ -73,7 +73,7 @@ export const useFinanceStore = defineStore('finance', () => {
   async function updateAsset(id, patch) {
     const a = assets.value.find(x => x.id === id); if (!a) return
     Object.assign(a, patch, { updatedAt: now() })
-    await db.finance_assets.put({ ...a })
+    await db.finance_assets.put(plain(a))
   }
   async function removeAsset(id) {
     await db.finance_assets.delete(id); assets.value = assets.value.filter(a => a.id !== id)
@@ -101,7 +101,7 @@ export const useFinanceStore = defineStore('finance', () => {
   async function updateCashflow(id, patch) {
     const c = cashflow.value.find(x => x.id === id); if (!c) return
     Object.assign(c, patch, { updatedAt: now() })
-    await db.finance_cashflow.put({ ...c })
+    await db.finance_cashflow.put(plain(c))
   }
   async function removeCashflow(id) {
     await db.finance_cashflow.delete(id); cashflow.value = cashflow.value.filter(c => c.id !== id)

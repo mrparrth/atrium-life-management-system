@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { db, newId, now } from '@/db'
+import { db, newId, now, plain } from '@/db'
 
 export const useYearsStore = defineStore('years', () => {
   const items = ref([])
@@ -12,7 +12,7 @@ export const useYearsStore = defineStore('years', () => {
   async function update(id, patch) {
     const y = items.value.find(x => x.id === id); if (!y) return
     Object.assign(y, patch, { updatedAt: now() })
-    await db.years.put({ ...y })
+    await db.years.put(plain(y))
   }
   async function remove(id) { await db.years.delete(id); items.value = items.value.filter(y => y.id !== id) }
   return { items, load, add, update, remove }

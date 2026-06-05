@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { db, newId, now } from '@/db'
+import { db, newId, now, plain } from '@/db'
 
 export const useNextStepsStore = defineStore('nextSteps', () => {
   const items = ref([])
@@ -25,14 +25,14 @@ export const useNextStepsStore = defineStore('nextSteps', () => {
     it.done = !it.done
     it.updatedAt = now()
     if (it.done) it.completedAt = now()
-    await db.next_steps.put({ ...it })
+    await db.next_steps.put(plain(it))
   }
 
   async function rename(id, title) {
     const it = items.value.find(x => x.id === id); if (!it) return
     it.title = title.trim() || it.title
     it.updatedAt = now()
-    await db.next_steps.put({ ...it })
+    await db.next_steps.put(plain(it))
   }
 
   async function remove(id) {
@@ -52,7 +52,7 @@ export const useNextStepsStore = defineStore('nextSteps', () => {
     let i = 1
     for (const it of items.value) {
       it.order = i++; it.updatedAt = ts
-      await db.next_steps.put({ ...it })
+      await db.next_steps.put(plain(it))
     }
   }
 

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { db, newId, now } from '@/db'
+import { db, newId, now, plain } from '@/db'
 
 export const useProjectsStore = defineStore('projects', () => {
   const items = ref([])
@@ -26,11 +26,11 @@ export const useProjectsStore = defineStore('projects', () => {
   async function update(id, patch) {
     const p = items.value.find(x => x.id === id); if (!p) return
     Object.assign(p, patch, { updatedAt: now() })
-    await db.projects.put({ ...p })
+    await db.projects.put(plain(p))
   }
   async function markViewed(id) {
     const p = items.value.find(x => x.id === id); if (!p) return
-    p.lastViewedAt = now(); await db.projects.put({ ...p })
+    p.lastViewedAt = now(); await db.projects.put(plain(p))
   }
   async function archive(id) { await update(id, { status: 'archived' }) }
   async function complete(id) { await update(id, { status: 'completed' }) }
