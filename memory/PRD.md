@@ -43,6 +43,21 @@ Build a premium local-first life management web application (Vue 3 + Vite + Pini
 - Sparkline gradient bug fixed (stable unique id per instance).
 - **15/15 scenarios PASS** in testing_agent_v3 iteration_2.
 
+## Iteration 3 — Next Steps + Bookmark Pages + Note Backlinks (2026-02-05)
+- **Next Steps** page (sidebar under Horizon, `/next-steps`): flat checklist with add / toggle / inline rename (dblclick or Edit) / delete / drag-and-drop reorder / clear-completed; live remaining/done counter; persists via new `next_steps` Dexie table (v3).
+- **Bookmark Pages** (collections): new `bookmark_pages` table; each Page has emoji + title + description + tags; bookmarks store a `pageId` reference. Main Bookmarks view shows Collections grid first, then Loose section. New BookmarkPageDetail view with header + Edit/Save mode + add/detach/delete bookmarks. Deleting a Page detaches (does not delete) its bookmarks.
+- **Note backlinks**: `[[wiki-link]]` syntax. Editor autosuggests existing notes when typing `[[` (keyboard nav + Enter inserts `[[Title]]`). Rendered note converts `[[Title]]` to a styled chip-link that uses vue-router; missing targets show as dashed italic chip. Below each note: a Backlinks panel showing "Linked from" (incoming) and "Links to" (outgoing) other notes, with missing-link pills for unresolved targets.
+- **Critical bugfix**: added `plain(obj)` helper (`JSON.parse(JSON.stringify(obj))`) in `db/index.js` and wrapped every `db.<table>.put(...)` call in all 9 stores. This eliminates a `DataClone` failure where Vue 3 reactive Proxies (esp. nested array fields like `tags`) were being passed to IndexedDB's structured clone.
+- **100% scenarios PASS** in testing_agent_v3 iteration_4 (re-test after Dexie fix).
+- **Google Drive sync deferred** to a focused follow-up: the integration playbook returned a server-side OAuth flow that doesn't fit our pure-browser local-first model; the correct path is Google Identity Services Token Client with `drive.appdata` scope, which requires the user to provide their own Google Cloud OAuth Client ID (web) with this app's URL as Authorized JavaScript origin.
+
+## Backlog (next iterations)
+- **P1 — Google Drive backup/restore** (browser-only via GIS Token Client + `drive.appdata`): needs user-provided Client ID; one button to Connect, Backup now, Restore.
+- **P1 — AI assistance** (Claude Sonnet 4.5 via Universal Key): task decomposition, stale-project nudge, weekly insight.
+- **P2 — Monthly money mirror** ritual.
+- **P2 — Note graph view** — small force-directed visualisation of note ↔ note relationships.
+- **P3 — PWA installability** + offline manifest.
+
 ## Backlog (next iterations)
 - **P1 — AI assistance**: task decomposition, stale-project detection, emotional workload detection, schedule balancing, insight generation (Claude Sonnet 4.5 via Universal Key).
 - **P1 — Backlinks / [[wiki-links]]** in notes; graph view of relationships.
