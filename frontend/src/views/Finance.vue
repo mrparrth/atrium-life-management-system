@@ -9,7 +9,11 @@ import EmptyState from '@/components/EmptyState.vue'
 import NetworthLogForm from '@/components/NetworthLogForm.vue'
 import CashflowPeriodForm from '@/components/CashflowPeriodForm.vue'
 import { inr, inrCompact } from '@/lib/money'
-import { Plus, Trash2, Edit3, Tag, X, ArrowDownToLine, ArrowUpFromLine, PiggyBank, Wallet } from 'lucide-vue-next'
+import { Plus, Trash2, Edit3, Tag, X, ArrowDownToLine, ArrowUpFromLine, PiggyBank, Wallet, Archive } from 'lucide-vue-next'
+
+import { useRoute, useRouter } from 'vue-router'
+const route = useRoute()
+const router = useRouter()
 
 const finance = useFinanceStore()
 const ui = useUIStore()
@@ -26,12 +30,31 @@ const editingCf = ref(null)
 function openCfForm(p = null) { editingCf.value = p; showCfForm.value = true }
 function closeCfForm() { showCfForm.value = false; editingCf.value = null }
 
+import { onMounted, watch } from 'vue'
+
+function handleQuery() {
+  if (route.query.tab) tab.value = route.query.tab
+  if (route.query.new === 'nw') {
+    tab.value = 'networth'
+    openNwForm()
+  } else if (route.query.new === 'cf') {
+    tab.value = 'cashflow'
+    openCfForm()
+  }
+  if (route.query.new || route.query.tab) {
+    router.replace({ query: {} })
+  }
+}
+
+onMounted(handleQuery)
+watch(() => route.query, handleQuery)
+
 async function deleteNw(log) {
-  if (!confirm(`Delete net worth snapshot from ${log.date}?`)) return
+  if (!await ui.confirm({ message: `Delete net worth snapshot from ${log.date}?`, title: 'Delete Snapshot' })) return
   await finance.removeNetworthLog(log.id); ui.showToast('Snapshot removed', 'success')
 }
 async function deleteCf(p) {
-  if (!confirm(`Delete ${formatMonth(p.month)} entry?`)) return
+  if (!await ui.confirm({ message: `Delete ${formatMonth(p.month)} entry?`, title: 'Delete Month' })) return
   await finance.removeCashflowPeriod(p.id); ui.showToast('Month removed', 'success')
 }
 
@@ -49,13 +72,47 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
 // Categories tab
 const newCatScope = ref('expense')
 const newCatName = ref('')
+const newCatGroup = ref('Need')
+
+const scopeGroups = {
+  asset: ['Liquid', 'Fixed', 'Business', 'One-Off'],
+  liability: ['Short-term', 'Long-term', 'Business', 'One-Off'],
+  income: ['Active', 'Passive', 'Business', 'One-Off'],
+  expense: ['Want', 'Need', 'Business', 'One-Off'],
+  investment: ['Equity', 'Debt', 'Business', 'One-Off']
+}
+
 async function addCategoryFn() {
-  const r = await finance.addCategory(newCatScope.value, newCatName.value)
+  const r = await finance.addCategory(newCatScope.value, newCatName.value, newCatGroup.value)
   if (!r) { ui.showToast('Category exists or empty', 'error'); return }
   newCatName.value = ''; ui.showToast('Category added', 'success')
 }
 async function removeCategoryFn(c) {
-  if (confirm(`Remove "${label(c.name)}" from ${c.scope}?`)) await finance.removeCategory(c.id)
+  if (await ui.confirm({ message: `Remove "${label(c.name)}" from ${c.scope}?`, title: 'Remove Category' })) await finance.removeCategory(c.id)
+}
+
+const editingCategoryId = ref(null)
+const editingCategoryName = ref('')
+
+function startRenameCategory(c) {
+  editingCategoryId.value = c.id
+  editingCategoryName.value = label(c.name)
+}
+
+async function saveRenameCategory(c) {
+  if (!editingCategoryName.value.trim()) { editingCategoryId.value = null; return }
+  const ok = await finance.renameCategory(c.id, editingCategoryName.value)
+  if (ok) {
+    ui.showToast('Category renamed', 'success')
+  } else {
+    ui.showToast('Failed to rename (duplicate name)', 'error')
+  }
+  editingCategoryId.value = null
+}
+
+async function archiveCategoryFn(c) {
+  await finance.toggleArchiveCategory(c.id)
+  ui.showToast(c.archived ? 'Category archived' : 'Category restored', 'success')
 }
 
 const latest = computed(() => finance.latestNetworth)
@@ -218,7 +275,7 @@ const latestCfTotals = computed(() => finance.periodTotals(latestCf.value))
       <form @submit.prevent="addCategoryFn" class="card p-5 mb-10 flex flex-wrap gap-3 items-end" data-testid="add-category-form">
         <label class="flex-1 min-w-[140px]">
           <span class="overline block mb-1">Scope</span>
-          <select v-model="newCatScope" class="input-block text-sm" data-testid="new-category-scope">
+          <select v-model="newCatScope" @change="newCatGroup = scopeGroups[newCatScope][0]" class="input-block text-sm" data-testid="new-category-scope">
             <optgroup label="Net worth">
               <option value="asset">Asset</option>
               <option value="liability">Liability</option>
@@ -228,6 +285,12 @@ const latestCfTotals = computed(() => finance.periodTotals(latestCf.value))
               <option value="expense">Expense</option>
               <option value="investment">Investment</option>
             </optgroup>
+          </select>
+        </label>
+        <label class="flex-1 min-w-[140px]">
+          <span class="overline block mb-1">Type</span>
+          <select v-model="newCatGroup" class="input-block text-sm" data-testid="new-category-group">
+            <option v-for="g in scopeGroups[newCatScope]" :key="g" :value="g">{{ g }}</option>
           </select>
         </label>
         <label class="flex-1 min-w-[200px]">
@@ -242,14 +305,56 @@ const latestCfTotals = computed(() => finance.periodTotals(latestCf.value))
         <h3 class="overline mb-3">{{ group.label }}</h3>
         <div class="flex flex-wrap gap-2" :data-testid="`category-group-${group.scope}`">
           <span v-for="c in finance.categoriesForScope(group.scope)" :key="c.id"
-                class="group inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-line bg-surface text-sm capitalize hover:border-line-2 transition-colors duration-300"
+                class="group inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-line bg-surface text-sm capitalize hover:border-line-2 transition-all duration-300"
+                :class="c.archived ? 'opacity-70 bg-elevated/40 border-dashed' : ''"
                 :data-testid="`category-${group.scope}-${c.name}`">
-            <Tag class="w-3 h-3 text-ink-3" />
-            {{ label(c.name) }}
-            <button @click="removeCategoryFn(c)" class="ml-1 opacity-0 group-hover:opacity-100 hover:text-pri-critical transition-opacity"
-                    :data-testid="`category-remove-${c.id}`" :title="`Remove ${c.name}`">
-              <X class="w-3 h-3" />
-            </button>
+            <Tag class="w-3 h-3 text-ink-3 shrink-0" />
+            
+            <template v-if="editingCategoryId === c.id">
+              <input 
+                v-model="editingCategoryName"
+                @keydown.enter="saveRenameCategory(c)"
+                @keydown.esc="editingCategoryId = null"
+                @blur="saveRenameCategory(c)"
+                class="bg-transparent border-b border-line focus:outline-none w-24 text-sm font-sans"
+                autofocus
+              />
+            </template>
+            <template v-else>
+              <span 
+                @dblclick="startRenameCategory(c)" 
+                :class="c.archived ? 'line-through text-ink-3' : 'text-ink'" 
+                class="cursor-text flex items-center gap-1.5"
+                :title="c.archived ? 'Archived (Double click to rename)' : 'Double click to rename'"
+              >
+                {{ label(c.name) }}
+                <span v-if="c.group" class="text-[9px] uppercase tracking-wider text-ink-3 border border-line rounded px-1">{{ c.group }}</span>
+              </span>
+            </template>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-1.5 ml-1 select-none">
+              <button 
+                v-if="editingCategoryId !== c.id"
+                @click="startRenameCategory(c)" 
+                class="opacity-0 group-hover:opacity-100 hover:text-ink transition-opacity" 
+                title="Rename category"
+              >
+                <Edit3 class="w-3 h-3 text-ink-3" />
+              </button>
+              <button 
+                @click="archiveCategoryFn(c)" 
+                class="opacity-0 group-hover:opacity-100 transition-opacity" 
+                :class="c.archived ? 'text-pri-strategic hover:opacity-100' : 'text-ink-3 hover:text-pri-interruptive'"
+                :title="c.archived ? 'Restore category' : 'Archive category'"
+              >
+                <Archive class="w-3 h-3" />
+              </button>
+              <button @click="removeCategoryFn(c)" class="opacity-0 group-hover:opacity-100 hover:text-pri-critical transition-opacity"
+                      :data-testid="`category-remove-${c.id}`" :title="`Remove ${c.name}`">
+                <X class="w-3 h-3 text-ink-3" />
+              </button>
+            </div>
           </span>
           <span v-if="!finance.categoriesForScope(group.scope).length" class="text-sm text-ink-3 italic">None yet.</span>
         </div>

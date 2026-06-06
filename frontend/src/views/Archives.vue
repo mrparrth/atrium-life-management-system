@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
+import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { fromNow } from '@/lib/date'
@@ -10,11 +11,13 @@ import { FolderKanban, Trash2 } from 'lucide-vue-next'
 
 const projects = useProjectsStore()
 const tasks = useTasksStore()
+const ui = useUIStore()
+
 const archived = computed(() => projects.items.filter(p => p.status === 'archived' || p.status === 'completed'))
 const completedTasks = computed(() => tasks.items.filter(t => t.status === 'done'))
 
 async function restoreProject(p) { await projects.update(p.id, { status: 'active' }) }
-async function deleteProject(p) { if (confirm('Permanently delete?')) await projects.remove(p.id) }
+async function deleteProject(p) { if (await ui.confirm({ message: 'Permanently delete this project?', title: 'Delete Project' })) await projects.remove(p.id) }
 </script>
 
 <template>

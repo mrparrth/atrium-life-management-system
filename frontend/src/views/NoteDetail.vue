@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useNotesStore } from '@/stores/notes'
 import { useProjectsStore } from '@/stores/projects'
+import { useUIStore } from '@/stores/ui'
 import { marked } from 'marked'
 import EmptyState from '@/components/EmptyState.vue'
 import { wikilinkPreprocess, backlinksOf, findWikiTargets, resolveTitle } from '@/lib/wikilinks'
@@ -12,6 +13,8 @@ const props = defineProps({ id: String })
 const router = useRouter()
 const notes = useNotesStore()
 const projects = useProjectsStore()
+const ui = useUIStore()
+
 
 const note = computed(() => notes.items.find(n => n.id === props.id))
 const editing = ref(false)
@@ -60,7 +63,7 @@ async function save() {
   await notes.update(note.value.id, { title: draftTitle.value, body: draftBody.value })
   editing.value = false
 }
-async function del() { if (confirm('Delete this note?')) { await notes.remove(props.id); router.push('/notes') } }
+async function del() { if (await ui.confirm({ message: 'Delete this note?', title: 'Delete Note' })) { await notes.remove(props.id); router.push('/notes') } }
 
 // ───── Wiki-link autosuggest typing handler
 function onBodyInput(e) {

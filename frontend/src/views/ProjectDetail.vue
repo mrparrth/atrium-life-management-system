@@ -41,9 +41,9 @@ const progress = computed(() => {
 onMounted(() => { if (project.value) projects.markViewed(project.value.id) })
 watch(() => props.id, (id) => { if (id && project.value) projects.markViewed(id) })
 
-async function archive() { if (confirm('Archive this project?')) { await projects.archive(props.id); router.push('/projects') } }
+async function archive() { if (await ui.confirm({ message: 'Archive this project?', title: 'Archive Project' })) { await projects.archive(props.id); router.push('/projects') } }
 async function complete() { await projects.complete(props.id); ui.showToast('Project marked complete', 'success') }
-async function remove() { if (confirm('Delete this project?')) { await projects.remove(props.id); router.push('/projects') } }
+async function remove() { if (await ui.confirm({ message: 'Delete this project?', title: 'Delete Project' })) { await projects.remove(props.id); router.push('/projects') } }
 </script>
 
 <template>

@@ -39,19 +39,35 @@ const navItems = [
   { type: 'nav', label: 'Reviews', to: '/reviews', icon: 'home' },
 ]
 
+const extraNav = [
+  { type: 'nav', label: 'View Networth', action: () => { ui.closeCommand(); router.push('/finance?tab=networth') }, icon: 'wallet' },
+  { type: 'nav', label: 'View CashFlow', action: () => { ui.closeCommand(); router.push('/finance?tab=cashflow') }, icon: 'wallet' },
+  { type: 'nav', label: 'Modify Categories', action: () => { ui.closeCommand(); router.push('/finance?tab=categories') }, icon: 'wallet' },
+  { type: 'nav', label: 'Year Summary', action: () => { ui.closeCommand(); router.push('/summary?tab=yearly') }, icon: 'goal' },
+  { type: 'nav', label: 'YoY summary', action: () => { ui.closeCommand(); router.push('/summary?tab=yoy') }, icon: 'goal' },
+]
+
+const quickActions = [
+  { type: 'action', label: 'Quick capture a task', kbd: '⌘N', action: () => { ui.closeCommand(); ui.openQuickCapture() } },
+  { type: 'action', label: 'New Project', action: () => { ui.closeCommand(); router.push('/projects?new=1') } },
+  { type: 'action', label: 'New Note', action: () => { ui.closeCommand(); router.push('/notes?new=1') } },
+  { type: 'action', label: 'New Bookmark', action: () => { ui.closeCommand(); router.push('/bookmarks?new=bookmark') } },
+  { type: 'action', label: 'New Collection', action: () => { ui.closeCommand(); router.push('/bookmarks?new=collection') } },
+  { type: 'action', label: 'Log Networth', action: () => { ui.closeCommand(); router.push('/finance?new=nw') } },
+  { type: 'action', label: "Log a Month's Cashflow", action: () => { ui.closeCommand(); router.push('/finance?new=cf') } },
+]
+
 const results = computed(() => {
   const term = q.value.trim().toLowerCase()
   if (!term) {
     return [
-      { group: 'Quick actions', items: [
-        { type: 'action', label: 'Quick capture a task', kbd: '⌘N', action: () => { ui.closeCommand(); ui.openQuickCapture() } },
-        { type: 'action', label: 'Toggle theme', action: () => { ui.toggleTheme(); ui.closeCommand() } },
-      ]},
-      { group: 'Jump to', items: navItems.slice(0, 8) },
+      { group: 'Quick actions', items: quickActions },
+      { group: 'Jump to', items: extraNav }
     ]
   }
   const match = (s) => (s || '').toLowerCase().includes(term)
-  const nav = navItems.filter(n => match(n.label))
+  const nav = [...navItems, ...extraNav].filter(n => match(n.label))
+  const qa = quickActions.filter(a => match(a.label))
   const t = tasks.items.filter(t => match(t.title) || match(t.description)).slice(0, 8).map(t => ({ type: 'task', label: t.title, to: `/tasks`, item: t }))
   const p = projects.items.filter(p => match(p.title) || match(p.description)).slice(0, 6).map(p => ({ type: 'project', label: p.title, to: `/projects/${p.id}`, item: p }))
   const n = notes.items.filter(n => match(n.title) || match(n.body)).slice(0, 6).map(n => ({ type: 'note', label: n.title, to: `/notes/${n.id}`, item: n }))
@@ -59,6 +75,7 @@ const results = computed(() => {
   const g = goals.items.filter(g => match(g.title)).slice(0, 4).map(g => ({ type: 'goal', label: g.title, to: '/goals', item: g }))
 
   const groups = []
+  if (qa.length) groups.push({ group: 'Quick actions', items: qa })
   if (nav.length) groups.push({ group: 'Jump to', items: nav })
   if (t.length) groups.push({ group: 'Tasks', items: t })
   if (p.length) groups.push({ group: 'Projects', items: p })
@@ -85,6 +102,16 @@ function onKey(e) {
   if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx.value = Math.min(flatItems.value.length - 1, activeIdx.value + 1) }
   if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx.value = Math.max(0, activeIdx.value - 1) }
   if (e.key === 'Enter') { e.preventDefault(); const item = flatItems.value[activeIdx.value]; if (item) run(item) }
+  
+  if (e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey) {
+    const num = parseInt(e.key)
+    if (!isNaN(num)) {
+      e.preventDefault()
+      const index = num === 0 ? 9 : num - 1
+      const item = flatItems.value[index]
+      if (item) run(item)
+    }
+  }
 }
 </script>
 
@@ -94,15 +121,12 @@ function onKey(e) {
     <div class="relative w-full max-w-2xl card overflow-hidden shadow-2xl shadow-black/20 animate-rise-in">
       <div class="flex items-center gap-3 px-5 py-4 border-b border-line">
         <Search class="w-4 h-4 text-ink-3" />
-        <input
-          ref="inputEl"
-          v-model="q"
-          @keydown="onKey"
-          placeholder="Search tasks, projects, notes, bookmarks…"
+        <input ref="inputEl" v-model="q" @keydown="onKey" placeholder="Search tasks, projects, notes, bookmarks…"
           class="flex-1 bg-transparent outline-none text-ink placeholder:text-ink-3 text-base"
-          data-testid="command-input"
-        />
-        <button class="btn-ghost !p-1.5" @click="ui.closeCommand" data-testid="command-close"><X class="w-4 h-4" /></button>
+          data-testid="command-input" />
+        <button class="btn-ghost !p-1.5" @click="ui.closeCommand" data-testid="command-close">
+          <X class="w-4 h-4" />
+        </button>
       </div>
 
       <div class="max-h-[60vh] overflow-y-auto px-2 py-2">
@@ -110,25 +134,26 @@ function onKey(e) {
           <div v-for="group in results" :key="group.group" class="mb-2">
             <div class="overline px-3 py-2">{{ group.group }}</div>
             <ul>
-              <li v-for="(item, i) in group.items"
-                  :key="(item.to || item.label) + i"
-                  :class="[
-                    'flex items-center justify-between gap-3 px-3 py-2 rounded-xl cursor-pointer text-sm transition-colors duration-200',
-                    flatItems.indexOf(item) === activeIdx ? 'bg-elevated text-ink' : 'text-ink-2 hover:bg-elevated/60'
-                  ]"
-                  @mouseenter="activeIdx = flatItems.indexOf(item)"
-                  @click="run(item)"
-                  :data-testid="`command-result-${item.type}`">
+              <li v-for="(item, i) in group.items" :key="(item.to || item.label) + i" :class="[
+                'flex items-center justify-between gap-3 px-3 py-2 rounded-xl cursor-pointer text-sm transition-colors duration-200',
+                flatItems.indexOf(item) === activeIdx ? 'bg-elevated text-ink' : 'text-ink-2 hover:bg-elevated/60'
+              ]" @mouseenter="activeIdx = flatItems.indexOf(item)" @click="run(item)"
+                :data-testid="`command-result-${item.type}`">
                 <span class="flex items-center gap-3 min-w-0">
                   <component :is="iconFor(item.type)" class="w-4 h-4 text-ink-3 shrink-0" />
                   <span class="truncate">{{ item.label }}</span>
                 </span>
-                <span v-if="item.kbd" class="kbd">{{ item.kbd }}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span v-if="item.kbd" class="kbd">{{ item.kbd }}</span>
+                  <span v-else-if="flatItems.indexOf(item) < 10" class="kbd text-ink-3">⌘{{ flatItems.indexOf(item) === 9 ? 0 : flatItems.indexOf(item) + 1 }}</span>
+                </div>
               </li>
             </ul>
           </div>
         </template>
-        <div v-else class="px-5 py-10 text-center text-ink-3 text-sm font-serif italic">Nothing here yet — try a different word.</div>
+        <div v-else class="px-5 py-10 text-center text-ink-3 text-sm font-serif italic">Nothing here yet — try a
+          different word.
+        </div>
       </div>
 
       <div class="px-4 py-2.5 border-t border-line flex items-center gap-4 text-[11px] text-ink-3">

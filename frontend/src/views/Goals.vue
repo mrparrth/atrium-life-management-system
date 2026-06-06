@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useGoalsStore } from '@/stores/goals'
 import { useYearsStore } from '@/stores/years'
 import { useProjectsStore } from '@/stores/projects'
+import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { Plus, X, Target, Trash2 } from 'lucide-vue-next'
@@ -10,6 +11,8 @@ import { Plus, X, Target, Trash2 } from 'lucide-vue-next'
 const goals = useGoalsStore()
 const years = useYearsStore()
 const projects = useProjectsStore()
+const ui = useUIStore()
+
 const showNew = ref(false)
 const newTitle = ref(''); const newDesc = ref(''); const newYear = ref(null)
 
@@ -22,7 +25,7 @@ async function create() {
   newTitle.value = ''; newDesc.value = ''; newYear.value = null; showNew.value = false
 }
 async function removeGoal(g) {
-  if (!confirm(`Delete goal "${g.title}"? Linked projects will remain.`)) return
+  if (!await ui.confirm({ message: `Delete goal "${g.title}"? Linked projects will remain.`, title: 'Delete Goal' })) return
   await goals.remove(g.id)
 }
 </script>

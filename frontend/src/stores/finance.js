@@ -11,7 +11,19 @@ export const useFinanceStore = defineStore('finance', () => {
     await ensureDefaultCategories()
     networthLogs.value = (await db.finance_networth_logs.toArray()).sort((a, b) => b.date.localeCompare(a.date))
     cashflowPeriods.value = (await db.finance_cashflow_periods.toArray()).sort((a, b) => b.month.localeCompare(a.month))
-    categories.value = (await db.finance_categories.toArray()).sort((a, b) => a.name.localeCompare(b.name))
+    
+    let cats = await db.finance_categories.toArray()
+    let migrated = false
+    const fallbackGroup = { asset: 'Liquid', liability: 'Short-term', income: 'Active', expense: 'Need', investment: 'Equity' }
+    for (const c of cats) {
+      if (!c.group) {
+        c.group = fallbackGroup[c.scope] || 'One-Off'
+        await db.finance_categories.put(plain(c))
+        migrated = true
+      }
+    }
+    if (migrated) cats = await db.finance_categories.toArray()
+    categories.value = cats.sort((a, b) => a.name.localeCompare(b.name))
   }
 
   // ───── Net worth helpers
@@ -108,16 +120,82 @@ export const useFinanceStore = defineStore('finance', () => {
 
   // ───── Categories CRUD
   function categoriesForScope(scope) { return categories.value.filter(c => c.scope === scope) }
-  async function addCategory(scope, name) {
+  
+  function visibleCategoriesForScope(scope, initialRecord = null) {
+    const list = categories.value.filter(c => c.scope === scope)
+    if (!initialRecord) {
+      return list.filter(c => !c.archived)
+    }
+    const activeCats = new Set((initialRecord.entries || []).map(e => e.category))
+    return list.filter(c => !c.archived || activeCats.has(c.name))
+  }
+
+  async function addCategory(scope, name, group = 'One-Off') {
     const trimmed = (name || '').trim().toLowerCase().replace(/\s+/g, '_')
     if (!trimmed) return null
     if (categories.value.some(c => c.scope === scope && c.name === trimmed)) return null
-    const c = { id: newId(), scope, name: trimmed, createdAt: now() }
+    const c = { id: newId(), scope, name: trimmed, group, archived: false, createdAt: now() }
     await db.finance_categories.add(c)
     categories.value.push(c)
     categories.value.sort((a, b) => a.name.localeCompare(b.name))
     return c
   }
+
+  async function renameCategory(id, name) {
+    const trimmed = (name || '').trim().toLowerCase().replace(/\s+/g, '_')
+    if (!trimmed) return false
+    const c = categories.value.find(x => x.id === id)
+    if (!c) return false
+    if (c.name === trimmed) return true
+    
+    if (categories.value.some(x => x.scope === c.scope && x.name === trimmed)) return false
+    
+    const oldName = c.name
+    c.name = trimmed
+    await db.finance_categories.put(plain(c))
+    
+    // Propagate rename to networthLogs
+    const typeFilter = c.scope === 'asset' ? 'asset' : c.scope === 'liability' ? 'liability' : ''
+    if (typeFilter) {
+      for (const log of networthLogs.value) {
+        let changed = false
+        for (const e of log.entries || []) {
+          if (e.type === typeFilter && e.category === oldName) {
+            e.category = trimmed
+            changed = true
+          }
+        }
+        if (changed) {
+          await db.finance_networth_logs.put(plain(log))
+        }
+      }
+    }
+    
+    // Propagate rename to cashflowPeriods
+    for (const p of cashflowPeriods.value) {
+      let changed = false
+      for (const e of p.entries || []) {
+        if (e.type === c.scope && e.category === oldName) {
+          e.category = trimmed
+          changed = true
+        }
+      }
+      if (changed) {
+        await db.finance_cashflow_periods.put(plain(p))
+      }
+    }
+    
+    categories.value.sort((a, b) => a.name.localeCompare(b.name))
+    return true
+  }
+
+  async function toggleArchiveCategory(id) {
+    const c = categories.value.find(x => x.id === id)
+    if (!c) return
+    c.archived = !c.archived
+    await db.finance_categories.put(plain(c))
+  }
+
   async function removeCategory(id) {
     await db.finance_categories.delete(id)
     categories.value = categories.value.filter(c => c.id !== id)
@@ -131,6 +209,6 @@ export const useFinanceStore = defineStore('finance', () => {
     load,
     addNetworthLog, updateNetworthLog, removeNetworthLog,
     addCashflowPeriod, updateCashflowPeriod, removeCashflowPeriod,
-    categoriesForScope, addCategory, removeCategory,
+    categoriesForScope, visibleCategoriesForScope, addCategory, renameCategory, toggleArchiveCategory, removeCategory,
   }
 })

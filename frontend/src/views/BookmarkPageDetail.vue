@@ -57,10 +57,10 @@ async function createBookmark() {
 }
 
 async function openBookmark(b) { await bookmarks.markViewed(b.id); window.open(b.url, '_blank') }
-async function remove(b) { if (confirm('Remove bookmark?')) await bookmarks.remove(b.id) }
+async function remove(b) { if (await ui.confirm({ message: 'Remove bookmark?', title: 'Remove Bookmark' })) await bookmarks.remove(b.id) }
 async function detach(b) { await bookmarks.update(b.id, { pageId: null }); ui.showToast('Moved to loose bookmarks', 'success') }
 async function removePage() {
-  if (!confirm(`Remove "${page.value.title}"? Bookmarks inside will be detached, not deleted.`)) return
+  if (!await ui.confirm({ message: `Remove "${page.value.title}"? Bookmarks inside will be detached, not deleted.`, title: 'Remove Collection' })) return
   await bookmarks.removePage(props.id)
   router.push('/bookmarks')
 }

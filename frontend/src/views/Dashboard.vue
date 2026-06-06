@@ -53,6 +53,29 @@ const memory = computed(() => memoryResurfacing(notes.items, bookmarks.items))
 const sparkData = computed(() => finance.networthSeries.map(s => s.value))
 const netWorthFormatted = computed(() => inr(finance.currentNetWorth ?? 0))
 
+const projection5y = computed(() => {
+  const current = finance.currentNetWorth || 0
+  if (!finance.cashflowPeriods.length && current === 0) return '—'
+
+  let totalSaved = 0
+  finance.cashflowPeriods.forEach(p => {
+    const t = finance.periodTotals(p)
+    totalSaved += (t.net + t.investment)
+  })
+  const avgMonthlySaved = finance.cashflowPeriods.length ? (totalSaved / finance.cashflowPeriods.length) : 0
+
+  // 5% annual return assumption
+  const monthlyReturn = 0.05 / 12
+  const months = 60
+
+  let futureValue = current
+  for (let i = 0; i < months; i++) {
+    futureValue = futureValue * (1 + monthlyReturn) + avgMonthlySaved
+  }
+
+  return inr(Math.round(futureValue))
+})
+
 const lastWeeklyReview = computed(() => reviews.items.find(r => r.type === 'weekly'))
 
 // Daily journal — creates or opens today's journal note pre-filled with yesterday link + prompts
@@ -84,7 +107,8 @@ async function openDailyJournal() {
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-6xl mx-auto" data-testid="dashboard">
-    <PageHeader :overline="todayDate" :title="`${greeting}.`" :sub="currentYear?.theme || 'A quiet system for the things that matter.'">
+    <PageHeader :overline="todayDate" :title="`${greeting}.`"
+      :sub="currentYear?.theme || 'A quiet system for the things that matter.'">
       <template #right>
         <button class="btn-ghost" @click="openDailyJournal" data-testid="dash-journal-btn">
           <BookOpen class="w-4 h-4" /> Journal
@@ -101,9 +125,12 @@ async function openDailyJournal() {
 
     <!-- TODAY FOCUS -->
     <section class="mb-12" data-testid="section-today-focus">
-      <SectionHeader overline="Today" title="Today focus" :hint="focus.length ? 'A few quiet things to attend to.' : 'Nothing scheduled — the day is open.'">
+      <SectionHeader overline="Today" title="Today focus"
+        :hint="focus.length ? 'A few quiet things to attend to.' : 'Nothing scheduled — the day is open.'">
         <template #right>
-          <RouterLink to="/today" class="btn-ghost text-sm">Open today <ArrowRight class="w-3 h-3" /></RouterLink>
+          <RouterLink to="/today" class="btn-ghost text-sm">Open today
+            <ArrowRight class="w-3 h-3" />
+          </RouterLink>
         </template>
       </SectionHeader>
       <div v-if="focus.length" class="space-y-3">
@@ -125,7 +152,8 @@ async function openDailyJournal() {
 
       <!-- Recently ignored -->
       <section data-testid="section-recently-ignored">
-        <SectionHeader overline="Resurfaced" title="Recently ignored" hint="Untouched for a while — still worthwhile?" />
+        <SectionHeader overline="Resurfaced" title="Recently ignored"
+          hint="Untouched for a while — still worthwhile?" />
         <div v-if="ignored.length" class="space-y-3">
           <TaskCard v-for="t in ignored" :key="t.id" :task="t" />
         </div>
@@ -136,7 +164,8 @@ async function openDailyJournal() {
     <!-- MOMENTUM & UPCOMING -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
       <section data-testid="section-momentum">
-        <SectionHeader overline="Strategic" title="Momentum opportunities" hint="Important, not urgent. The good kind of work." />
+        <SectionHeader overline="Strategic" title="Momentum opportunities"
+          hint="Important, not urgent. The good kind of work." />
         <div v-if="momentum.length" class="space-y-3">
           <TaskCard v-for="t in momentum" :key="t.id" :task="t" />
         </div>
@@ -155,16 +184,22 @@ async function openDailyJournal() {
     <!-- STALE PROJECTS -->
     <section class="mb-12" data-testid="section-stale">
       <SectionHeader overline="Drifting" title="Stale projects" hint="Quietly paused — return when you're ready.">
-        <template #right><RouterLink to="/projects" class="btn-ghost text-sm">All projects <ArrowRight class="w-3 h-3" /></RouterLink></template>
+        <template #right>
+          <RouterLink to="/projects" class="btn-ghost text-sm">All projects
+            <ArrowRight class="w-3 h-3" />
+          </RouterLink>
+        </template>
       </SectionHeader>
       <div v-if="stale.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <RouterLink v-for="p in stale" :key="p.id" :to="`/projects/${p.id}`"
-                    class="card p-5 hover:border-line-2 transition-all duration-300 group"
-                    :data-testid="`stale-project-${p.id}`">
-          <div class="flex items-center gap-2 mb-3"><FolderKanban class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Project</span></div>
+          class="card p-5 hover:border-line-2 transition-all duration-300 group" :data-testid="`stale-project-${p.id}`">
+          <div class="flex items-center gap-2 mb-3">
+            <FolderKanban class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Project</span>
+          </div>
           <div class="font-serif text-xl text-ink mb-1">{{ p.title }}</div>
           <p v-if="p.description" class="text-sm text-ink-2 line-clamp-2">{{ p.description }}</p>
-          <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(p.lastViewedAt) }} · {{ p.openTaskCount }} open task<template v-if="p.openTaskCount !== 1">s</template></div>
+          <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(p.lastViewedAt) }} · {{ p.openTaskCount }} open
+            task<template v-if="p.openTaskCount !== 1">s</template></div>
         </RouterLink>
       </div>
       <EmptyState v-else title="Everything is in motion" hint="No project has gone quiet." />
@@ -175,30 +210,45 @@ async function openDailyJournal() {
       <section data-testid="section-memory">
         <SectionHeader overline="Memory" title="Resurfacing" hint="Notes and bookmarks worth revisiting." />
         <div class="space-y-3">
-          <RouterLink v-for="n in memory.notes.slice(0, 2)" :key="n.id" :to="`/notes/${n.id}`" class="card p-4 block hover:border-line-2 transition-all duration-300" :data-testid="`resurface-note-${n.id}`">
-            <div class="flex items-center gap-2"><NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt) }}</span></div>
+          <RouterLink v-for="n in memory.notes.slice(0, 2)" :key="n.id" :to="`/notes/${n.id}`"
+            class="card p-4 block hover:border-line-2 transition-all duration-300"
+            :data-testid="`resurface-note-${n.id}`">
+            <div class="flex items-center gap-2">
+              <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
+              }}</span>
+            </div>
             <div class="font-serif text-lg mt-1.5">{{ n.title }}</div>
             <p class="text-sm text-ink-2 mt-1 line-clamp-2">{{ n.body }}</p>
           </RouterLink>
           <a v-for="b in memory.bookmarks.slice(0, 2)" :key="b.id" :href="b.url" target="_blank"
-             class="card p-4 block hover:border-line-2 transition-all duration-300" :data-testid="`resurface-bookmark-${b.id}`">
-            <div class="flex items-center gap-2"><Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{ fromNow(b.lastViewedAt) }}</span></div>
+            class="card p-4 block hover:border-line-2 transition-all duration-300"
+            :data-testid="`resurface-bookmark-${b.id}`">
+            <div class="flex items-center gap-2">
+              <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{ fromNow(b.lastViewedAt)
+              }}</span>
+            </div>
             <div class="font-serif text-lg mt-1.5">{{ b.title }}</div>
             <p class="text-sm text-ink-2 mt-1 truncate">{{ b.url }}</p>
           </a>
-          <EmptyState v-if="!memory.notes.length && !memory.bookmarks.length" title="Memory is fresh" hint="Nothing to resurface yet." />
+          <EmptyState v-if="!memory.notes.length && !memory.bookmarks.length" title="Memory is fresh"
+            hint="Nothing to resurface yet." />
         </div>
       </section>
 
       <section data-testid="section-finance">
         <SectionHeader overline="Snapshot" title="Finance">
-          <template #right><RouterLink to="/finance" class="btn-ghost text-sm">Open <ArrowRight class="w-3 h-3" /></RouterLink></template>
+          <template #right>
+            <RouterLink to="/finance" class="btn-ghost text-sm">Open
+              <ArrowRight class="w-3 h-3" />
+            </RouterLink>
+          </template>
         </SectionHeader>
         <div class="card p-6" data-testid="finance-snapshot-card">
           <div class="flex items-baseline justify-between">
             <div>
               <div class="overline">Net worth</div>
-              <div class="font-serif text-4xl tracking-tight mt-1" data-testid="net-worth-value">{{ netWorthFormatted }}</div>
+              <div class="font-serif text-4xl tracking-tight mt-1" data-testid="net-worth-value">{{ netWorthFormatted }}
+              </div>
             </div>
             <div class="text-right">
               <div class="overline">in 5 years</div>
@@ -220,15 +270,17 @@ async function openDailyJournal() {
         <div>
           <div class="font-serif text-2xl">What did this week make of me?</div>
           <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
-          <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{ fromNow(lastWeeklyReview.createdAt) }}</p>
+          <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
+            fromNow(lastWeeklyReview.createdAt)
+          }}</p>
         </div>
         <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
       </div>
     </section>
   </div>
 </template>
-btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
+<!-- btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
       </div>
     </section>
   </div>
-</template>
+</template> -->

@@ -13,14 +13,17 @@ import { useAreasStore } from '@/stores/areas'
 import { useReviewsStore } from '@/stores/reviews'
 import { useNextStepsStore } from '@/stores/nextSteps'
 import { db, seedIfEmpty } from '@/db'
+import { backup as driveBackup, isConnected, lastBackupAt } from '@/services/drive'
 
 import AppSidebar from '@/components/AppSidebar.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
 import QuickCapture from '@/components/QuickCapture.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ToastHost from '@/components/ToastHost.vue'
 
 const ui = useUIStore()
 const route = useRoute()
+
 
 onMounted(async () => {
   await db.open()
@@ -40,16 +43,31 @@ onMounted(async () => {
 
   window.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault(); ui.openCommand()
+      e.preventDefault(); ui.closeQuickCapture(); ui.openCommand()
     }
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
-      e.preventDefault(); ui.openQuickCapture()
+      e.preventDefault(); ui.closeCommand(); ui.openQuickCapture()
     }
     if (e.key === 'Escape') {
       if (ui.commandOpen) ui.closeCommand()
       if (ui.quickCaptureOpen) ui.closeQuickCapture()
     }
   })
+
+  // Auto backup check
+  function checkAutoBackup() {
+    if (!isConnected()) return
+    const last = lastBackupAt()
+    const today = new Date().toISOString().slice(0, 10)
+    const lastDate = last ? new Date(last).toISOString().slice(0, 10) : null
+
+    if (today !== lastDate) {
+      driveBackup().catch(err => console.error("Auto-backup failed:", err))
+    }
+  }
+
+  checkAutoBackup()
+  setInterval(checkAutoBackup, 1000 * 60 * 60) // Check every hour
 })
 
 watch(() => route.fullPath, () => {
@@ -70,6 +88,7 @@ watch(() => route.fullPath, () => {
     </main>
     <CommandPalette v-if="ui.commandOpen" />
     <QuickCapture v-if="ui.quickCaptureOpen" />
+    <ConfirmDialog v-if="ui.confirmState" />
     <ToastHost />
   </div>
 </template>

@@ -25,7 +25,7 @@ function startReview(t) { form.value = { type: t, wins: '', challenges: '', grat
 async function save() {
   await reviews.add(form.value); ui.showToast('Reflection saved', 'success'); showNew.value = false
 }
-async function remove(id) { if (confirm('Delete reflection?')) await reviews.remove(id) }
+async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?', title: 'Delete Reflection' })) await reviews.remove(id) }
 </script>
 
 <template>

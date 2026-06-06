@@ -6,9 +6,30 @@ import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { fromNow } from '@/lib/date'
 import { Plus, X, Search } from 'lucide-vue-next'
+import { onKeyStroke } from '@vueuse/core'
+import { useUIStore } from '@/stores/ui'
+
+const ui = useUIStore()
+
+import { useRoute, useRouter } from 'vue-router'
+const route = useRoute()
+const router = useRouter()
 
 const notes = useNotesStore()
 const showNew = ref(false)
+
+import { onMounted, watch } from 'vue'
+
+function handleQuery() {
+  if (route.query.new) {
+    showNew.value = true
+    router.replace({ query: {} })
+  }
+}
+
+onMounted(handleQuery)
+watch(() => route.query, handleQuery)
+
 const newTitle = ref(''); const newBody = ref('')
 const q = ref('')
 const filtered = computed(() => {
@@ -21,6 +42,20 @@ async function create() {
   const n = await notes.add({ title: newTitle.value, body: newBody.value })
   newTitle.value = ''; newBody.value = ''; showNew.value = false
 }
+
+async function closeNewNote() {
+  if (newTitle.value.trim() || newBody.value.trim()) {
+    if (!await ui.confirm({ title: 'Discard draft?', message: 'You have unsaved changes. Discard them?' })) return
+  }
+  showNew.value = false
+}
+
+onKeyStroke('Escape', (e) => {
+  if (showNew.value) {
+    e.preventDefault()
+    closeNewNote()
+  }
+})
 </script>
 
 <template>
@@ -47,15 +82,15 @@ async function create() {
     <EmptyState v-else title="No notes" hint="Begin writing what you'd otherwise forget." />
 
     <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNew = false"></div>
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="closeNewNote"></div>
       <form @submit.prevent="create" class="relative w-full max-w-xl card p-8 animate-rise-in">
-        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false"><X class="w-4 h-4" /></button>
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeNewNote"><X class="w-4 h-4" /></button>
         <div class="overline">New note</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A page of your own</h2>
         <input v-model="newTitle" placeholder="Title…" class="input-soft text-lg font-serif mb-3" required data-testid="new-note-title" />
         <textarea v-model="newBody" placeholder="Write freely. Markdown welcome." rows="6" class="input-soft resize-none mb-5" data-testid="new-note-body" />
         <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="showNew = false">Cancel</button>
+          <button type="button" class="btn-ghost" @click="closeNewNote">Cancel</button>
           <button type="submit" class="btn-primary" data-testid="new-note-save">Save</button>
         </div>
       </form>

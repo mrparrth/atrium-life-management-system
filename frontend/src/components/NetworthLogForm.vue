@@ -4,6 +4,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
 import { inr } from '@/lib/money'
 import { X, Plus } from 'lucide-vue-next'
+import { onKeyStroke } from '@vueuse/core'
 
 const props = defineProps({
   initial: { type: Object, default: null }, // edit mode
@@ -23,7 +24,7 @@ function makeKey(type, category) { return `${type}::${category}` }
 function initValues() {
   const map = {}
   for (const scope of ['asset', 'liability']) {
-    for (const cat of finance.categoriesForScope(scope)) {
+    for (const cat of finance.visibleCategoriesForScope(scope, props.initial)) {
       map[makeKey(scope, cat.name)] = 0
     }
   }
@@ -63,6 +64,19 @@ async function save() {
   emit('close')
 }
 
+async function closeForm() {
+  const hasValues = Object.values(valuesMap.value).some(v => +v > 0)
+  if (hasValues || note.value.trim()) {
+    if (!await ui.confirm({ title: 'Discard draft?', message: 'You have unsaved changes. Discard them?' })) return
+  }
+  emit('close')
+}
+
+onKeyStroke('Escape', (e) => {
+  e.preventDefault()
+  closeForm()
+})
+
 const newCatName = ref({ asset: '', liability: '' })
 async function addCat(scope) {
   const r = await finance.addCategory(scope, newCatName.value[scope])
@@ -75,9 +89,9 @@ function label(name) { return (name || '').replace(/_/g, ' ') }
 
 <template>
   <div class="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4" data-testid="networth-form">
-    <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="$emit('close')"></div>
+    <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="closeForm"></div>
     <form @submit.prevent="save" class="relative w-full max-w-3xl card p-8 animate-rise-in max-h-[88vh] overflow-y-auto">
-      <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="$emit('close')"><X class="w-4 h-4" /></button>
+      <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeForm"><X class="w-4 h-4" /></button>
       <div class="overline">{{ initial ? 'Edit' : 'Log' }} net worth</div>
       <h2 class="font-serif text-3xl mt-1 mb-6">A picture of today</h2>
 
@@ -99,7 +113,7 @@ function label(name) { return (name || '').replace(/_/g, ' ') }
           <h3 class="overline">Assets</h3>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="nw-asset-grid">
-          <label v-for="c in finance.categoriesForScope('asset')" :key="c.id" class="card p-3 flex items-center gap-3" :data-testid="`nw-input-asset-${c.name}`">
+          <label v-for="c in finance.visibleCategoriesForScope('asset', props.initial)" :key="c.id" class="card p-3 flex items-center gap-3" :data-testid="`nw-input-asset-${c.name}`">
             <span class="flex-1 capitalize text-sm text-ink-2">{{ label(c.name) }}</span>
             <input type="number" min="0" step="any" v-model="valuesMap[`asset::${c.name}`]"
                    class="bg-transparent border-b border-line focus:border-line-2 text-right w-32 px-1 py-1 outline-none" placeholder="0" />
@@ -117,7 +131,7 @@ function label(name) { return (name || '').replace(/_/g, ' ') }
           <h3 class="overline">Liabilities</h3>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="nw-liability-grid">
-          <label v-for="c in finance.categoriesForScope('liability')" :key="c.id" class="card p-3 flex items-center gap-3" :data-testid="`nw-input-liability-${c.name}`">
+          <label v-for="c in finance.visibleCategoriesForScope('liability', props.initial)" :key="c.id" class="card p-3 flex items-center gap-3" :data-testid="`nw-input-liability-${c.name}`">
             <span class="flex-1 capitalize text-sm text-ink-2">{{ label(c.name) }}</span>
             <input type="number" min="0" step="any" v-model="valuesMap[`liability::${c.name}`]"
                    class="bg-transparent border-b border-line focus:border-line-2 text-right w-32 px-1 py-1 outline-none" placeholder="0" />
@@ -135,7 +149,7 @@ function label(name) { return (name || '').replace(/_/g, ' ') }
       </label>
 
       <div class="flex justify-end gap-2">
-        <button type="button" class="btn-ghost" @click="$emit('close')">Cancel</button>
+        <button type="button" class="btn-ghost" @click="closeForm">Cancel</button>
         <button type="submit" class="btn-primary" data-testid="nw-save">Save snapshot</button>
       </div>
     </form>

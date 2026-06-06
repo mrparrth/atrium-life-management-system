@@ -20,6 +20,7 @@ const routes = [
   { path: '/finance', name: 'finance', component: () => import('@/views/Finance.vue') },
   { path: '/reviews', name: 'reviews', component: () => import('@/views/Reviews.vue') },
   { path: '/settings', name: 'settings', component: () => import('@/views/Settings.vue') },
+  { path: '/summary', name: 'summary', component: () => import('@/views/Summary.vue') },
 ]
 
 const router = createRouter({

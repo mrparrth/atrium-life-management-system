@@ -2,12 +2,15 @@
 import { ref, computed } from 'vue'
 import { useAreasStore } from '@/stores/areas'
 import { useProjectsStore } from '@/stores/projects'
+import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { Plus, X, Trash2 } from 'lucide-vue-next'
 
 const areas = useAreasStore()
 const projects = useProjectsStore()
+const ui = useUIStore()
+
 const showNew = ref(false)
 const newName = ref(''); const newDesc = ref('')
 
@@ -19,7 +22,7 @@ async function create() {
   newName.value = ''; newDesc.value = ''; showNew.value = false
 }
 async function removeArea(a) {
-  if (!confirm(`Delete area "${a.name}"? Linked projects will remain.`)) return
+  if (!await ui.confirm({ message: `Delete area "${a.name}"? Linked projects will remain.`, title: 'Delete Area' })) return
   await areas.remove(a.id)
 }
 </script>

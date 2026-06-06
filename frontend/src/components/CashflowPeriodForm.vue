@@ -4,6 +4,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
 import { inr } from '@/lib/money'
 import { X, Plus } from 'lucide-vue-next'
+import { onKeyStroke } from '@vueuse/core'
 
 const props = defineProps({
   initial: { type: Object, default: null },
@@ -22,7 +23,7 @@ function makeKey(type, category) { return `${type}::${category}` }
 function initValues() {
   const map = {}
   for (const scope of ['income', 'expense', 'investment']) {
-    for (const cat of finance.categoriesForScope(scope)) {
+    for (const cat of finance.visibleCategoriesForScope(scope, props.initial)) {
       map[makeKey(scope, cat.name)] = 0
     }
   }
@@ -64,6 +65,19 @@ async function save() {
   emit('close')
 }
 
+async function closeForm() {
+  const hasValues = Object.values(valuesMap.value).some(v => +v > 0)
+  if (hasValues || note.value.trim()) {
+    if (!await ui.confirm({ title: 'Discard draft?', message: 'You have unsaved changes. Discard them?' })) return
+  }
+  emit('close')
+}
+
+onKeyStroke('Escape', (e) => {
+  e.preventDefault()
+  closeForm()
+})
+
 const newCatName = ref({ income: '', expense: '', investment: '' })
 async function addCat(scope) {
   const r = await finance.addCategory(scope, newCatName.value[scope])
@@ -81,9 +95,9 @@ const sectionMeta = {
 
 <template>
   <div class="fixed inset-0 z-50 flex items-start justify-center pt-10 px-4" data-testid="cashflow-form">
-    <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="$emit('close')"></div>
+    <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="closeForm"></div>
     <form @submit.prevent="save" class="relative w-full max-w-3xl card p-8 animate-rise-in max-h-[90vh] overflow-y-auto">
-      <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="$emit('close')"><X class="w-4 h-4" /></button>
+      <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeForm"><X class="w-4 h-4" /></button>
       <div class="overline">{{ initial ? 'Edit' : 'Log' }} a month</div>
       <h2 class="font-serif text-3xl mt-1 mb-6">A month, in numbers</h2>
 
@@ -103,7 +117,7 @@ const sectionMeta = {
       <div v-for="scope in ['income','expense','investment']" :key="scope" class="mb-8">
         <h3 class="overline mb-3" :class="`text-${sectionMeta[scope].tone}`">{{ sectionMeta[scope].label }}</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3" :data-testid="`cf-grid-${scope}`">
-          <label v-for="c in finance.categoriesForScope(scope)" :key="c.id" class="card p-3 flex items-center gap-3" :data-testid="`cf-input-${scope}-${c.name}`">
+          <label v-for="c in finance.visibleCategoriesForScope(scope, props.initial)" :key="c.id" class="card p-3 flex items-center gap-3" :data-testid="`cf-input-${scope}-${c.name}`">
             <span class="flex-1 capitalize text-sm text-ink-2">{{ label(c.name) }}</span>
             <input type="number" min="0" step="any" v-model="valuesMap[`${scope}::${c.name}`]"
                    class="bg-transparent border-b border-line focus:border-line-2 text-right w-32 px-1 py-1 outline-none" placeholder="0" />
@@ -121,7 +135,7 @@ const sectionMeta = {
       </label>
 
       <div class="flex justify-end gap-2">
-        <button type="button" class="btn-ghost" @click="$emit('close')">Cancel</button>
+        <button type="button" class="btn-ghost" @click="closeForm">Cancel</button>
         <button type="submit" class="btn-primary" data-testid="cf-save">Save month</button>
       </div>
     </form>

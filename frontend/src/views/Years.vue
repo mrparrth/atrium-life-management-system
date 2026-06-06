@@ -2,12 +2,15 @@
 import { ref, computed } from 'vue'
 import { useYearsStore } from '@/stores/years'
 import { useGoalsStore } from '@/stores/goals'
+import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { Plus, X, Trash2 } from 'lucide-vue-next'
 
 const years = useYearsStore()
 const goals = useGoalsStore()
+const ui = useUIStore()
+
 
 const showNew = ref(false)
 const newYear = ref(new Date().getFullYear() + 1)
@@ -19,7 +22,7 @@ async function create() {
   newTheme.value = ''; showNew.value = false
 }
 async function removeYear(y) {
-  if (!confirm(`Delete ${y.year}? Its goals will remain.`)) return
+  if (!await ui.confirm({ message: `Delete ${y.year}? Its goals will remain.`, title: 'Delete Year' })) return
   await years.remove(y.id)
 }
 </script>
