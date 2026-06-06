@@ -12,14 +12,14 @@ import { useYearsStore } from '@/stores/years'
 import { useUIStore } from '@/stores/ui'
 import { todayFocus, upcomingTasks, recentlyIgnored, momentumOpportunities, staleProjects, memoryResurfacing, criticalCount, isTaskOpen } from '@/lib/resurface'
 import { fromNow } from '@/lib/date'
-import { inr, inrCompact } from '@/lib/money'
+import { inr } from '@/lib/money'
 
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import Sparkline from '@/components/Sparkline.vue'
-import { ArrowRight, Plus, FolderKanban, NotebookPen, Bookmark, Wallet, Calendar as CalIcon } from 'lucide-vue-next'
+import { ArrowRight, Plus, FolderKanban, NotebookPen, Bookmark, Wallet, Calendar as CalIcon, BookOpen } from 'lucide-vue-next'
 
 const router = useRouter()
 const tasks = useTasksStore()
@@ -50,17 +50,45 @@ const momentum = computed(() => momentumOpportunities(tasks.items).slice(0, 3))
 const stale = computed(() => staleProjects(projects.items, tasks.items).slice(0, 3))
 const memory = computed(() => memoryResurfacing(notes.items, bookmarks.items))
 
-const sparkData = computed(() => finance.snapshots.map(s => s.netWorth))
-const netWorthFormatted = computed(() => inr(finance.netWorth ?? 0))
-const projection5y = computed(() => inrCompact(finance.project(5)))
+const sparkData = computed(() => finance.networthSeries.map(s => s.value))
+const netWorthFormatted = computed(() => inr(finance.currentNetWorth ?? 0))
 
 const lastWeeklyReview = computed(() => reviews.items.find(r => r.type === 'weekly'))
+
+// Daily journal — creates or opens today's journal note pre-filled with yesterday link + prompts
+async function openDailyJournal() {
+  const today = dayjs().format('YYYY-MM-DD')
+  const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+  const title = `Journal — ${today}`
+  const existing = notes.items.find(n => n.title === title)
+  if (existing) {
+    router.push(`/notes/${existing.id}`)
+    return
+  }
+  const body = `[[Journal — ${yesterday}]]
+
+**One small win**
+
+
+**One tension**
+
+
+**One curiosity**
+
+`
+  const created = await notes.add({ title, body, tags: ['journal'] })
+  ui.showToast('Journal opened', 'success')
+  router.push(`/notes/${created.id}`)
+}
 </script>
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-6xl mx-auto" data-testid="dashboard">
     <PageHeader :overline="todayDate" :title="`${greeting}.`" :sub="currentYear?.theme || 'A quiet system for the things that matter.'">
       <template #right>
+        <button class="btn-ghost" @click="openDailyJournal" data-testid="dash-journal-btn">
+          <BookOpen class="w-4 h-4" /> Journal
+        </button>
         <button class="btn-secondary" @click="ui.openCommand" data-testid="dash-search-btn">
           Search
           <span class="ml-1 kbd">⌘K</span>
@@ -195,6 +223,11 @@ const lastWeeklyReview = computed(() => reviews.items.find(r => r.type === 'week
           <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{ fromNow(lastWeeklyReview.createdAt) }}</p>
         </div>
         <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
+      </div>
+    </section>
+  </div>
+</template>
+btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
       </div>
     </section>
   </div>

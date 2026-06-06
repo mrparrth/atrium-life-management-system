@@ -4,7 +4,7 @@ import { useAreasStore } from '@/stores/areas'
 import { useProjectsStore } from '@/stores/projects'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, X } from 'lucide-vue-next'
+import { Plus, X, Trash2 } from 'lucide-vue-next'
 
 const areas = useAreasStore()
 const projects = useProjectsStore()
@@ -18,6 +18,10 @@ async function create() {
   await areas.add({ name: newName.value, description: newDesc.value })
   newName.value = ''; newDesc.value = ''; showNew.value = false
 }
+async function removeArea(a) {
+  if (!confirm(`Delete area "${a.name}"? Linked projects will remain.`)) return
+  await areas.remove(a.id)
+}
 </script>
 
 <template>
@@ -27,7 +31,12 @@ async function create() {
     </PageHeader>
 
     <div v-if="areas.items.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      <div v-for="a in areas.items" :key="a.id" class="card p-6 hover:border-line-2 transition-all duration-300" :data-testid="`area-card-${a.id}`">
+      <div v-for="a in areas.items" :key="a.id" class="card p-6 hover:border-line-2 transition-all duration-300 group relative" :data-testid="`area-card-${a.id}`">
+        <button
+          @click="removeArea(a)"
+          class="absolute top-4 right-4 btn-ghost !p-1.5 opacity-0 group-hover:opacity-100 hover:text-pri-critical"
+          :data-testid="`area-delete-${a.id}`" :title="`Delete area`"
+        ><Trash2 class="w-4 h-4" /></button>
         <div class="flex items-baseline gap-3">
           <span class="text-2xl font-serif text-ink-3">{{ a.emoji || '◌' }}</span>
           <div>

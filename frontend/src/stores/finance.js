@@ -1,122 +1,120 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { db, newId, now, ensureDefaultCategories, plain } from '@/db'
+import { db, newId, now, plain, ensureDefaultCategories } from '@/db'
 
 export const useFinanceStore = defineStore('finance', () => {
-  const assets = ref([])
-  const snapshots = ref([])
-  const cashflow = ref([])
-  const categories = ref([])
+  const networthLogs = ref([])      // [{ id, date, entries:[{category,type,value}], note, createdAt, updatedAt }]
+  const cashflowPeriods = ref([])   // [{ id, month: 'YYYY-MM', entries:[{category,type,value}], note, createdAt, updatedAt }]
+  const categories = ref([])        // [{ id, scope:'asset'|'liability'|'income'|'expense'|'investment', name }]
 
   async function load() {
     await ensureDefaultCategories()
-    assets.value = await db.finance_assets.toArray()
-    snapshots.value = (await db.finance_snapshots.toArray()).sort((a, b) => a.date.localeCompare(b.date))
-    cashflow.value = await db.finance_cashflow.toArray()
+    networthLogs.value = (await db.finance_networth_logs.toArray()).sort((a, b) => b.date.localeCompare(a.date))
+    cashflowPeriods.value = (await db.finance_cashflow_periods.toArray()).sort((a, b) => b.month.localeCompare(a.month))
     categories.value = (await db.finance_categories.toArray()).sort((a, b) => a.name.localeCompare(b.name))
   }
 
-  // ───────── Net Worth ─────────
-  const netWorth = computed(() =>
-    assets.value.reduce((sum, a) => sum + (a.type === 'asset' ? +a.value : -+a.value), 0)
-  )
-  const totalAssets = computed(() => assets.value.filter(a => a.type === 'asset').reduce((s, a) => s + +a.value, 0))
-  const totalLiabilities = computed(() => assets.value.filter(a => a.type === 'liability').reduce((s, a) => s + +a.value, 0))
+  // ───── Net worth helpers
+  function logTotal(log) {
+    if (!log) return 0
+    return (log.entries || []).reduce((s, e) => s + (e.type === 'asset' ? +e.value : -+e.value), 0)
+  }
+  function logAssets(log) { return (log?.entries || []).filter(e => e.type === 'asset').reduce((s, e) => s + +e.value, 0) }
+  function logLiabilities(log) { return (log?.entries || []).filter(e => e.type === 'liability').reduce((s, e) => s + +e.value, 0) }
+
+  const latestNetworth = computed(() => networthLogs.value[0] || null)
+  const currentNetWorth = computed(() => logTotal(latestNetworth.value))
+  const networthSeries = computed(() => [...networthLogs.value].reverse().map(l => ({ date: l.date, value: logTotal(l) })))
 
   const allocation = computed(() => {
+    const log = latestNetworth.value
+    if (!log) return []
+    const total = logAssets(log) || 1
     const map = {}
-    assets.value.filter(a => a.type === 'asset').forEach(a => {
-      map[a.category] = (map[a.category] || 0) + +a.value
+    log.entries.filter(e => e.type === 'asset').forEach(e => {
+      map[e.category] = (map[e.category] || 0) + +e.value
     })
-    return map
+    return Object.entries(map).map(([k, v]) => ({ key: k, value: v, pct: (v / total) * 100 })).sort((a, b) => b.value - a.value)
   })
 
-  // ───────── Cash flow (normalised to monthly) ─────────
-  function monthlyValue(entry) {
-    const amt = +entry.amount || 0
-    if (entry.recurring === 'yearly') return amt / 12
-    if (entry.recurring === 'monthly') return amt
-    return 0 // one_time excluded from recurring totals
+  // ───── Cash flow helpers
+  function periodTotals(p) {
+    if (!p) return { income: 0, expense: 0, investment: 0, net: 0 }
+    const i = (p.entries || []).filter(e => e.type === 'income').reduce((s, e) => s + +e.value, 0)
+    const x = (p.entries || []).filter(e => e.type === 'expense').reduce((s, e) => s + +e.value, 0)
+    const v = (p.entries || []).filter(e => e.type === 'investment').reduce((s, e) => s + +e.value, 0)
+    return { income: i, expense: x, investment: v, net: i - x - v }
   }
-  const monthlyIncome = computed(() => cashflow.value.filter(e => e.type === 'income').reduce((s, e) => s + monthlyValue(e), 0))
-  const monthlyExpenses = computed(() => cashflow.value.filter(e => e.type === 'expense').reduce((s, e) => s + monthlyValue(e), 0))
-  const monthlyInvestments = computed(() => cashflow.value.filter(e => e.type === 'investment').reduce((s, e) => s + monthlyValue(e), 0))
-  const monthlyNet = computed(() => monthlyIncome.value - monthlyExpenses.value - monthlyInvestments.value)
-  const savingsRate = computed(() => {
-    if (!monthlyIncome.value) return 0
-    return ((monthlyIncome.value - monthlyExpenses.value) / monthlyIncome.value) * 100
+
+  const latestCashflow = computed(() => cashflowPeriods.value[0] || null)
+  const cashflowSeries = computed(() => [...cashflowPeriods.value].reverse().map(p => ({ month: p.month, ...periodTotals(p) })))
+  const expenseBreakdownLatest = computed(() => {
+    const p = latestCashflow.value
+    if (!p) return []
+    const expenses = (p.entries || []).filter(e => e.type === 'expense')
+    const total = expenses.reduce((s, e) => s + +e.value, 0) || 1
+    return expenses.map(e => ({ key: e.category, value: +e.value, pct: (+e.value / total) * 100 })).sort((a, b) => b.value - a.value)
   })
 
-  const expenseByCategory = computed(() => {
-    const map = {}
-    cashflow.value.filter(e => e.type === 'expense').forEach(e => {
-      map[e.category || 'other'] = (map[e.category || 'other'] || 0) + monthlyValue(e)
-    })
-    return map
-  })
-
-  // ───────── Projection (assets only) ─────────
-  function project(years = 5) {
-    const annual = assets.value.filter(a => a.type === 'asset').reduce((acc, a) => {
-      const r = (a.growthRate || 0) / 100
-      const c = (a.contribution || 0) * 12
-      return acc + a.value * Math.pow(1 + r, years) + c * ((Math.pow(1 + r, years) - 1) / (r || 1))
-    }, 0)
-    return Math.round(annual - totalLiabilities.value)
-  }
-
-  // ───────── Assets CRUD ─────────
-  async function addAsset(payload) {
-    const a = { id: newId(), name: payload.name, type: payload.type || 'asset', category: payload.category || 'cash', value: +payload.value || 0, growthRate: +payload.growthRate || 0, contribution: +payload.contribution || 0, createdAt: now(), updatedAt: now() }
-    await db.finance_assets.add(a); assets.value.push(a); return a
-  }
-  async function updateAsset(id, patch) {
-    const a = assets.value.find(x => x.id === id); if (!a) return
-    Object.assign(a, patch, { updatedAt: now() })
-    await db.finance_assets.put(plain(a))
-  }
-  async function removeAsset(id) {
-    await db.finance_assets.delete(id); assets.value = assets.value.filter(a => a.id !== id)
-  }
-  async function takeSnapshot() {
-    const s = { id: newId(), date: new Date().toISOString().slice(0, 10), netWorth: netWorth.value, createdAt: now() }
-    await db.finance_snapshots.add(s); snapshots.value.push(s); return s
-  }
-
-  // ───────── Cash flow CRUD ─────────
-  async function addCashflow(payload) {
-    const c = {
+  // ───── Net worth log CRUD
+  async function addNetworthLog(payload) {
+    const log = {
       id: newId(),
-      type: payload.type || 'expense',
-      name: payload.name || '(untitled)',
-      amount: +payload.amount || 0,
-      category: payload.category || 'other',
-      recurring: payload.recurring || 'monthly',
       date: payload.date || new Date().toISOString().slice(0, 10),
+      entries: (payload.entries || []).filter(e => +e.value !== 0).map(e => ({ category: e.category, type: e.type, value: +e.value })),
       note: payload.note || '',
       createdAt: now(), updatedAt: now(),
     }
-    await db.finance_cashflow.add(c); cashflow.value.push(c); return c
+    await db.finance_networth_logs.add(log)
+    networthLogs.value.unshift(log)
+    networthLogs.value.sort((a, b) => b.date.localeCompare(a.date))
+    return log
   }
-  async function updateCashflow(id, patch) {
-    const c = cashflow.value.find(x => x.id === id); if (!c) return
-    Object.assign(c, patch, { updatedAt: now() })
-    await db.finance_cashflow.put(plain(c))
+  async function updateNetworthLog(id, patch) {
+    const l = networthLogs.value.find(x => x.id === id); if (!l) return
+    Object.assign(l, patch, { updatedAt: now() })
+    await db.finance_networth_logs.put(plain(l))
+    networthLogs.value.sort((a, b) => b.date.localeCompare(a.date))
   }
-  async function removeCashflow(id) {
-    await db.finance_cashflow.delete(id); cashflow.value = cashflow.value.filter(c => c.id !== id)
+  async function removeNetworthLog(id) {
+    await db.finance_networth_logs.delete(id)
+    networthLogs.value = networthLogs.value.filter(l => l.id !== id)
   }
 
-  // ───────── Categories CRUD ─────────
-  function categoriesForScope(scope) {
-    return categories.value.filter(c => c.scope === scope)
+  // ───── Cash flow period CRUD
+  async function addCashflowPeriod(payload) {
+    const p = {
+      id: newId(),
+      month: payload.month || new Date().toISOString().slice(0, 7),
+      entries: (payload.entries || []).filter(e => +e.value !== 0).map(e => ({ category: e.category, type: e.type, value: +e.value })),
+      note: payload.note || '',
+      createdAt: now(), updatedAt: now(),
+    }
+    await db.finance_cashflow_periods.add(p)
+    cashflowPeriods.value.unshift(p)
+    cashflowPeriods.value.sort((a, b) => b.month.localeCompare(a.month))
+    return p
   }
+  async function updateCashflowPeriod(id, patch) {
+    const p = cashflowPeriods.value.find(x => x.id === id); if (!p) return
+    Object.assign(p, patch, { updatedAt: now() })
+    await db.finance_cashflow_periods.put(plain(p))
+    cashflowPeriods.value.sort((a, b) => b.month.localeCompare(a.month))
+  }
+  async function removeCashflowPeriod(id) {
+    await db.finance_cashflow_periods.delete(id)
+    cashflowPeriods.value = cashflowPeriods.value.filter(p => p.id !== id)
+  }
+
+  // ───── Categories CRUD
+  function categoriesForScope(scope) { return categories.value.filter(c => c.scope === scope) }
   async function addCategory(scope, name) {
     const trimmed = (name || '').trim().toLowerCase().replace(/\s+/g, '_')
     if (!trimmed) return null
     if (categories.value.some(c => c.scope === scope && c.name === trimmed)) return null
     const c = { id: newId(), scope, name: trimmed, createdAt: now() }
-    await db.finance_categories.add(c); categories.value.push(c)
+    await db.finance_categories.add(c)
+    categories.value.push(c)
     categories.value.sort((a, b) => a.name.localeCompare(b.name))
     return c
   }
@@ -126,12 +124,13 @@ export const useFinanceStore = defineStore('finance', () => {
   }
 
   return {
-    assets, snapshots, cashflow, categories,
-    netWorth, totalAssets, totalLiabilities, allocation,
-    monthlyIncome, monthlyExpenses, monthlyInvestments, monthlyNet, savingsRate, expenseByCategory,
-    project, load,
-    addAsset, updateAsset, removeAsset, takeSnapshot,
-    addCashflow, updateCashflow, removeCashflow,
+    networthLogs, cashflowPeriods, categories,
+    latestNetworth, currentNetWorth, networthSeries, allocation,
+    latestCashflow, cashflowSeries, expenseBreakdownLatest,
+    logTotal, logAssets, logLiabilities, periodTotals,
+    load,
+    addNetworthLog, updateNetworthLog, removeNetworthLog,
+    addCashflowPeriod, updateCashflowPeriod, removeCashflowPeriod,
     categoriesForScope, addCategory, removeCategory,
   }
 })

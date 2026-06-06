@@ -5,7 +5,7 @@ import { useUIStore } from '@/stores/ui'
 import {
   LayoutGrid, Sun, Moon, CheckSquare, FolderKanban, Compass,
   BookOpen, Archive, Calendar, Target, NotebookPen, Bookmark,
-  Wallet, Sparkles, Settings, Command, Plus, ListChecks
+  Wallet, Sparkles, Settings, Command, Plus, ListChecks, GitFork
 } from 'lucide-vue-next'
 
 const ui = useUIStore()

@@ -4,7 +4,7 @@ import { useYearsStore } from '@/stores/years'
 import { useGoalsStore } from '@/stores/goals'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, X } from 'lucide-vue-next'
+import { Plus, X, Trash2 } from 'lucide-vue-next'
 
 const years = useYearsStore()
 const goals = useGoalsStore()
@@ -18,6 +18,10 @@ async function create() {
   await years.add({ year: +newYear.value, theme: newTheme.value })
   newTheme.value = ''; showNew.value = false
 }
+async function removeYear(y) {
+  if (!confirm(`Delete ${y.year}? Its goals will remain.`)) return
+  await years.remove(y.id)
+}
 </script>
 
 <template>
@@ -27,7 +31,12 @@ async function create() {
     </PageHeader>
 
     <div v-if="years.items.length" class="space-y-5">
-      <div v-for="y in years.items" :key="y.id" class="card p-7" :data-testid="`year-card-${y.id}`">
+      <div v-for="y in years.items" :key="y.id" class="card p-7 group relative" :data-testid="`year-card-${y.id}`">
+        <button
+          @click="removeYear(y)"
+          class="absolute top-4 right-4 btn-ghost !p-1.5 opacity-0 group-hover:opacity-100 hover:text-pri-critical"
+          :data-testid="`year-delete-${y.id}`" :title="`Delete ${y.year}`"
+        ><Trash2 class="w-4 h-4" /></button>
         <div class="flex items-baseline gap-6">
           <div class="font-serif text-5xl tracking-tight text-ink-2">{{ y.year }}</div>
           <div>

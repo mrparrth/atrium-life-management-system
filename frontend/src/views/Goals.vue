@@ -5,7 +5,7 @@ import { useYearsStore } from '@/stores/years'
 import { useProjectsStore } from '@/stores/projects'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, X, Target } from 'lucide-vue-next'
+import { Plus, X, Target, Trash2 } from 'lucide-vue-next'
 
 const goals = useGoalsStore()
 const years = useYearsStore()
@@ -21,6 +21,10 @@ async function create() {
   await goals.add({ title: newTitle.value, description: newDesc.value, yearId: newYear.value || years.items[0]?.id })
   newTitle.value = ''; newDesc.value = ''; newYear.value = null; showNew.value = false
 }
+async function removeGoal(g) {
+  if (!confirm(`Delete goal "${g.title}"? Linked projects will remain.`)) return
+  await goals.remove(g.id)
+}
 </script>
 
 <template>
@@ -30,9 +34,14 @@ async function create() {
     </PageHeader>
 
     <div v-if="goals.items.length" class="space-y-4">
-      <div v-for="g in goals.items" :key="g.id" class="card p-6" :data-testid="`goal-card-${g.id}`">
+      <div v-for="g in goals.items" :key="g.id" class="card p-6 group relative" :data-testid="`goal-card-${g.id}`">
+        <button
+          @click="removeGoal(g)"
+          class="absolute top-4 right-4 btn-ghost !p-1.5 opacity-0 group-hover:opacity-100 hover:text-pri-critical"
+          :data-testid="`goal-delete-${g.id}`" :title="`Delete goal`"
+        ><Trash2 class="w-4 h-4" /></button>
         <div class="flex items-start justify-between gap-4">
-          <div class="flex-1">
+          <div class="flex-1 pr-8">
             <div class="flex items-center gap-2 text-ink-3 text-xs"><Target class="w-3 h-3" /><span class="overline">{{ yearOf(g.yearId)?.year || '—' }}</span></div>
             <div class="font-serif text-2xl mt-1.5">{{ g.title }}</div>
             <p v-if="g.description" class="text-ink-2 mt-2">{{ g.description }}</p>

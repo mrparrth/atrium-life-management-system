@@ -34,6 +34,12 @@ db.version(3).stores({
   bookmark_pages: 'id, createdAt, updatedAt',
 })
 
+// v4 — Net worth logs (dated, multi-category) + Cash flow monthly periods (multi-category)
+db.version(4).stores({
+  finance_networth_logs: 'id, date, createdAt, updatedAt',
+  finance_cashflow_periods: 'id, month, createdAt, updatedAt',
+})
+
 export function newId() { return nanoid(12) }
 export function now() { return new Date().toISOString() }
 // Strip Vue reactive proxies before passing to Dexie's structured clone.
@@ -129,38 +135,50 @@ export async function seedIfEmpty() {
     { id: newId(), title: 'The PARA Method', url: 'https://fortelabs.com/blog/para/', category: 'Method', tags: ['productivity'], description: '', createdAt: now(), updatedAt: now(), lastViewedAt: new Date(Date.now() - 40 * 86400000).toISOString() },
   ])
 
-  // INR-based seed values
-  const assets = [
-    { id: newId(), name: 'Savings account', type: 'asset', category: 'savings', value: 240000, growthRate: 3, createdAt: now(), updatedAt: now() },
-    { id: newId(), name: 'Mutual fund portfolio', type: 'asset', category: 'investments', value: 850000, growthRate: 12, createdAt: now(), updatedAt: now() },
-    { id: newId(), name: 'EPF', type: 'asset', category: 'retirement', value: 620000, growthRate: 8, contribution: 12000, createdAt: now(), updatedAt: now() },
-    { id: newId(), name: 'Bitcoin', type: 'asset', category: 'crypto', value: 95000, growthRate: 15, createdAt: now(), updatedAt: now() },
-    { id: newId(), name: 'Credit card', type: 'liability', category: 'credit_card', value: 18000, createdAt: now(), updatedAt: now() },
-  ]
-  await db.finance_assets.bulkAdd(assets)
-
-  // Cash flow seed (monthly recurring)
-  const cashflow = [
-    { id: newId(), type: 'income', name: 'Salary', amount: 180000, category: 'salary', recurring: 'monthly', date: todayISO, createdAt: now(), updatedAt: now() },
-    { id: newId(), type: 'income', name: 'Freelance', amount: 25000, category: 'freelance', recurring: 'monthly', date: todayISO, createdAt: now(), updatedAt: now() },
-    { id: newId(), type: 'expense', name: 'Rent', amount: 45000, category: 'rent', recurring: 'monthly', date: todayISO, createdAt: now(), updatedAt: now() },
-    { id: newId(), type: 'expense', name: 'Groceries', amount: 18000, category: 'groceries', recurring: 'monthly', date: todayISO, createdAt: now(), updatedAt: now() },
-    { id: newId(), type: 'expense', name: 'Utilities', amount: 5500, category: 'utilities', recurring: 'monthly', date: todayISO, createdAt: now(), updatedAt: now() },
-    { id: newId(), type: 'expense', name: 'Subscriptions', amount: 3200, category: 'subscriptions', recurring: 'monthly', date: todayISO, createdAt: now(), updatedAt: now() },
-    { id: newId(), type: 'investment', name: 'Equity SIP', amount: 25000, category: 'sip_mutual_fund', recurring: 'monthly', date: todayISO, createdAt: now(), updatedAt: now() },
-    { id: newId(), type: 'investment', name: 'PPF', amount: 12500, category: 'ppf', recurring: 'monthly', date: todayISO, createdAt: now(), updatedAt: now() },
-  ]
-  await db.finance_cashflow.bulkAdd(cashflow)
-
-  // Six monthly snapshots — gentle climb
-  const months = 6
-  const baseTotal = 1500000
-  const snaps = []
-  for (let i = months - 1; i >= 0; i--) {
+  // INR-based seed: 3 historical net worth logs
+  const networthLogs = []
+  for (let i = 2; i >= 0; i--) {
     const d = new Date(); d.setMonth(d.getMonth() - i); d.setDate(1)
-    snaps.push({ id: newId(), date: d.toISOString().slice(0, 10), netWorth: baseTotal + (months - i) * 45000 + Math.round(Math.sin(i) * 12000), createdAt: now() })
+    const drift = (2 - i) * 45000
+    networthLogs.push({
+      id: newId(),
+      date: d.toISOString().slice(0, 10),
+      entries: [
+        { category: 'savings',     type: 'asset',     value: 240000 + drift / 4 },
+        { category: 'investments', type: 'asset',     value: 850000 + drift },
+        { category: 'retirement',  type: 'asset',     value: 620000 + drift / 2 },
+        { category: 'crypto',      type: 'asset',     value: 95000  + drift / 6 },
+        { category: 'credit_card', type: 'liability', value: 18000 },
+      ],
+      note: '',
+      createdAt: now(), updatedAt: now(),
+    })
   }
-  await db.finance_snapshots.bulkAdd(snaps)
+  await db.finance_networth_logs.bulkAdd(networthLogs)
+
+  // 3 monthly cash-flow periods
+  const cashflowPeriods = []
+  for (let i = 2; i >= 0; i--) {
+    const d = new Date(); d.setMonth(d.getMonth() - i)
+    const month = d.toISOString().slice(0, 7)
+    cashflowPeriods.push({
+      id: newId(),
+      month,
+      entries: [
+        { category: 'salary',          type: 'income',     value: 180000 },
+        { category: 'freelance',       type: 'income',     value: 25000 },
+        { category: 'rent',            type: 'expense',    value: 45000 },
+        { category: 'groceries',       type: 'expense',    value: 18000 },
+        { category: 'utilities',       type: 'expense',    value: 5500 },
+        { category: 'subscriptions',   type: 'expense',    value: 3200 },
+        { category: 'sip_mutual_fund', type: 'investment', value: 25000 },
+        { category: 'ppf',             type: 'investment', value: 12500 },
+      ],
+      note: '',
+      createdAt: now(), updatedAt: now(),
+    })
+  }
+  await db.finance_cashflow_periods.bulkAdd(cashflowPeriods)
 
   await db.settings.put({ id: 'app', theme: 'light', firstRun: false, lastDailyReview: null, lastWeeklyReview: null })
 }

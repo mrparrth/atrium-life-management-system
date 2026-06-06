@@ -1,30 +1,74 @@
 <script setup>
+import { ref, computed, onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { db } from '@/db'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
+import { downloadLocalBackup, getClientId, setClientId, connect as driveConnect, backup as driveBackup, restore as driveRestore, disconnect as driveDisconnect, lastBackupAt } from '@/services/drive'
+import { fromNow } from '@/lib/date'
+import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp } from 'lucide-vue-next'
 
 const ui = useUIStore()
+const origin = location.origin
 
-async function exportData() {
-  const data = {
-    years: await db.years.toArray(),
-    goals: await db.goals.toArray(),
-    projects: await db.projects.toArray(),
-    tasks: await db.tasks.toArray(),
-    notes: await db.notes.toArray(),
-    bookmarks: await db.bookmarks.toArray(),
-    areas: await db.areas.toArray(),
-    finance_assets: await db.finance_assets.toArray(),
-    finance_snapshots: await db.finance_snapshots.toArray(),
-    reviews: await db.reviews.toArray(),
-  }
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = `atrium-export-${new Date().toISOString().slice(0,10)}.json`; a.click()
-  URL.revokeObjectURL(url)
-  ui.showToast('Exported', 'success')
+const clientIdInput = ref('')
+const connected = ref(false)
+const lastBackup = ref(null)
+const busy = ref(false)
+
+function refresh() {
+  clientIdInput.value = getClientId()
+  connected.value = !!localStorage.getItem('atrium.drive.connected')
+  lastBackup.value = lastBackupAt()
+}
+onMounted(refresh)
+
+function saveClientId() {
+  setClientId(clientIdInput.value.trim())
+  ui.showToast('Client ID saved', 'success')
+  refresh()
+}
+
+async function connect() {
+  busy.value = true
+  try { await driveConnect(); ui.showToast('Drive connected', 'success'); refresh() }
+  catch (e) { ui.showToast(`Connect failed: ${e.message}`, 'error') }
+  finally { busy.value = false }
+}
+async function backup() {
+  busy.value = true
+  try { await driveBackup(); ui.showToast('Backed up to Drive', 'success'); refresh() }
+  catch (e) { ui.showToast(`Backup failed: ${e.message}`, 'error') }
+  finally { busy.value = false }
+}
+async function restore() {
+  if (!confirm('Replace ALL local data with the Drive backup? This cannot be undone.')) return
+  busy.value = true
+  try { await driveRestore(); ui.showToast('Restored — reloading…', 'success'); setTimeout(() => location.reload(), 800) }
+  catch (e) { ui.showToast(`Restore failed: ${e.message}`, 'error') }
+  finally { busy.value = false }
+}
+function disconnect() {
+  if (!confirm('Disconnect Drive from this device?')) return
+  driveDisconnect(); refresh(); ui.showToast('Disconnected', 'success')
+}
+
+async function exportJson() { await downloadLocalBackup(); ui.showToast('Exported', 'success') }
+
+const fileInput = ref(null)
+async function importJson(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (!confirm('Replace ALL local data with this file?')) return
+  const text = await file.text()
+  try {
+    const payload = JSON.parse(text)
+    const data = payload?.data || payload
+    const { importAllData } = await import('@/services/drive')
+    await importAllData(data)
+    ui.showToast('Imported — reloading…', 'success')
+    setTimeout(() => location.reload(), 700)
+  } catch (err) { ui.showToast(`Import failed: ${err.message}`, 'error') }
 }
 
 async function clearAll() {
@@ -44,10 +88,43 @@ async function clearAll() {
       <button class="btn-secondary" @click="ui.toggleTheme" data-testid="settings-toggle-theme">Switch theme</button>
     </div>
 
-    <SectionHeader overline="Data" title="Your local archive" hint="All data lives in IndexedDB on this device." />
-    <div class="card p-5 mb-10 space-y-3">
-      <button class="btn-secondary" @click="exportData" data-testid="export-json">Export JSON</button>
-      <button class="btn-ghost !text-pri-critical block" @click="clearAll" data-testid="clear-all">Erase all local data</button>
+    <!-- GOOGLE DRIVE -->
+    <SectionHeader overline="Optional sync" title="Google Drive backup" hint="Stores a single JSON in a private app-only folder on your Drive (drive.appdata scope)." />
+    <div class="card p-6 mb-10 space-y-4" data-testid="drive-section">
+      <div>
+        <label class="overline block mb-1">OAuth Client ID</label>
+        <div class="flex gap-2">
+          <input v-model="clientIdInput" placeholder="xxxxx.apps.googleusercontent.com" class="input-block text-sm font-mono" data-testid="drive-client-id" />
+          <button class="btn-secondary" @click="saveClientId" data-testid="drive-save-client-id"><Save class="w-4 h-4" /> Save</button>
+        </div>
+        <p class="text-xs text-ink-3 mt-2">
+          Create a Web OAuth Client in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="underline decoration-line-2 underline-offset-2">Google Cloud Console</a>.
+          Add <code class="bg-elevated px-1.5 py-0.5 rounded text-xs">{{ origin }}</code> as an Authorized JavaScript origin.
+          Enable the Drive API on the project.
+        </p>
+      </div>
+
+      <div class="pt-4 border-t border-line flex flex-wrap items-center gap-2">
+        <button v-if="!connected" class="btn-primary" :disabled="!clientIdInput || busy" @click="connect" data-testid="drive-connect">
+          <Cloud class="w-4 h-4" /> Connect Drive
+        </button>
+        <template v-else>
+          <button class="btn-primary" :disabled="busy" @click="backup" data-testid="drive-backup"><CloudUpload class="w-4 h-4" /> Back up now</button>
+          <button class="btn-secondary" :disabled="busy" @click="restore" data-testid="drive-restore"><CloudDownload class="w-4 h-4" /> Restore</button>
+          <button class="btn-ghost" :disabled="busy" @click="disconnect" data-testid="drive-disconnect"><Unlink class="w-4 h-4" /> Disconnect</button>
+        </template>
+        <span v-if="lastBackup" class="text-xs text-ink-3 ml-auto">last backup {{ fromNow(lastBackup) }}</span>
+      </div>
+    </div>
+
+    <SectionHeader overline="Data" title="Local archive" hint="All data lives in IndexedDB on this device." />
+    <div class="card p-5 mb-10 flex flex-wrap items-center gap-2">
+      <button class="btn-secondary" @click="exportJson" data-testid="export-json"><FileDown class="w-4 h-4" /> Export JSON</button>
+      <label class="btn-secondary cursor-pointer">
+        <FileUp class="w-4 h-4" /> Import JSON
+        <input ref="fileInput" type="file" accept="application/json" class="hidden" @change="importJson" data-testid="import-json" />
+      </label>
+      <button class="btn-ghost !text-pri-critical ml-auto" @click="clearAll" data-testid="clear-all">Erase all local data</button>
     </div>
 
     <SectionHeader overline="Shortcuts" title="Keyboard" />
