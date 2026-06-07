@@ -72,16 +72,17 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
         />
       </div>
       <ul class="overflow-y-auto p-1.5 space-y-0.5">
-        <li 
-          v-for="opt in filteredOptions" 
-          :key="opt.key"
-          class="px-2.5 py-1.5 text-xs rounded-lg cursor-pointer flex items-center justify-between transition-colors"
-          :class="modelValue === opt.key ? 'bg-elevated/80 font-medium text-ink' : 'text-ink-2 hover:bg-elevated/50 hover:text-ink'"
-          @click="selectOption(opt)"
-        >
-          <span class="truncate">{{ opt.label }}</span>
-          <Check v-if="modelValue === opt.key" class="w-3 h-3 text-ink shrink-0 ml-2" />
-        </li>
+        <template v-for="(opt, idx) in filteredOptions" :key="opt.key || idx">
+          <li v-if="opt.isSeparator" class="my-1.5 border-t border-line"></li>
+          <li v-else
+            class="px-2.5 py-1.5 text-xs rounded-lg cursor-pointer flex items-center justify-between transition-colors"
+            :class="modelValue === opt.key ? 'bg-elevated/80 font-medium text-ink' : 'text-ink-2 hover:bg-elevated/50 hover:text-ink'"
+            @click="selectOption(opt)"
+          >
+            <span class="truncate">{{ opt.label }}</span>
+            <Check v-if="modelValue === opt.key" class="w-3 h-3 text-ink shrink-0 ml-2" />
+          </li>
+        </template>
         <li v-if="!filteredOptions.length" class="px-2 py-3 text-xs text-ink-3 italic text-center font-serif">
           No matches found.
         </li>

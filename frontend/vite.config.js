@@ -8,7 +8,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "atrium-icon.svg", "pwa-192.png", "pwa-512.png"],
+      includeAssets: ["favicon.ico", "atrium-icon.svg", "pwa-192.png", "pwa-256.png", "pwa-512.png"],
       manifest: {
         name: "Atrium Life Planner",
         short_name: "Atrium",
@@ -30,6 +30,11 @@ export default defineConfig({
             type: "image/png",
           },
           {
+            src: "pwa-256.png",
+            sizes: "256x256",
+            type: "image/png",
+          },
+          {
             src: "pwa-512.png",
             sizes: "512x512",
             type: "image/png",
@@ -38,10 +43,7 @@ export default defineConfig({
       },
       devOptions: {
         enabled: true,
-      },
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
-        globStrict: false,
+        suppressWarnings: true,
       },
     }),
   ],

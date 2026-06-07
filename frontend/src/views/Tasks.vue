@@ -14,9 +14,11 @@ const tasks = useTasksStore()
 const projects = useProjectsStore()
 const ui = useUIStore()
 
-const filter = ref('open')  // open | done | all
-const priorityFilter = ref('all')
-const projectFilter = ref('all')
+import { PRIORITY } from "@/lib/priority"
+
+const filter = ref("open"); // open | done | all
+const priorityFilter = ref("all");
+const projectFilter = ref("all");
 
 const filtered = computed(() => {
   let list = tasks.items
@@ -38,23 +40,22 @@ const groups = computed(() => {
   <div class="px-8 md:px-12 py-10 max-w-5xl mx-auto" data-testid="tasks-view">
     <PageHeader overline="All tasks" title="Tasks" sub="Grouped quietly by the meaning they carry.">
       <template #right>
-        <button class="btn-primary" @click="ui.openQuickCapture" data-testid="tasks-capture-btn"><Plus class="w-4 h-4" /> Capture</button>
+        <button class="btn-primary" @click="ui.openQuickCapture" data-testid="tasks-capture-btn">
+          <Plus class="w-4 h-4" /> Capture
+        </button>
       </template>
     </PageHeader>
 
     <div class="flex flex-wrap items-center gap-2 mb-8" data-testid="tasks-filters">
       <div class="flex bg-elevated rounded-xl p-1 border border-line text-sm">
-        <button v-for="f in ['open','done','all']" :key="f" :data-testid="`filter-${f}`"
+        <button v-for="f in ['open', 'done', 'all']" :key="f" :data-testid="`filter-${f}`"
           class="px-3 py-1.5 rounded-lg transition-colors duration-200"
-          :class="filter === f ? 'bg-surface text-ink' : 'text-ink-2 hover:text-ink'"
-          @click="filter = f">{{ f }}</button>
+          :class="filter === f ? 'bg-surface text-ink' : 'text-ink-2 hover:text-ink'" @click="filter = f">{{ f
+          }}</button>
       </div>
       <select v-model="priorityFilter" class="input-block !w-auto text-sm" data-testid="filter-priority">
         <option value="all">All priorities</option>
-        <option value="critical">Critical</option>
-        <option value="strategic">Strategic</option>
-        <option value="interruptive">Interruptive</option>
-        <option value="backlog">Backlog</option>
+        <option v-for="(p, key) in PRIORITY" :key="key" :value="p.key">{{ p.label }}</option>
       </select>
       <select v-model="projectFilter" class="input-block !w-auto text-sm" data-testid="filter-project">
         <option value="all">All projects</option>

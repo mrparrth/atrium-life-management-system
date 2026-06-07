@@ -6,35 +6,43 @@ import { useUIStore } from '@/stores/ui'
 import { X, Plus } from 'lucide-vue-next'
 import PriorityBadge from './PriorityBadge.vue'
 
-const props = defineProps({ defaultProjectId: { type: String, default: null } })
-const emit = defineEmits(['close', 'created'])
+const props = defineProps({ defaultProjectId: { type: String, default: null }, initialTask: { type: Object, default: null } })
+const emit = defineEmits(['close', 'created', 'updated'])
 
 const tasks = useTasksStore()
 const projects = useProjectsStore()
 const ui = useUIStore()
 
-const title = ref('')
-const description = ref('')
-const projectId = ref(props.defaultProjectId)
-const scheduledDate = ref('')
-const dueDate = ref('')
-const important = ref(false)
-const urgent = ref(false)
+const title = ref(props.initialTask?.title || '')
+const description = ref(props.initialTask?.description || '')
+const projectId = ref(props.initialTask?.projectId || props.defaultProjectId)
+const scheduledDate = ref(props.initialTask?.scheduledDate || '')
+const dueDate = ref(props.initialTask?.dueDate || '')
+const important = ref(props.initialTask?.important || false)
+const urgent = ref(props.initialTask?.urgent || false)
 const titleEl = ref(null)
 
 watch(titleEl, el => el?.focus())
 
 async function save() {
   if (!title.value.trim()) return
-  const t = await tasks.add({
+  const payload = {
     title: title.value, description: description.value,
     projectId: projectId.value || null,
     scheduledDate: scheduledDate.value || null,
     dueDate: dueDate.value || null,
     important: important.value, urgent: urgent.value,
-  })
-  ui.showToast('Task captured', 'success')
-  emit('created', t)
+  }
+  
+  if (props.initialTask) {
+    await tasks.update(props.initialTask.id, payload)
+    ui.showToast('Task updated', 'success')
+    emit('updated', props.initialTask.id)
+  } else {
+    const t = await tasks.add(payload)
+    ui.showToast('Task captured', 'success')
+    emit('created', t)
+  }
   emit('close')
 }
 </script>
@@ -83,7 +91,8 @@ async function save() {
     <div class="flex items-center justify-end gap-2 pt-2">
       <button type="button" class="btn-ghost" @click="$emit('close')" data-testid="task-cancel">Cancel</button>
       <button type="submit" class="btn-primary" data-testid="task-save">
-        <Plus class="w-4 h-4" /> Capture
+        <template v-if="initialTask">Save changes</template>
+        <template v-else><Plus class="w-4 h-4" /> Capture</template>
       </button>
     </div>
   </form>

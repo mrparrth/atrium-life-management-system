@@ -18,8 +18,10 @@ import { backup as driveBackup, isConnected, lastBackupAt } from '@/services/dri
 import AppSidebar from '@/components/AppSidebar.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
 import QuickCapture from '@/components/QuickCapture.vue'
+import TaskComposer from '@/components/TaskComposer.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ToastHost from '@/components/ToastHost.vue'
+import { X } from 'lucide-vue-next'
 
 const ui = useUIStore()
 const route = useRoute()
@@ -51,6 +53,7 @@ onMounted(async () => {
     if (e.key === 'Escape') {
       if (ui.commandOpen) ui.closeCommand()
       if (ui.quickCaptureOpen) ui.closeQuickCapture()
+      if (ui.taskEditOpen) ui.closeTaskEdit()
     }
   })
 
@@ -72,7 +75,7 @@ onMounted(async () => {
 
 watch(() => route.fullPath, () => {
   // close overlays on navigation
-  ui.closeCommand(); ui.closeQuickCapture()
+  ui.closeCommand(); ui.closeQuickCapture(); ui.closeTaskEdit()
 })
 </script>
 
@@ -88,6 +91,22 @@ watch(() => route.fullPath, () => {
     </main>
     <CommandPalette v-if="ui.commandOpen" />
     <QuickCapture v-if="ui.quickCaptureOpen" />
+
+    <!-- TASK EDIT MODAL -->
+    <div v-if="ui.taskEditOpen" class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4" data-testid="task-edit-overlay">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="ui.closeTaskEdit"></div>
+      <div class="relative w-full max-w-xl card p-8 shadow-xl shadow-black/10 animate-rise-in">
+        <button class="absolute top-4 right-4 btn-ghost !p-1.5" @click="ui.closeTaskEdit" data-testid="task-edit-close">
+          <X class="w-4 h-4" />
+        </button>
+        <div class="mb-5">
+          <div class="overline">Edit task</div>
+          <h2 class="font-serif text-2xl mt-1">Make adjustments</h2>
+        </div>
+        <TaskComposer :initial-task="ui.taskToEdit" @close="ui.closeTaskEdit" />
+      </div>
+    </div>
+
     <ConfirmDialog v-if="ui.confirmState" />
     <ToastHost />
   </div>

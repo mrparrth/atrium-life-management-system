@@ -7,6 +7,8 @@ export const useUIStore = defineStore("ui", () => {
   const sidebarOpen = ref(true);
   const commandOpen = ref(false);
   const quickCaptureOpen = ref(false);
+  const taskEditOpen = ref(false);
+  const taskToEdit = ref(null);
   const toast = ref(null);
   const confirmState = ref(null);
 
@@ -30,6 +32,14 @@ export const useUIStore = defineStore("ui", () => {
   }
   function closeQuickCapture() {
     quickCaptureOpen.value = false;
+  }
+  function openTaskEdit(task) {
+    taskToEdit.value = task;
+    taskEditOpen.value = true;
+  }
+  function closeTaskEdit() {
+    taskEditOpen.value = false;
+    taskToEdit.value = null;
   }
   function showToast(msg, type = "info") {
     toast.value = { msg, type, id: Date.now() };
@@ -66,6 +76,8 @@ export const useUIStore = defineStore("ui", () => {
     sidebarOpen,
     commandOpen,
     quickCaptureOpen,
+    taskEditOpen,
+    taskToEdit,
     toast,
     confirmState,
     toggleTheme,
@@ -73,6 +85,8 @@ export const useUIStore = defineStore("ui", () => {
     closeCommand,
     openQuickCapture,
     closeQuickCapture,
+    openTaskEdit,
+    closeTaskEdit,
     showToast,
     confirm,
   };

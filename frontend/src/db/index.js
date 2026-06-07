@@ -57,43 +57,52 @@ export function plain(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-const DEFAULT_CATEGORIES = [
+export const DEFAULT_CATEGORIES = [
   // assets
   { scope: "asset", name: "cash", group: "Liquid" },
   { scope: "asset", name: "savings", group: "Liquid" },
+  { scope: "asset", name: "fixed_deposits", group: "Fixed" },
   { scope: "asset", name: "investments", group: "Liquid" },
-  { scope: "asset", name: "retirement", group: "Fixed" },
   { scope: "asset", name: "real_estate", group: "Fixed" },
-  { scope: "asset", name: "crypto", group: "Liquid" },
-  { scope: "asset", name: "other", group: "One-Off" },
+  { scope: "asset", name: "jewellery", group: "Fixed" },
   // liabilities
   { scope: "liability", name: "credit_card", group: "Short-term" },
   { scope: "liability", name: "home_loan", group: "Long-term" },
   { scope: "liability", name: "personal_loan", group: "Short-term" },
-  { scope: "liability", name: "other", group: "One-Off" },
+  { scope: "liability", name: "unpaid_taxes", group: "Short-term" },
   // income
-  { scope: "income", name: "salary", group: "Active" },
-  { scope: "income", name: "freelance", group: "Business" },
+  { scope: "income", name: "upwork", group: "Active" },
+  { scope: "income", name: "direct_client", group: "Active" },
   { scope: "income", name: "dividend", group: "Passive" },
+  { scope: "income", name: "interest", group: "Passive" },
   { scope: "income", name: "rental", group: "Passive" },
-  { scope: "income", name: "other", group: "One-Off" },
+  { scope: "income", name: "others", group: "One-Off" },
   // expenses
   { scope: "expense", name: "rent", group: "Need" },
-  { scope: "expense", name: "groceries", group: "Need" },
-  { scope: "expense", name: "utilities", group: "Need" },
-  { scope: "expense", name: "transport", group: "Need" },
-  { scope: "expense", name: "dining", group: "Want" },
+  { scope: "expense", name: "food_and_groceries", group: "Need" },
+  { scope: "expense", name: "household", group: "Need" },
+  { scope: "expense", name: "baby", group: "Need" },
+  { scope: "expense", name: "commute/fuel", group: "Need" },
+  { scope: "expense", name: "medical_&_healthcare", group: "Need" },
+  { scope: "expense", name: "utility", group: "Need" },
+  { scope: "expense", name: "eat_out", group: "Want" },
+  { scope: "expense", name: "gift", group: "Want" },
+  { scope: "expense", name: "cosmetics/salon", group: "Want" },
+  { scope: "expense", name: "travel", group: "Want" },
+  { scope: "expense", name: "personal", group: "Want" },
+  { scope: "expense", name: "wearables", group: "Want" },
   { scope: "expense", name: "subscriptions", group: "Want" },
-  { scope: "expense", name: "health", group: "Need" },
-  { scope: "expense", name: "other", group: "One-Off" },
+  { scope: "expense", name: "one-off", group: "Want" },
+  { scope: "expense", name: "education", group: "Business" },
+  { scope: "expense", name: "paid_help", group: "Business" },
+  { scope: "expense", name: "business_expenses", group: "Business" },
+
   // investments (recurring contributions)
-  { scope: "investment", name: "sip_mutual_fund", group: "Equity" },
+  { scope: "investment", name: "mutual_fund", group: "Equity" },
   { scope: "investment", name: "stocks", group: "Equity" },
-  { scope: "investment", name: "ppf", group: "Debt" },
-  { scope: "investment", name: "nps", group: "Debt" },
-  { scope: "investment", name: "fd", group: "Debt" },
-  { scope: "investment", name: "crypto", group: "Equity" },
-  { scope: "investment", name: "other", group: "One-Off" },
+  { scope: "investment", name: "fixed_deposits", group: "Debt" },
+  { scope: "investment", name: "emi", group: "Debt" },
+  { scope: "investment", name: "jewellery", group: "Bullion" },
 ];
 
 // Ensures category catalogue exists; safe to call on every load.
@@ -107,10 +116,9 @@ export async function ensureDefaultCategories() {
 // Seed helper — only runs once if DB is empty
 export async function seedIfEmpty() {
   await ensureDefaultCategories();
-  
+
   const appSettings = await db.settings.get("app");
   if (appSettings) return;
-
 
   const year = {
     id: newId(),
@@ -299,7 +307,7 @@ export async function seedIfEmpty() {
         { category: "groceries", type: "expense", value: 18000 },
         { category: "utilities", type: "expense", value: 5500 },
         { category: "subscriptions", type: "expense", value: 3200 },
-        { category: "sip_mutual_fund", type: "investment", value: 25000 },
+        { category: "mutual_fund", type: "investment", value: 25000 },
         { category: "ppf", type: "investment", value: 12500 },
       ],
       note: "",

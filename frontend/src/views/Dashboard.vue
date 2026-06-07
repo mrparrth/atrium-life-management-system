@@ -215,7 +215,7 @@ async function openDailyJournal() {
             :data-testid="`resurface-note-${n.id}`">
             <div class="flex items-center gap-2">
               <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
-              }}</span>
+                }}</span>
             </div>
             <div class="font-serif text-lg mt-1.5">{{ n.title }}</div>
             <p class="text-sm text-ink-2 mt-1 line-clamp-2">{{ n.body }}</p>
@@ -225,40 +225,13 @@ async function openDailyJournal() {
             :data-testid="`resurface-bookmark-${b.id}`">
             <div class="flex items-center gap-2">
               <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{ fromNow(b.lastViewedAt)
-              }}</span>
+                }}</span>
             </div>
             <div class="font-serif text-lg mt-1.5">{{ b.title }}</div>
             <p class="text-sm text-ink-2 mt-1 truncate">{{ b.url }}</p>
           </a>
           <EmptyState v-if="!memory.notes.length && !memory.bookmarks.length" title="Memory is fresh"
             hint="Nothing to resurface yet." />
-        </div>
-      </section>
-
-      <section data-testid="section-finance">
-        <SectionHeader overline="Snapshot" title="Finance">
-          <template #right>
-            <RouterLink to="/finance" class="btn-ghost text-sm">Open
-              <ArrowRight class="w-3 h-3" />
-            </RouterLink>
-          </template>
-        </SectionHeader>
-        <div class="card p-6" data-testid="finance-snapshot-card">
-          <div class="flex items-baseline justify-between">
-            <div>
-              <div class="overline">Net worth</div>
-              <div class="font-serif text-4xl tracking-tight mt-1" data-testid="net-worth-value">{{ netWorthFormatted }}
-              </div>
-            </div>
-            <div class="text-right">
-              <div class="overline">in 5 years</div>
-              <div class="font-serif text-xl text-ink-2 mt-1">{{ projection5y }}</div>
-            </div>
-          </div>
-          <div class="mt-5 text-pri-strategic">
-            <Sparkline :data="sparkData" :height="56" color="rgb(90 115 83)" />
-          </div>
-          <div class="mt-3 text-xs text-ink-3">last 6 snapshots — drift over time</div>
         </div>
       </section>
     </div>
@@ -272,7 +245,7 @@ async function openDailyJournal() {
           <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
           <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
             fromNow(lastWeeklyReview.createdAt)
-          }}</p>
+            }}</p>
         </div>
         <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
       </div>

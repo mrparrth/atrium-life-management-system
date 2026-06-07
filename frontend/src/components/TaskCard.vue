@@ -41,7 +41,7 @@ async function del() { if (await ui.confirm({ message: 'Remove this task?', titl
         </svg>
       </button>
 
-      <div class="flex-1 min-w-0 cursor-pointer" @click="emit('open', task)">
+      <div class="flex-1 min-w-0 cursor-pointer" @click="ui.openTaskEdit(task); emit('open', task)">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <div class="text-[15px] leading-snug" :class="{ 'line-through text-ink-3': isDone, 'text-ink': !isDone }">

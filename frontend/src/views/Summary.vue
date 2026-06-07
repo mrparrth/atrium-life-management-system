@@ -287,15 +287,35 @@ const yoyInvestmentsChartData = computed(() => {
 const selectedYoyChart = ref('all_scopes')
 
 const yoyChartOptions = computed(() => {
+  const scopeOrder = ['asset', 'liability', 'income', 'investment', 'expense']
+  const scopeLabels = {
+    asset: 'Asset',
+    liability: 'Liability',
+    income: 'Income',
+    investment: 'Investment',
+    expense: 'Expense'
+  }
+  const totalLabels = {
+    asset: 'Total Assets',
+    liability: 'Total Liabilities',
+    income: 'Total Income',
+    investment: 'Total Investments',
+    expense: 'Total Expenses'
+  }
+
   const opts = [
     { key: 'all_scopes', label: 'All Scopes' },
-    { key: 'scope_asset', label: 'Total Assets' },
-    { key: 'scope_liability', label: 'Total Liabilities' },
-    { key: 'scope_income', label: 'Total Income' },
-    { key: 'scope_expense', label: 'Total Expense' },
-    { key: 'scope_investment', label: 'Total Investment' }
+    { isSeparator: true, key: 'sep_1' }
   ]
+
+  // Totals
+  scopeOrder.forEach(scope => {
+    opts.push({ key: `scope_${scope}`, label: totalLabels[scope] })
+  })
   
+  opts.push({ isSeparator: true, key: 'sep_2' })
+
+  // Types (Groups)
   const mapGroups = {}
   finance.categories.forEach(c => {
     if (c.group) {
@@ -303,15 +323,25 @@ const yoyChartOptions = computed(() => {
       mapGroups[key] = { scope: c.scope, group: c.group }
     }
   })
-  Object.keys(mapGroups).sort().forEach(key => {
-    const capScope = mapGroups[key].scope.charAt(0).toUpperCase() + mapGroups[key].scope.slice(1)
-    opts.push({ key, label: `${capScope} Type · ${mapGroups[key].group}` })
+  scopeOrder.forEach(scope => {
+    const scopeGroups = Object.values(mapGroups)
+      .filter(g => g.scope === scope)
+      .sort((a, b) => a.group.localeCompare(b.group))
+    scopeGroups.forEach(g => {
+      opts.push({ key: `group_${g.scope}_${g.group}`, label: `${scopeLabels[scope]} Type · ${g.group}` })
+    })
   })
 
-  const catNames = [...finance.categories].sort((a,b) => a.name.localeCompare(b.name))
-  catNames.forEach(c => {
-    const capScope = c.scope.charAt(0).toUpperCase() + c.scope.slice(1)
-    opts.push({ key: `name_${c.scope}_${c.name}`, label: `${capScope} Category · ${c.name.replace(/_/g, ' ')}` })
+  opts.push({ isSeparator: true, key: 'sep_3' })
+
+  // Categories
+  scopeOrder.forEach(scope => {
+    const scopeCats = finance.categories
+      .filter(c => c.scope === scope)
+      .sort((a, b) => a.name.localeCompare(b.name))
+    scopeCats.forEach(c => {
+      opts.push({ key: `name_${c.scope}_${c.name}`, label: `${scopeLabels[scope]} Category · ${c.name.replace(/_/g, ' ')}` })
+    })
   })
 
   return opts
