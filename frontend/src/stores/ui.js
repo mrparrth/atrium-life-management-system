@@ -4,6 +4,7 @@ import { db } from "@/db";
 
 export const useUIStore = defineStore("ui", () => {
   const theme = ref(localStorage.getItem("atrium.theme") || "light");
+  const mode = ref(localStorage.getItem("atrium.mode") || "personal");
   const sidebarOpen = ref(true);
   const commandOpen = ref(false);
   const quickCaptureOpen = ref(false);
@@ -20,6 +21,11 @@ export const useUIStore = defineStore("ui", () => {
   }
   function toggleTheme() {
     theme.value = theme.value === "dark" ? "light" : "dark";
+  }
+  function toggleMode() {
+    mode.value = mode.value === "work" ? "personal" : "work";
+    localStorage.setItem("atrium.mode", mode.value);
+    showToast(`Switched to ${mode.value === "work" ? "Work" : "Personal"} Mode`, "success");
   }
   function openCommand() {
     commandOpen.value = true;
@@ -73,6 +79,7 @@ export const useUIStore = defineStore("ui", () => {
 
   return {
     theme,
+    mode,
     sidebarOpen,
     commandOpen,
     quickCaptureOpen,
@@ -81,6 +88,7 @@ export const useUIStore = defineStore("ui", () => {
     toast,
     confirmState,
     toggleTheme,
+    toggleMode,
     openCommand,
     closeCommand,
     openQuickCapture,

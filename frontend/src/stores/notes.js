@@ -6,7 +6,7 @@ export const useNotesStore = defineStore('notes', () => {
   const items = ref([])
   async function load() { items.value = await db.notes.orderBy('updatedAt').reverse().toArray() }
   async function add(payload) {
-    const n = { id: newId(), title: payload.title?.trim() || 'Untitled note', body: payload.body || '', tags: payload.tags || [], projectId: payload.projectId || null, taskId: payload.taskId || null, goalId: payload.goalId || null, bookmarkId: payload.bookmarkId || null, createdAt: now(), updatedAt: now(), lastViewedAt: now() }
+    const n = { id: newId(), title: payload.title?.trim() || 'Untitled note', body: payload.body || '', tags: payload.tags || [], projectId: payload.projectId || null, taskId: payload.taskId || null, goalId: payload.goalId || null, bookmarkId: payload.bookmarkId || null, clientId: payload.clientId || null, createdAt: now(), updatedAt: now(), lastViewedAt: now() }
     await db.notes.add(n); items.value.unshift(n); return n
   }
   async function update(id, patch) {

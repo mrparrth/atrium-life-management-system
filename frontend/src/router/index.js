@@ -21,6 +21,18 @@ const routes = [
   { path: '/reviews', name: 'reviews', component: () => import('@/views/Reviews.vue') },
   { path: '/settings', name: 'settings', component: () => import('@/views/Settings.vue') },
   { path: '/summary', name: 'summary', component: () => import('@/views/Summary.vue') },
+  
+  // Work Mode Routes
+  { path: '/work/clients', name: 'work-clients', component: () => import('@/views/work/WorkClients.vue') },
+  { path: '/work/clients/:id', name: 'work-client-detail', component: () => import('@/views/work/WorkClientDetail.vue'), props: true },
+  { path: '/work/items', name: 'work-items', component: () => import('@/views/work/WorkItems.vue') },
+  { path: '/work/leads', name: 'work-leads', component: () => import('@/views/work/WorkLeads.vue') },
+  { path: '/work/forecasting', name: 'work-forecasting', component: () => import('@/views/work/WorkForecasting.vue') },
+  { path: '/work/invoices', name: 'work-invoices', component: () => import('@/views/work/WorkInvoices.vue') },
+  { path: '/work/analytics', name: 'work-analytics', component: () => import('@/views/work/WorkAnalytics.vue') },
+  { path: '/work/notes', name: 'work-notes', component: () => import('@/views/work/WorkNotes.vue') },
+  { path: '/work/resources', name: 'work-resources', component: () => import('@/views/work/WorkResources.vue') },
+  { path: '/work/archive', name: 'work-archive', component: () => import('@/views/work/WorkArchive.vue') },
 ]
 
 const router = createRouter({

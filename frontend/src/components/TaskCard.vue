@@ -31,16 +31,6 @@ async function del() { if (await ui.confirm({ message: 'Remove this task?', titl
   <div class="group card p-4 hover:border-line-2 transition-all duration-300 animate-fade-in"
     :class="{ 'opacity-50': snoozed }" :data-testid="`task-card-${task.id}`">
     <div class="flex items-start gap-3">
-      <button @click.stop="toggle"
-        class="mt-1 w-5 h-5 rounded-md border-2 transition-all duration-300 flex items-center justify-center shrink-0"
-        :class="isDone ? 'bg-ink border-ink' : 'border-line-2 hover:border-ink-2'"
-        :data-testid="`task-toggle-${task.id}`" :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
-        <svg v-if="isDone" class="w-3 h-3 text-canvas" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="3">
-          <path d="M5 13l4 4L19 7" />
-        </svg>
-      </button>
-
       <div class="flex-1 min-w-0 cursor-pointer" @click="ui.openTaskEdit(task); emit('open', task)">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -73,15 +63,29 @@ async function del() { if (await ui.confirm({ message: 'Remove this task?', titl
         </div>
       </div>
 
-      <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1">
-        <button @click.stop="snooze1d" class="btn-ghost !p-1.5" title="Snooze 1 day"
-          :data-testid="`task-snooze-${task.id}`">
-          <MoonStar class="w-3.5 h-3.5" />
+      <div class="flex items-center gap-2 shrink-0 self-center">
+        <!-- Checkbox / Mark complete -->
+        <button @click.stop="toggle"
+          class="w-5 h-5 rounded-md border-2 transition-all duration-300 flex items-center justify-center shrink-0 cursor-pointer"
+          :class="isDone ? 'bg-ink border-ink' : 'border-line-2 hover:border-ink-2'"
+          :data-testid="`task-toggle-${task.id}`" :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
+          <svg v-if="isDone" class="w-3 h-3 text-canvas" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="3">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
         </button>
-        <button @click.stop="del" class="btn-ghost !p-1.5 hover:text-pri-critical" title="Delete"
-          :data-testid="`task-delete-${task.id}`">
-          <Trash2 class="w-3.5 h-3.5" />
-        </button>
+
+        <!-- Hover actions -->
+        <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1">
+          <button @click.stop="snooze1d" class="btn-ghost !p-1.5" title="Snooze 1 day"
+            :data-testid="`task-snooze-${task.id}`">
+            <MoonStar class="w-3.5 h-3.5" />
+          </button>
+          <button @click.stop="del" class="btn-ghost !p-1.5 hover:text-pri-critical" title="Delete"
+            :data-testid="`task-delete-${task.id}`">
+            <Trash2 class="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   </div>

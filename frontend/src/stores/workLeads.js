@@ -1,0 +1,71 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { db, newId, now, plain } from '@/db'
+
+export const useWorkLeadsStore = defineStore('workLeads', () => {
+  const items = ref([])
+
+  async function load() {
+    items.value = await db.work_leads.toArray()
+  }
+
+  async function add(payload) {
+    const lead = {
+      id: newId(),
+      title: payload.title || 'Untitled Lead',
+      clientName: payload.clientName || 'Direct Client',
+      status: payload.status || 'lead', // lead, discovery, proposal_sent, negotiation, won, lost, onboarding
+      estimatedValue: payload.estimatedValue !== undefined ? Number(payload.estimatedValue) : 0,
+      expectedHours: payload.expectedHours !== undefined ? Number(payload.expectedHours) : 0,
+      probability: payload.probability !== undefined ? Number(payload.probability) : 0.5,
+      followUpDate: payload.followUpDate || '',
+      relationshipStrength: payload.relationshipStrength !== undefined ? Number(payload.relationshipStrength) : 3, // 1 to 5
+      notes: payload.notes || '',
+      createdAt: now(),
+      updatedAt: now()
+    }
+    await db.work_leads.add(lead)
+    items.value.push(lead)
+    return lead
+  }
+
+  async function update(id, patch) {
+    const lead = items.value.find(x => x.id === id)
+    if (!lead) return
+    Object.assign(lead, patch, { updatedAt: now() })
+    await db.work_leads.put(plain(lead))
+  }
+
+  async function remove(id) {
+    await db.work_leads.delete(id)
+    items.value = items.value.filter(x => x.id !== id)
+  }
+
+  // Forecast weights
+  const forecast = computed(() => {
+    let high = 0
+    let medium = 0
+    let low = 0
+
+    items.value.forEach(lead => {
+      if (['won', 'onboarding'].includes(lead.status)) {
+        high += lead.estimatedValue
+      } else if (lead.status === 'lost') {
+        // skip
+      } else {
+        const val = lead.estimatedValue * lead.probability
+        if (lead.probability >= 0.8) {
+          high += val
+        } else if (lead.probability >= 0.5) {
+          medium += val
+        } else {
+          low += val
+        }
+      }
+    })
+
+    return { high, medium, low, total: high + medium + low }
+  })
+
+  return { items, load, add, update, remove, forecast }
+})

@@ -1,0 +1,166 @@
+<script setup>
+import { computed, ref } from 'vue'
+import { useWorkClientsStore } from '@/stores/workClients'
+import { useWorkItemsStore } from '@/stores/workItems'
+import { useWorkInvoicesStore } from '@/stores/workInvoices'
+import { useWorkLeadsStore } from '@/stores/workLeads'
+import { useUIStore } from '@/stores/ui'
+import { BellRing, ShieldAlert, Check, RefreshCw, Moon, EyeOff } from 'lucide-vue-next'
+import dayjs from 'dayjs'
+
+const clientsStore = useWorkClientsStore()
+const itemsStore = useWorkItemsStore()
+const invoicesStore = useWorkInvoicesStore()
+const leadsStore = useWorkLeadsStore()
+const ui = useUIStore()
+
+const today = dayjs().format('YYYY-MM-DD')
+
+// We'll store snoozed alerts locally in a ref or localStorage to make this persistent
+const snoozedAlerts = ref(JSON.parse(localStorage.getItem('atrium.snoozed_alerts') || '[]'))
+
+function saveSnoozes() {
+  localStorage.setItem('atrium.snoozed_alerts', JSON.stringify(snoozedAlerts.value))
+}
+
+function snoozeAlert(id, days = 7) {
+  const until = dayjs().add(days, 'day').toISOString()
+  snoozedAlerts.value.push({ id, until })
+  saveSnoozes()
+  ui.showToast('Item snoozed from briefing', 'info')
+}
+
+function isSnoozed(id) {
+  const item = snoozedAlerts.value.find(s => s.id === id)
+  if (!item) return false
+  if (new Date(item.until) < new Date()) {
+    // expired
+    snoozedAlerts.value = snoozedAlerts.value.filter(s => s.id !== id)
+    saveSnoozes()
+    return false
+  }
+  return true
+}
+
+const alerts = computed(() => {
+  const list = []
+  
+  // 1. Stale Clients (> 30 days since last interaction)
+  clientsStore.items.forEach(c => {
+    const key = `client-stale-${c.id}`
+    if (isSnoozed(key)) return
+    const daysSince = dayjs().diff(dayjs(c.lastInteractionAt), 'day')
+    if (daysSince >= 30) {
+      list.push({
+        id: key,
+        type: 'client',
+        title: `${c.name} has gone quiet`,
+        description: `No interactions registered for ${daysSince} days. Check in to maintain relationship health.`,
+        actionText: 'Mark checked-in',
+        action: () => {
+          clientsStore.update(c.id, { lastInteractionAt: new Date().toISOString() })
+          ui.showToast(`Updated interaction date for ${c.name}`, 'success')
+        }
+      })
+    }
+  })
+
+  // 2. Overdue Invoices
+  invoicesStore.items.forEach(inv => {
+    const key = `invoice-overdue-${inv.id}`
+    if (isSnoozed(key)) return
+    if (inv.status !== 'paid' && inv.dueDate < today) {
+      list.push({
+        id: key,
+        type: 'invoice',
+        title: `Outstanding Account: ${inv.invoiceNumber}`,
+        description: `Overdue since ${dayjs(inv.dueDate).format('MMM D')}. Total balance outstanding is ${Math.round(inv.amount - inv.amountPaid)}.`,
+        actionText: 'Mark Paid',
+        action: () => {
+          invoicesStore.update(inv.id, { status: 'paid', paidAt: new Date().toISOString() })
+          ui.showToast(`Invoice ${inv.invoiceNumber} marked as paid`, 'success')
+        }
+      })
+    }
+  })
+
+  // 3. Stale Work Items (untouched for 14 days)
+  itemsStore.items.forEach(item => {
+    const key = `work-item-stale-${item.id}`
+    if (isSnoozed(key)) return
+    if (!itemsStore.isCompleted(item.status)) {
+      const daysSince = dayjs().diff(dayjs(item.updatedAt), 'day')
+      if (daysSince >= 14) {
+        list.push({
+          id: key,
+          type: 'work_item',
+          title: `Untouched work: ${item.title}`,
+          description: `Paused for ${daysSince} days. Review if this is still strategic or needs snoozing/archiving.`,
+          actionText: 'Touch (mark active)',
+          action: () => {
+            itemsStore.update(item.id, { updatedAt: new Date().toISOString() })
+            ui.showToast('Item bumped to active status', 'success')
+          }
+        })
+      }
+    }
+  })
+
+  // 4. Stale Leads
+  leadsStore.items.forEach(lead => {
+    const key = `lead-stale-${lead.id}`
+    if (isSnoozed(key)) return
+    if (!['won', 'lost', 'onboarding'].includes(lead.status) && lead.followUpDate && lead.followUpDate < today) {
+      list.push({
+        id: key,
+        type: 'lead',
+        title: `Lead follow-up: ${lead.title}`,
+        description: `Follow-up was scheduled for ${dayjs(lead.followUpDate).format('MMM D')}. Check-in with ${lead.clientName}.`,
+        actionText: 'Postpone 3d',
+        action: () => {
+          const nextDate = dayjs().add(3, 'day').format('YYYY-MM-DD')
+          leadsStore.update(lead.id, { followUpDate: nextDate })
+          ui.showToast('Follow-up postponed by 3 days', 'info')
+        }
+      })
+    }
+  })
+
+  return list
+})
+</script>
+
+<template>
+  <div v-if="alerts.length" class="space-y-4">
+    <div class="flex items-center gap-2 mb-2">
+      <BellRing class="w-4 h-4 text-pri-interruptive" />
+      <h3 class="overline text-ink-2">Strategic Briefing Alerts</h3>
+    </div>
+    
+    <div class="grid grid-cols-1 gap-3">
+      <div v-for="alert in alerts" :key="alert.id"
+        class="card p-4 flex items-start justify-between gap-4 border border-line bg-surface hover:border-line-2 transition-all duration-300">
+        
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full shrink-0" 
+              :class="alert.type === 'invoice' ? 'bg-pri-critical' : alert.type === 'client' ? 'bg-pri-critical' : 'bg-pri-interruptive'">
+            </span>
+            <span class="text-xs uppercase tracking-wider text-ink-3 font-semibold">{{ alert.type }}</span>
+          </div>
+          <h4 class="font-serif text-base text-ink font-semibold mt-1">{{ alert.title }}</h4>
+          <p class="text-xs text-ink-2 leading-relaxed max-w-xl">{{ alert.description }}</p>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0 self-center">
+          <button @click="alert.action" class="btn-ghost !text-xs !py-1 px-2.5 bg-canvas hover:bg-line/40 rounded-lg flex items-center gap-1 text-ink font-medium">
+            <Check class="w-3.5 h-3.5" /> {{ alert.actionText }}
+          </button>
+          <button @click="snoozeAlert(alert.id)" class="btn-ghost !p-1.5 hover:bg-canvas text-ink-3 hover:text-ink rounded-lg" title="Snooze for 7 days">
+            <EyeOff class="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

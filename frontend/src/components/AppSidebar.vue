@@ -6,14 +6,14 @@ import {
   LayoutGrid, Sun, Moon, CheckSquare, FolderKanban, Compass,
   BookOpen, Archive, Calendar, Target, NotebookPen, Bookmark,
   Wallet, Sparkles, Settings, Command, Plus, ListChecks, GitFork,
-  TrendingUp
+  TrendingUp, Users, Receipt, BarChart2
 } from 'lucide-vue-next'
 
 const ui = useUIStore()
 const route = useRoute()
 const router = useRouter()
 
-const RAW_SECTIONS = [
+const RAW_SECTIONS_PERSONAL = [
   {
     label: 'Today',
     items: [
@@ -51,6 +51,39 @@ const RAW_SECTIONS = [
   },
 ]
 
+const RAW_SECTIONS_WORK = [
+  {
+    label: 'Briefing',
+    items: [
+      { to: '/', name: 'Dashboard', icon: LayoutGrid, testid: 'nav-work-dashboard' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { to: '/work/clients', name: 'Clients', icon: Users, testid: 'nav-work-clients' },
+      { to: '/work/items', name: 'Work items', icon: FolderKanban, testid: 'nav-work-items' },
+      { to: '/work/notes', name: 'Notes', icon: NotebookPen, testid: 'nav-work-notes' },
+      { to: '/work/resources', name: 'Resources', icon: BookOpen, testid: 'nav-work-resources' },
+    ],
+  },
+  {
+    label: 'Business',
+    items: [
+      { to: '/work/leads', name: 'Leads', icon: Target, testid: 'nav-work-leads' },
+      { to: '/work/forecasting', name: 'Forecasting', icon: BarChart2, testid: 'nav-work-forecasting' },
+      { to: '/work/invoices', name: 'Invoices', icon: Receipt, testid: 'nav-work-invoices' },
+      { to: '/work/analytics', name: 'Analytics', icon: TrendingUp, testid: 'nav-work-analytics' },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { to: '/work/archive', name: 'Archive', icon: Archive, testid: 'nav-work-archive' },
+    ],
+  }
+]
+
 const usedShortcuts = new Set()
 function assignShortcut(name) {
   for (let i = 0; i < name.length; i++) {
@@ -65,7 +98,8 @@ function assignShortcut(name) {
 
 const sections = computed(() => {
   usedShortcuts.clear()
-  return RAW_SECTIONS.map(section => ({
+  const raw = ui.mode === 'work' ? RAW_SECTIONS_WORK : RAW_SECTIONS_PERSONAL
+  return raw.map(section => ({
     ...section,
     items: section.items.map(item => ({
       ...item,
@@ -111,6 +145,14 @@ function handleKeydown(e) {
   }
 }
 
+function handleQuickCaptureClick() {
+  if (ui.mode === 'work') {
+    router.push('/work/notes?new=true')
+  } else {
+    ui.openQuickCapture()
+  }
+}
+
 onMounted(() => window.addEventListener('keydown', handleKeydown))
 onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 </script>
@@ -135,6 +177,22 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </button>
     </div>
 
+    <!-- MODE TOGGLE -->
+    <div class="px-4 mb-3">
+      <div class="bg-canvas border border-line p-1 rounded-xl flex gap-1 text-xs font-medium">
+        <button @click="ui.mode !== 'personal' && ui.toggleMode()"
+          class="flex-1 py-1.5 rounded-lg text-center transition-all duration-300"
+          :class="ui.mode === 'personal' ? 'bg-surface text-ink shadow-sm border border-line/40 font-semibold' : 'text-ink-2 hover:text-ink'">
+          Personal
+        </button>
+        <button @click="ui.mode !== 'work' && ui.toggleMode()"
+          class="flex-1 py-1.5 rounded-lg text-center transition-all duration-300"
+          :class="ui.mode === 'work' ? 'bg-surface text-ink shadow-sm border border-line/40 font-semibold' : 'text-ink-2 hover:text-ink'">
+          Work Mode
+        </button>
+      </div>
+    </div>
+
     <button @click="ui.openCommand"
       class="mx-4 mb-2 flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-line bg-surface text-ink-2 hover:text-ink hover:border-line-2 transition-all duration-300"
       data-testid="command-trigger">
@@ -147,10 +205,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </span>
     </button>
 
-    <button @click="ui.openQuickCapture"
+    <button @click="handleQuickCaptureClick"
       class="mx-4 mb-4 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-ink text-canvas hover:opacity-90 transition-opacity duration-300 text-sm font-medium"
       data-testid="quick-capture-trigger">
-      <Plus class="w-3.5 h-3.5" /> Quick capture
+      <Plus class="w-3.5 h-3.5" /> {{ ui.mode === 'work' ? 'New note' : 'Quick capture' }}
     </button>
 
     <nav class="flex-1 overflow-y-auto px-3 pb-4 space-y-6">

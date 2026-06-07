@@ -23,7 +23,15 @@ const notes = useNotesStore()
 const bookmarks = useBookmarksStore()
 const goals = useGoalsStore()
 
-const navItems = [
+import { useWorkClientsStore } from '@/stores/workClients'
+import { useWorkItemsStore } from '@/stores/workItems'
+import { useWorkInvoicesStore } from '@/stores/workInvoices'
+
+const workClients = useWorkClientsStore()
+const workItems = useWorkItemsStore()
+const workInvoices = useWorkInvoicesStore()
+
+const navItemsPersonal = [
   { type: 'nav', label: 'Dashboard', to: '/', icon: 'home' },
   { type: 'nav', label: 'Today focus', to: '/today', icon: 'home' },
   { type: 'nav', label: 'Tasks', to: '/tasks', icon: 'task' },
@@ -39,7 +47,19 @@ const navItems = [
   { type: 'nav', label: 'Reviews', to: '/reviews', icon: 'home' },
 ]
 
-const extraNav = [
+const navItemsWork = [
+  { type: 'nav', label: 'Dashboard Briefing', to: '/', icon: 'home' },
+  { type: 'nav', label: 'Clients Directory', to: '/work/clients', icon: 'home' },
+  { type: 'nav', label: 'Work Items Scope', to: '/work/items', icon: 'task' },
+  { type: 'nav', label: 'Leads Pipeline', to: '/work/leads', icon: 'goal' },
+  { type: 'nav', label: 'Forecasting Capacity', to: '/work/forecasting', icon: 'home' },
+  { type: 'nav', label: 'Invoices Ledger', to: '/work/invoices', icon: 'note' },
+  { type: 'nav', label: 'Analytics Intel', to: '/work/analytics', icon: 'project' },
+  { type: 'nav', label: 'Notes Memory', to: '/work/notes', icon: 'note' },
+  { type: 'nav', label: 'Workflow SOPs', to: '/work/resources', icon: 'home' },
+]
+
+const extraNavPersonal = [
   { type: 'nav', label: 'View Networth', action: () => { ui.closeCommand(); router.push('/finance?tab=networth') }, icon: 'wallet' },
   { type: 'nav', label: 'View CashFlow', action: () => { ui.closeCommand(); router.push('/finance?tab=cashflow') }, icon: 'wallet' },
   { type: 'nav', label: 'Modify Categories', action: () => { ui.closeCommand(); router.push('/finance?tab=categories') }, icon: 'wallet' },
@@ -47,42 +67,77 @@ const extraNav = [
   { type: 'nav', label: 'YoY summary', action: () => { ui.closeCommand(); router.push('/summary?tab=yoy') }, icon: 'goal' },
 ]
 
-const quickActions = [
+const extraNavWork = [
+  { type: 'nav', label: 'Client Revenue Margins', action: () => { ui.closeCommand(); router.push('/work/analytics') }, icon: 'wallet' },
+  { type: 'nav', label: 'Archived Contracts', action: () => { ui.closeCommand(); router.push('/work/archive') }, icon: 'home' },
+]
+
+const quickActionsPersonal = [
   { type: 'action', label: 'Quick capture a task', kbd: '⌘N', action: () => { ui.closeCommand(); ui.openQuickCapture() } },
   { type: 'action', label: 'New Project', action: () => { ui.closeCommand(); router.push('/projects?new=1') } },
   { type: 'action', label: 'New Note', action: () => { ui.closeCommand(); router.push('/notes?new=1') } },
   { type: 'action', label: 'New Bookmark', action: () => { ui.closeCommand(); router.push('/bookmarks?new=bookmark') } },
-  { type: 'action', label: 'New Collection', action: () => { ui.closeCommand(); router.push('/bookmarks?new=collection') } },
-  { type: 'action', label: 'Log Networth', action: () => { ui.closeCommand(); router.push('/finance?new=nw') } },
-  { type: 'action', label: "Log a Month's Cashflow", action: () => { ui.closeCommand(); router.push('/finance?new=cf') } },
+]
+
+const quickActionsWork = [
+  { type: 'action', label: 'New Client Profile', action: () => { ui.closeCommand(); router.push('/work/clients') } },
+  { type: 'action', label: 'Add Work Item', action: () => { ui.closeCommand(); router.push('/work/items') } },
+  { type: 'action', label: 'Draft Invoice', action: () => { ui.closeCommand(); router.push('/work/invoices') } },
+  { type: 'action', label: 'Capture Workspace Note', action: () => { ui.closeCommand(); router.push('/work/notes') } },
 ]
 
 const results = computed(() => {
   const term = q.value.trim().toLowerCase()
+  const mode = ui.mode
+  const isWork = mode === 'work'
+
   if (!term) {
     return [
-      { group: 'Quick actions', items: quickActions },
-      { group: 'Jump to', items: extraNav }
+      { group: 'Quick actions', items: isWork ? quickActionsWork : quickActionsPersonal },
+      { group: 'Jump to', items: isWork ? extraNavWork : extraNavPersonal }
     ]
   }
-  const match = (s) => (s || '').toLowerCase().includes(term)
-  const nav = [...navItems, ...extraNav].filter(n => match(n.label))
-  const qa = quickActions.filter(a => match(a.label))
-  const t = tasks.items.filter(t => match(t.title) || match(t.description)).slice(0, 8).map(t => ({ type: 'task', label: t.title, to: `/tasks`, item: t }))
-  const p = projects.items.filter(p => match(p.title) || match(p.description)).slice(0, 6).map(p => ({ type: 'project', label: p.title, to: `/projects/${p.id}`, item: p }))
-  const n = notes.items.filter(n => match(n.title) || match(n.body)).slice(0, 6).map(n => ({ type: 'note', label: n.title, to: `/notes/${n.id}`, item: n }))
-  const b = bookmarks.items.filter(b => match(b.title) || match(b.url)).slice(0, 6).map(b => ({ type: 'bookmark', label: b.title, url: b.url, item: b }))
-  const g = goals.items.filter(g => match(g.title)).slice(0, 4).map(g => ({ type: 'goal', label: g.title, to: '/goals', item: g }))
 
-  const groups = []
-  if (qa.length) groups.push({ group: 'Quick actions', items: qa })
-  if (nav.length) groups.push({ group: 'Jump to', items: nav })
-  if (t.length) groups.push({ group: 'Tasks', items: t })
-  if (p.length) groups.push({ group: 'Projects', items: p })
-  if (n.length) groups.push({ group: 'Notes', items: n })
-  if (b.length) groups.push({ group: 'Bookmarks', items: b })
-  if (g.length) groups.push({ group: 'Goals', items: g })
-  return groups
+  const match = (s) => (s || '').toLowerCase().includes(term)
+
+  const activeNavItems = isWork ? navItemsWork : navItemsPersonal
+  const activeExtraNav = isWork ? extraNavWork : extraNavPersonal
+  const activeQuickActions = isWork ? quickActionsWork : quickActionsPersonal
+
+  const nav = [...activeNavItems, ...activeExtraNav].filter(n => match(n.label))
+  const qa = activeQuickActions.filter(a => match(a.label))
+
+  if (isWork) {
+    const clients = workClients.items.filter(c => match(c.name) || match(c.relationshipNotes)).slice(0, 6).map(c => ({ type: 'project', label: c.name, to: `/work/clients/${c.id}`, item: c }))
+    const items = workItems.items.filter(i => match(i.title) || match(i.description)).slice(0, 8).map(i => ({ type: 'task', label: i.title, to: `/work/items`, item: i }))
+    const invoices = workInvoices.items.filter(inv => match(inv.invoiceNumber)).slice(0, 6).map(inv => ({ type: 'bookmark', label: inv.invoiceNumber, to: `/work/invoices`, item: inv }))
+    const wNotes = notes.items.filter(n => (n.tags?.includes('work') || n.clientId) && (match(n.title) || match(n.body))).slice(0, 6).map(n => ({ type: 'note', label: n.title, to: `/work/notes?id=${n.id}`, item: n }))
+
+    const groups = []
+    if (qa.length) groups.push({ group: 'Quick actions', items: qa })
+    if (nav.length) groups.push({ group: 'Jump to', items: nav })
+    if (clients.length) groups.push({ group: 'Clients Workspaces', items: clients })
+    if (items.length) groups.push({ group: 'Work Items Scope', items: items })
+    if (invoices.length) groups.push({ group: 'Invoices Billing', items: invoices })
+    if (wNotes.length) groups.push({ group: 'Work Notes', items: wNotes })
+    return groups
+  } else {
+    const t = tasks.items.filter(t => match(t.title) || match(t.description)).slice(0, 8).map(t => ({ type: 'task', label: t.title, to: `/tasks`, item: t }))
+    const p = projects.items.filter(p => match(p.title) || match(p.description)).slice(0, 6).map(p => ({ type: 'project', label: p.title, to: `/projects/${p.id}`, item: p }))
+    const n = notes.items.filter(n => match(n.title) || match(n.body)).slice(0, 6).map(n => ({ type: 'note', label: n.title, to: `/notes/${n.id}`, item: n }))
+    const b = bookmarks.items.filter(b => match(b.title) || match(b.url)).slice(0, 6).map(b => ({ type: 'bookmark', label: b.title, url: b.url, item: b }))
+    const g = goals.items.filter(g => match(g.title)).slice(0, 4).map(g => ({ type: 'goal', label: g.title, to: '/goals', item: g }))
+
+    const groups = []
+    if (qa.length) groups.push({ group: 'Quick actions', items: qa })
+    if (nav.length) groups.push({ group: 'Jump to', items: nav })
+    if (t.length) groups.push({ group: 'Tasks', items: t })
+    if (p.length) groups.push({ group: 'Projects', items: p })
+    if (n.length) groups.push({ group: 'Notes', items: n })
+    if (b.length) groups.push({ group: 'Bookmarks', items: b })
+    if (g.length) groups.push({ group: 'Goals', items: g })
+    return groups
+  }
 })
 
 const flatItems = computed(() => results.value.flatMap(g => g.items))

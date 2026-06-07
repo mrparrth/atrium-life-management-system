@@ -77,6 +77,15 @@ async function clearAll() {
   for (const t of db.tables) await t.clear()
   location.reload()
 }
+
+const driveRootInput = ref(localStorage.getItem('atrium.work.drive_root') || '')
+const defaultCurrencyInput = ref(localStorage.getItem('atrium.work.default_currency') || 'USD')
+
+function saveWorkSettings() {
+  localStorage.setItem('atrium.work.drive_root', driveRootInput.value.trim())
+  localStorage.setItem('atrium.work.default_currency', defaultCurrencyInput.value)
+  ui.showToast('Work preferences saved', 'success')
+}
 </script>
 
 <template>
@@ -87,6 +96,30 @@ async function clearAll() {
     <div class="card p-5 mb-10 flex items-center justify-between">
       <p class="text-sm text-ink-2">Currently {{ ui.theme }}</p>
       <button class="btn-secondary" @click="ui.toggleTheme" data-testid="settings-toggle-theme">Switch theme</button>
+    </div>
+
+    <!-- WORK WORKSPACE SETTINGS -->
+    <SectionHeader overline="Work Operations" title="Work Cockpit Preferences" />
+    <div class="card p-6 mb-10 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="overline block mb-1">Google Drive Root Folder</label>
+          <input v-model="driveRootInput" placeholder="e.g. My Drive/AtriumWork" class="input-block text-sm" />
+        </div>
+        <div>
+          <label class="overline block mb-1">Default Billing Currency</label>
+          <select v-model="defaultCurrencyInput" class="input-block text-sm">
+            <option value="USD">USD ($)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="INR">INR (₹)</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end pt-2 border-t border-line/40">
+        <button class="btn-primary" @click="saveWorkSettings">
+          <Save class="w-4 h-4" /> Save Work Preferences
+        </button>
+      </div>
     </div>
 
     <!-- GOOGLE DRIVE -->

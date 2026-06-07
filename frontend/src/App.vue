@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
@@ -12,6 +12,14 @@ import { useFinanceStore } from '@/stores/finance'
 import { useAreasStore } from '@/stores/areas'
 import { useReviewsStore } from '@/stores/reviews'
 import { useNextStepsStore } from '@/stores/nextSteps'
+import { useWorkClientsStore } from '@/stores/workClients'
+import { useWorkItemsStore } from '@/stores/workItems'
+import { useWorkLeadsStore } from '@/stores/workLeads'
+import { useWorkInvoicesStore } from '@/stores/workInvoices'
+import { useWorkMeetingsStore } from '@/stores/workMeetings'
+import { useWorkForecastStore } from '@/stores/workForecast'
+import { useWorkTemplatesStore } from '@/stores/workTemplates'
+import { useWorkResourcesStore } from '@/stores/workResources'
 import { db, seedIfEmpty } from '@/db'
 import { backup as driveBackup, isConnected, lastBackupAt } from '@/services/drive'
 
@@ -25,6 +33,7 @@ import { X } from 'lucide-vue-next'
 
 const ui = useUIStore()
 const route = useRoute()
+const router = useRouter()
 
 
 onMounted(async () => {
@@ -41,6 +50,14 @@ onMounted(async () => {
     useAreasStore().load(),
     useReviewsStore().load(),
     useNextStepsStore().load(),
+    useWorkClientsStore().load(),
+    useWorkItemsStore().load(),
+    useWorkLeadsStore().load(),
+    useWorkInvoicesStore().load(),
+    useWorkMeetingsStore().load(),
+    useWorkForecastStore().load(),
+    useWorkTemplatesStore().load(),
+    useWorkResourcesStore().load(),
   ])
 
   window.addEventListener('keydown', (e) => {
@@ -73,9 +90,53 @@ onMounted(async () => {
   setInterval(checkAutoBackup, 1000 * 60 * 60) // Check every hour
 })
 
-watch(() => route.fullPath, () => {
-  // close overlays on navigation
-  ui.closeCommand(); ui.closeQuickCapture(); ui.closeTaskEdit()
+// Sync and preserve active routes per mode
+watch(() => route.fullPath, (newPath) => {
+  if (!newPath) return
+
+  // Close overlays on navigation
+  ui.closeCommand()
+  ui.closeQuickCapture()
+  ui.closeTaskEdit()
+
+  // Avoid tracking or setting mode on shared settings page
+  if (newPath.startsWith('/settings')) {
+    return
+  }
+
+  // Detect mode based on route path
+  if (newPath.startsWith('/work')) {
+    if (ui.mode !== 'work') {
+      ui.mode = 'work'
+      localStorage.setItem('atrium.mode', 'work')
+    }
+    localStorage.setItem('atrium.last_path.work', newPath)
+  } else if (newPath === '/') {
+    // Shared root dashboard path - track for the currently active mode
+    if (ui.mode === 'work') {
+      localStorage.setItem('atrium.last_path.work', newPath)
+    } else {
+      localStorage.setItem('atrium.last_path.personal', newPath)
+    }
+  } else {
+    // All other routes are personal context
+    if (ui.mode !== 'personal') {
+      ui.mode = 'personal'
+      localStorage.setItem('atrium.mode', 'personal')
+    }
+    localStorage.setItem('atrium.last_path.personal', newPath)
+  }
+}, { immediate: true })
+
+// Redirect to last tab when mode is switched (e.g. from the sidebar toggle)
+watch(() => ui.mode, (newMode) => {
+  const targetPath = newMode === 'work'
+    ? (localStorage.getItem('atrium.last_path.work') || '/')
+    : (localStorage.getItem('atrium.last_path.personal') || '/')
+
+  if (route.fullPath !== targetPath) {
+    router.push(targetPath)
+  }
 })
 </script>
 
