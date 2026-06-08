@@ -318,9 +318,14 @@ onUnmounted(() => {
           <span v-if="client" @click.stop="goToClientPage"
             class="text-[10px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-2 py-0.5 rounded-full hover:bg-line/60 hover:text-ink transition-all cursor-pointer"
             title="Go to client details">
-            {{ client.name }}<template v-if="clientLocalTime"> · {{ clientLocalTime }}</template>
+            {{ client.name }} <template v-if="clientLocalTime">· {{ clientLocalTime }} Local</template>
           </span>
-          <!-- Status Tag with Dropdown Menu -->
+          <!-- Charged Badge -->
+          <span v-if="props.item.charged > 0"
+            class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+            ${{ props.item.charged }}
+          </span>
+          <!-- Status Tag with Dropdown Menu (Rightmost in labels list) -->
           <div class="relative inline-block">
             <button @click.stop="showStatusMenu = !showStatusMenu"
               class="text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1.5 hover:opacity-85 transition-all cursor-pointer"
@@ -362,16 +367,6 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
-          <!-- Priority tag -->
-          <span class="text-[9px] uppercase tracking-overline font-semibold px-2 py-0.5 rounded-md border"
-            :class="priorityClass">
-            {{ quadrant }}
-          </span>
-          <!-- Charged Badge -->
-          <span v-if="props.item.charged > 0"
-            class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-            ${{ props.item.charged }}
-          </span>
         </div>
 
         <h4 class="font-medium text-ink text-sm leading-snug"
@@ -546,29 +541,7 @@ onUnmounted(() => {
               </select>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <!-- Urgent Checkbox -->
-              <label
-                class="flex items-center gap-2.5 p-3 rounded-xl border border-line bg-canvas/40 cursor-pointer select-none">
-                <input type="checkbox" v-model="editForm.urgent"
-                  class="w-4 h-4 rounded border-line text-ink focus:ring-0" />
-                <div class="text-xs">
-                  <span class="font-semibold block">Urgent</span>
-                  <span class="text-[10px] text-ink-3">Requires swift action</span>
-                </div>
-              </label>
-
-              <!-- Important Checkbox -->
-              <label
-                class="flex items-center gap-2.5 p-3 rounded-xl border border-line bg-canvas/40 cursor-pointer select-none">
-                <input type="checkbox" v-model="editForm.important"
-                  class="w-4 h-4 rounded border-line text-ink focus:ring-0" />
-                <div class="text-xs">
-                  <span class="font-semibold block">Important</span>
-                  <span class="text-[10px] text-ink-3">High strategic impact</span>
-                </div>
-              </label>
-            </div>
+            <div></div>
 
             <div class="grid grid-cols-3 gap-4">
               <div>

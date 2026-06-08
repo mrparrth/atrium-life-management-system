@@ -46,7 +46,7 @@ const overruns = computed(() => analyticsStore.scopeCreepAlerts)
         <div v-for="s in revenueSeries" :key="s.key" class="flex-1 flex flex-col items-center h-full justify-end group">
           <!-- Tooltip on hover -->
           <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-ink text-canvas text-[10px] px-2 py-1 rounded-md mb-2 font-mono font-semibold shadow-md">
-            ₹{{ s.value.toLocaleString() }}
+            ${{ s.value.toLocaleString() }}
           </div>
           <!-- Bar -->
           <div class="w-full rounded-t-lg bg-line group-hover:bg-line-2 transition-all duration-300"
@@ -79,10 +79,10 @@ const overruns = computed(() => analyticsStore.scopeCreepAlerts)
                 <tr v-for="c in clientProfitability" :key="c.id" class="border-b border-line/60 last:border-0 hover:bg-canvas/20">
                   <td class="p-3 font-semibold text-ink">{{ c.name }}</td>
                   <td class="p-3 text-center text-ink-2 font-mono">{{ c.totalHours.toFixed(1) }}h</td>
-                  <td class="p-3 text-right text-ink-2">₹{{ c.totalInvoiced.toLocaleString() }}</td>
+                  <td class="p-3 text-right text-ink-2">${{ c.totalInvoiced.toLocaleString() }}</td>
                   <td class="p-3 text-right font-serif font-bold"
-                    :class="c.hourlyYield >= 3000 ? 'text-pri-strategic' : c.hourlyYield > 0 && c.hourlyYield < 2000 ? 'text-pri-critical' : 'text-ink'">
-                    ₹{{ c.hourlyYield }}/hr
+                    :class="c.hourlyYield >= 100 ? 'text-pri-strategic' : c.hourlyYield > 0 && c.hourlyYield < 50 ? 'text-pri-critical' : 'text-ink'">
+                    ${{ c.hourlyYield }}/hr
                   </td>
                 </tr>
               </tbody>

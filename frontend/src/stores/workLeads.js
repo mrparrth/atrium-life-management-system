@@ -19,6 +19,7 @@ export const useWorkLeadsStore = defineStore('workLeads', () => {
       expectedHours: payload.expectedHours !== undefined ? Number(payload.expectedHours) : 0,
       probability: payload.probability !== undefined ? Number(payload.probability) : 0.5,
       followUpDate: payload.followUpDate || '',
+      statusChangedAt: payload.statusChangedAt || now(),
       relationshipStrength: payload.relationshipStrength !== undefined ? Number(payload.relationshipStrength) : 3, // 1 to 5
       notes: payload.notes || '',
       createdAt: now(),
@@ -32,6 +33,16 @@ export const useWorkLeadsStore = defineStore('workLeads', () => {
   async function update(id, patch) {
     const lead = items.value.find(x => x.id === id)
     if (!lead) return
+
+    if (patch.status && patch.status !== lead.status) {
+      patch.statusChangedAt = now()
+      if (!patch.followUpDate) {
+        const twoDaysForward = new Date()
+        twoDaysForward.setDate(twoDaysForward.getDate() + 2)
+        patch.followUpDate = twoDaysForward.toISOString().slice(0, 10)
+      }
+    }
+
     Object.assign(lead, patch, { updatedAt: now() })
     await db.work_leads.put(plain(lead))
   }

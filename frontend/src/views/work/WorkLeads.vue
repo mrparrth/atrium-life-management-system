@@ -1,14 +1,16 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useWorkLeadsStore } from '@/stores/workLeads'
+import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, Target, DollarSign, Calendar, MessageSquare, Trash } from 'lucide-vue-next'
+import { Plus, Target, DollarSign, Calendar, MessageSquare, Trash, Briefcase } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
 const leadsStore = useWorkLeadsStore()
+const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
 
 const showAddModal = ref(false)
@@ -64,8 +66,8 @@ function getStageTotalValue(stageKey) {
   return list.reduce((acc, lead) => acc + lead.estimatedValue, 0)
 }
 
-function updateStage(leadId, nextStage) {
-  leadsStore.update(leadId, { status: nextStage })
+async function updateStage(leadId, nextStage) {
+  await leadsStore.update(leadId, { status: nextStage })
   ui.showToast(`Lead moved to ${nextStage.replace('_', ' ')}`, 'success')
 }
 
@@ -76,6 +78,24 @@ function deleteLead(id) {
       ui.showToast('Lead removed', 'success')
     }
   })
+}
+
+async function convertToClient(lead) {
+  const existingClient = clientsStore.items.find(c => c.name.toLowerCase() === lead.clientName.toLowerCase())
+  if (existingClient) {
+    ui.showToast('Client workspace already exists with this name', 'warning')
+    return
+  }
+
+  await clientsStore.add({
+    name: lead.clientName,
+    status: 'prospect',
+    relationshipNotes: lead.notes || `Converted from sales lead: ${lead.title}`,
+    clientSource: 'Referral'
+  })
+
+  await leadsStore.update(lead.id, { status: 'won' })
+  ui.showToast(`Successfully converted ${lead.clientName} to Client Workspace!`, 'success')
 }
 </script>
 
@@ -96,25 +116,25 @@ function deleteLead(id) {
       <div class="card p-4 bg-surface/50 border border-line">
         <div class="overline text-ink-3">Total Estimated Pipeline</div>
         <div class="font-serif text-2xl font-bold mt-1 text-ink">
-          ₹{{ leadsStore.items.reduce((acc, x) => acc + x.estimatedValue, 0).toLocaleString() }}
+          ${{ leadsStore.items.reduce((acc, x) => acc + x.estimatedValue, 0).toLocaleString() }}
         </div>
       </div>
       <div class="card p-4 bg-surface/50 border border-line">
         <div class="overline text-pri-strategic">High Confidence Forecast (P >= 80%)</div>
         <div class="font-serif text-2xl font-bold mt-1 text-pri-strategic">
-          ₹{{ Math.round(leadsStore.forecast.high).toLocaleString() }}
+          ${{ Math.round(leadsStore.forecast.high).toLocaleString() }}
         </div>
       </div>
       <div class="card p-4 bg-surface/50 border border-line">
         <div class="overline text-pri-interruptive">Medium Confidence Forecast (P >= 50%)</div>
         <div class="font-serif text-2xl font-bold mt-1 text-pri-interruptive">
-          ₹{{ Math.round(leadsStore.forecast.medium).toLocaleString() }}
+          ${{ Math.round(leadsStore.forecast.medium).toLocaleString() }}
         </div>
       </div>
       <div class="card p-4 bg-surface/50 border border-line">
         <div class="overline text-ink-3">Total Weighted Opportunity</div>
         <div class="font-serif text-2xl font-bold mt-1 text-ink">
-          ₹{{ Math.round(leadsStore.forecast.total).toLocaleString() }}
+          ${{ Math.round(leadsStore.forecast.total).toLocaleString() }}
         </div>
       </div>
     </div>
@@ -128,7 +148,7 @@ function deleteLead(id) {
         <div class="flex items-center justify-between pb-3 mb-4 border-b border-line/50">
           <div>
             <h3 class="font-serif text-sm font-semibold text-ink">{{ stage.name }}</h3>
-            <span class="text-[10px] text-ink-3 font-semibold uppercase tracking-wider">₹{{ getStageTotalValue(stage.key).toLocaleString() }}</span>
+            <span class="text-[10px] text-ink-3 font-semibold uppercase tracking-wider">${{ getStageTotalValue(stage.key).toLocaleString() }}</span>
           </div>
           <span class="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-canvas border text-ink-2">
             {{ getLeadsByStage(stage.key).length }}
@@ -147,18 +167,22 @@ function deleteLead(id) {
 
             <!-- Value / Probability -->
             <div class="mt-4 flex items-center justify-between text-xs border-t border-line/40 pt-3">
-              <span class="font-serif font-bold text-ink">₹{{ lead.estimatedValue.toLocaleString() }}</span>
+              <span class="font-serif font-bold text-ink">${{ lead.estimatedValue.toLocaleString() }}</span>
               <span class="text-[10px] bg-canvas border px-2 py-0.5 rounded font-mono font-semibold text-ink-2">
                 {{ Math.round(lead.probability * 100) }}% prob
               </span>
             </div>
 
             <!-- Follow-up date / notes -->
-            <div class="mt-3 flex justify-between items-center text-[10px] text-ink-3">
-              <span v-if="lead.followUpDate" class="flex items-center gap-1 text-pri-interruptive">
-                <Calendar class="w-3.5 h-3.5" /> {{ dayjs(lead.followUpDate).format('MMM D') }}
+            <div class="mt-3 flex flex-col gap-1 text-[10px] text-ink-3">
+              <span v-if="lead.followUpDate" class="flex items-center gap-1 text-pri-interruptive font-semibold">
+                <Calendar class="w-3.5 h-3.5" /> Follow Up: {{ dayjs(lead.followUpDate).format('MMM D, YYYY') }}
               </span>
               <span v-else class="italic">No follow-up set</span>
+
+              <span v-if="lead.statusChangedAt" class="text-[9px] text-ink-3 opacity-80">
+                Status updated: {{ dayjs(lead.statusChangedAt).format('MMM D, h:mm A') }}
+              </span>
             </div>
             
             <!-- Quick actions -->
@@ -170,9 +194,16 @@ function deleteLead(id) {
                 <option value="lost">Lost</option>
               </select>
               
-              <button @click="deleteLead(lead.id)" class="text-ink-3 hover:text-pri-critical p-1 rounded" title="Delete Opportunity">
-                <Trash class="w-3.5 h-3.5" />
-              </button>
+              <div class="flex items-center gap-1.5">
+                <button v-if="lead.status !== 'won' && lead.status !== 'onboarding'" 
+                  class="text-[10px] text-pri-strategic hover:underline flex items-center gap-0.5" 
+                  @click="convertToClient(lead)" title="Convert to Workspace Client">
+                  <Briefcase class="w-3 h-3" /> Convert
+                </button>
+                <button @click="deleteLead(lead.id)" class="text-ink-3 hover:text-pri-critical p-1 rounded" title="Delete Opportunity">
+                  <Trash class="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -206,7 +237,7 @@ function deleteLead(id) {
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Est. Deal Value (₹)</label>
+              <label class="block text-xs font-semibold text-ink-2 mb-1">Est. Deal Value ($)</label>
               <input type="number" v-model="value" min="0" class="input-block text-sm" />
             </div>
             <div>

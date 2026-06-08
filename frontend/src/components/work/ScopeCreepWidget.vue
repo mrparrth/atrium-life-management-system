@@ -32,37 +32,44 @@ const unprofitableClients = computed(() => {
             <AlertTriangle class="w-4 h-4 text-pri-critical" />
           </div>
           <h4 class="font-serif text-lg text-ink font-semibold">Active Scope Creep</h4>
-          <p class="text-xs text-ink-2 mt-1 leading-relaxed">The following items have exceeded their estimated hours. Consider pausing to adjust estimates or invoicing additional requests.</p>
-          
+          <p class="text-xs text-ink-2 mt-1 leading-relaxed">The following items have exceeded their estimated hours.
+            Consider pausing to adjust estimates or invoicing additional requests.</p>
+
           <ul class="mt-4 space-y-3">
-            <li v-for="item in overruns" :key="item.id" class="text-xs border-b border-line/60 pb-2 last:border-0 last:pb-0">
+            <li v-for="item in overruns" :key="item.id"
+              class="text-xs border-b border-line/60 pb-2 last:border-0 last:pb-0">
               <div class="flex justify-between font-medium text-ink">
                 <span class="truncate pr-2">{{ item.title }}</span>
                 <span class="text-pri-critical shrink-0">+{{ item.overrun.toFixed(1) }}h ({{ item.percent }}%)</span>
               </div>
-              <div class="text-[10px] text-ink-3 mt-0.5">Client: {{ item.clientName }} · Tracked: {{ item.actualHours }}h / Est: {{ item.estimatedHours }}h</div>
+              <div class="text-[10px] text-ink-3 mt-0.5">Client: {{ item.clientName }} · Tracked: {{ item.actualHours
+                }}h / Est: {{ item.estimatedHours }}h</div>
             </li>
           </ul>
         </div>
       </div>
 
       <!-- Unprofitable Client Alerts -->
-      <div v-if="unprofitableClients.length" class="card p-5 bg-surface border border-line flex flex-col justify-between">
+      <div v-if="unprofitableClients.length"
+        class="card p-5 bg-surface border border-line flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between mb-3">
             <span class="overline text-pri-interruptive font-semibold">Margin Check</span>
             <TrendingDown class="w-4 h-4 text-pri-interruptive" />
           </div>
           <h4 class="font-serif text-lg text-ink font-semibold">Low-Yield Accounts</h4>
-          <p class="text-xs text-ink-2 mt-1 leading-relaxed">Calculated by dividing base invoiced amount by actual tracked hours. Lower yield suggests high revision overhead or underpriced scopes.</p>
-          
+          <p class="text-xs text-ink-2 mt-1 leading-relaxed">Calculated by dividing base invoiced amount by actual
+            tracked hours. Lower yield suggests high revision overhead or underpriced scopes.</p>
+
           <ul class="mt-4 space-y-3">
-            <li v-for="c in unprofitableClients" :key="c.id" class="text-xs border-b border-line/60 pb-2 last:border-0 last:pb-0">
+            <li v-for="c in unprofitableClients" :key="c.id"
+              class="text-xs border-b border-line/60 pb-2 last:border-0 last:pb-0">
               <div class="flex justify-between font-medium text-ink">
                 <span>{{ c.name }}</span>
-                <span class="text-pri-interruptive font-semibold">₹{{ c.hourlyYield }}/hr</span>
+                <span class="text-pri-interruptive font-semibold">${{ c.hourlyYield }}/hr</span>
               </div>
-              <div class="text-[10px] text-ink-3 mt-0.5">Tracked: {{ c.totalHours }}h · Creep items: {{ c.scopeCreepCount }} / {{ c.itemsCount }}</div>
+              <div class="text-[10px] text-ink-3 mt-0.5">Tracked: {{ c.totalHours }}h · Creep items: {{
+                c.scopeCreepCount }} / {{ c.itemsCount }}</div>
             </li>
           </ul>
         </div>

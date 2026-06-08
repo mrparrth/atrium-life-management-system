@@ -203,11 +203,11 @@ async function addQuickWork() {
             <div class="grid grid-cols-2 gap-3">
               <div class="bg-canvas border border-line p-3 rounded-xl">
                 <div class="text-[10px] uppercase tracking-wider text-ink-3">Pending</div>
-                <div class="font-serif text-lg text-ink font-semibold mt-0.5">₹{{ pendingRevenue.toLocaleString() }}</div>
+                <div class="font-serif text-lg text-ink font-semibold mt-0.5">${{ pendingRevenue.toLocaleString() }}</div>
               </div>
               <div class="bg-pri-critical-bg border border-pri-critical-bd p-3 rounded-xl">
                 <div class="text-[10px] uppercase tracking-wider text-pri-critical">Overdue</div>
-                <div class="font-serif text-lg text-pri-critical font-semibold mt-0.5">₹{{ overdueRevenue.toLocaleString() }}</div>
+                <div class="font-serif text-lg text-pri-critical font-semibold mt-0.5">${{ overdueRevenue.toLocaleString() }}</div>
               </div>
             </div>
           </div>
@@ -216,11 +216,11 @@ async function addQuickWork() {
           <div class="pt-4 border-t border-line space-y-2">
             <div class="text-xs font-semibold text-ink flex justify-between">
               <span>Pipeline Weighted Estimate</span>
-              <span class="text-ink-2 font-medium">₹{{ Math.round(leadsStore.forecast.total).toLocaleString() }}</span>
+              <span class="text-ink-2 font-medium">${{ Math.round(leadsStore.forecast.total).toLocaleString() }}</span>
             </div>
             <div class="text-[11px] text-ink-2 flex justify-between">
               <span>High Confidence:</span>
-              <span class="text-pri-strategic font-semibold">₹{{ Math.round(leadsStore.forecast.high).toLocaleString() }}</span>
+              <span class="text-pri-strategic font-semibold">${{ Math.round(leadsStore.forecast.high).toLocaleString() }}</span>
             </div>
           </div>
         </div>

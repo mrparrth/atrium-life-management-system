@@ -288,14 +288,15 @@ async function addNewTask() {
         <div class="overline text-ink-3 flex items-center gap-1.5">
           <Receipt class="w-3.5 h-3.5" /> Receivables Balance
         </div>
-        <div class="font-serif text-2xl font-bold mt-1 text-pri-interruptive">₹{{ totalPendingAmount.toLocaleString() }}
+        <div class="font-serif text-2xl font-bold mt-1 text-pri-interruptive">${{ totalPendingAmount.toLocaleString() }}
         </div>
       </div>
       <div class="card p-4 border bg-surface/50">
         <div class="overline text-ink-3 flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
           <span class="text-xs font-bold font-mono">$</span> Total Task Charges
         </div>
-        <div class="font-serif text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">${{ totalChargedAmount.toLocaleString() }}</div>
+        <div class="font-serif text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">${{
+          totalChargedAmount.toLocaleString() }}</div>
       </div>
       <div class="card p-4 border bg-surface/50">
         <div class="overline text-ink-3 flex items-center gap-1.5">
@@ -341,7 +342,8 @@ async function addNewTask() {
               <span class="text-xs uppercase tracking-overline text-ink-3">Timezone</span>
               <p class="font-medium text-ink">
                 {{ client.timezone || 'Not specified' }}
-                <span v-if="getClientLocalTime(client.timezone)" class="ml-1.5 text-[10px] bg-pri-strategic-bg text-pri-strategic px-1.5 py-0.5 rounded border border-pri-strategic-bd/50 font-normal">
+                <span v-if="getClientLocalTime(client.timezone)"
+                  class="ml-1.5 text-[10px] bg-pri-strategic-bg text-pri-strategic px-1.5 py-0.5 rounded border border-pri-strategic-bd/50 font-normal">
                   Their Time: {{ getClientLocalTime(client.timezone) }}
                 </span>
               </p>
@@ -389,7 +391,8 @@ async function addNewTask() {
 
           <div class="pt-4 border-t border-line space-y-2">
             <span class="text-xs uppercase tracking-overline text-ink-3 block">Relationship Details</span>
-            <p class="text-sm text-ink-2 leading-relaxed whitespace-pre-line">{{ client.relationshipNotes || 'No notes added yet.' }}</p>
+            <p class="text-sm text-ink-2 leading-relaxed whitespace-pre-line">{{ client.relationshipNotes || `No notes
+              added yet.` }}</p>
           </div>
         </div>
 
@@ -539,7 +542,7 @@ async function addNewTask() {
                 </span>
               </td>
               <td class="p-4 text-ink-2">{{ dayjs(inv.dueDate).format('MMM D, YYYY') }}</td>
-              <td class="p-4 text-right text-ink font-medium">₹{{ inv.amount.toLocaleString() }}</td>
+              <td class="p-4 text-right text-ink font-medium">${{ inv.amount.toLocaleString() }}</td>
             </tr>
           </tbody>
         </table>
@@ -549,7 +552,8 @@ async function addNewTask() {
     </div>
 
     <!-- PREFERENCES EDIT DIALOG -->
-    <div v-if="isEditingPrefs" @keydown.window.esc="isEditingPrefs = false" class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
+    <div v-if="isEditingPrefs" @keydown.window.esc="isEditingPrefs = false"
+      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="isEditingPrefs = false"></div>
       <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
         <div>
@@ -566,7 +570,8 @@ async function addNewTask() {
                   {{ tz.label }}
                 </option>
               </select>
-              <span v-if="getClientLocalTime(editForm.timezone)" class="text-[10px] text-pri-strategic mt-1 block font-medium">
+              <span v-if="getClientLocalTime(editForm.timezone)"
+                class="text-[10px] text-pri-strategic mt-1 block font-medium">
                 Their Local Time: {{ getClientLocalTime(editForm.timezone) }}
               </span>
             </div>
@@ -654,7 +659,8 @@ async function addNewTask() {
     </div>
 
     <!-- ADD NOTE MODAL -->
-    <div v-if="showAddNoteModal" @keydown.window.esc="showAddNoteModal = false" class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
+    <div v-if="showAddNoteModal" @keydown.window.esc="showAddNoteModal = false"
+      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddNoteModal = false"></div>
       <div class="relative w-full max-w-md card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
         <div>
@@ -665,7 +671,8 @@ async function addNewTask() {
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-semibold text-ink-2 mb-1">Document Title</label>
-            <input v-model="newNoteTitle" placeholder="e.g. Project onboarding or Kickoff notes" class="input-block text-sm focus:ring-1 focus:ring-emerald-500" @keyup.enter="submitNewNote" />
+            <input v-model="newNoteTitle" placeholder="e.g. Project onboarding or Kickoff notes"
+              class="input-block text-sm focus:ring-1 focus:ring-emerald-500" @keyup.enter="submitNewNote" />
           </div>
         </div>
 

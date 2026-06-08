@@ -177,21 +177,21 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </button>
     </div>
 
-    <!-- MODE TOGGLE -->
-    <div class="px-4 mb-3">
-      <div class="bg-canvas border border-line p-1 rounded-xl flex gap-1 text-xs font-medium">
+    <!-- MODE TOGGLE (FLOATING BOTTOM RIGHT) -->
+    <Teleport to="body">
+      <div class="fixed bottom-6 right-6 z-50 bg-surface/90 border border-line p-1 rounded-2xl flex gap-1 text-xs font-medium shadow-xl backdrop-blur-sm w-60">
         <button @click="ui.mode !== 'personal' && ui.toggleMode()"
-          class="flex-1 py-1.5 rounded-lg text-center transition-all duration-300"
-          :class="ui.mode === 'personal' ? 'bg-surface text-ink shadow-sm border border-line/40 font-semibold' : 'text-ink-2 hover:text-ink'">
+          class="flex-1 py-2 rounded-xl text-center transition-all duration-300 cursor-pointer"
+          :class="ui.mode === 'personal' ? 'bg-ink text-canvas shadow-sm font-semibold' : 'text-ink-2 hover:text-ink hover:bg-canvas/50'">
           Personal
         </button>
         <button @click="ui.mode !== 'work' && ui.toggleMode()"
-          class="flex-1 py-1.5 rounded-lg text-center transition-all duration-300"
-          :class="ui.mode === 'work' ? 'bg-surface text-ink shadow-sm border border-line/40 font-semibold' : 'text-ink-2 hover:text-ink'">
+          class="flex-1 py-2 rounded-xl text-center transition-all duration-300 cursor-pointer"
+          :class="ui.mode === 'work' ? 'bg-ink text-canvas shadow-sm font-semibold' : 'text-ink-2 hover:text-ink hover:bg-canvas/50'">
           Work Mode
         </button>
       </div>
-    </div>
+    </Teleport>
 
     <button @click="ui.openCommand"
       class="mx-4 mb-2 flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-line bg-surface text-ink-2 hover:text-ink hover:border-line-2 transition-all duration-300"

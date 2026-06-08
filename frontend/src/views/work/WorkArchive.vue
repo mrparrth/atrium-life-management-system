@@ -61,7 +61,7 @@ const inactiveLeads = computed(() => {
           </div>
 
           <div class="mt-4 pt-3 border-t border-line/40 flex justify-between text-xs text-ink-3">
-            <span>Invoiced Val: ₹{{ lead.estimatedValue.toLocaleString() }}</span>
+            <span>Invoiced Val: ${{ lead.estimatedValue.toLocaleString() }}</span>
             <span>Closed {{ dayjs(lead.updatedAt).format('MMM D, YYYY') }}</span>
           </div>
         </div>

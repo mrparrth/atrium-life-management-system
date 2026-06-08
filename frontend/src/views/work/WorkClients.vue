@@ -291,7 +291,7 @@ const filteredClients = computed(() => {
             <div>
               <div class="flex items-center justify-between gap-2 mb-2.5">
                 <span class="text-xs uppercase tracking-overline text-ink-3 flex items-center gap-1">
-                  <User class="w-3.5 h-3.5" /> {{ client.clientSource || 'Client Profile' }}
+                  <User class="w-3.5 h-3.5" /> {{ client.clientSource || '' }}
                 </span>
                 <div class="flex items-center gap-1.5">
                   <span v-if="client.upchargePercentage > 0"
@@ -346,10 +346,6 @@ const filteredClients = computed(() => {
                   class="text-[10px] text-pri-strategic font-semibold ml-0.5">
                   ({{ getClientLocalTime(client.timezone) }})
                 </span>
-              </span>
-              <span class="flex items-center gap-1 group-hover:translate-x-1 transition-transform font-medium">
-                Open Workspace
-                <ArrowRight class="w-3.5 h-3.5 text-ink-3 shrink-0" />
               </span>
             </div>
           </div>
