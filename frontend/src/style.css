@@ -113,7 +113,7 @@ input[type="number"] {
   @apply font-serif;
 }
 
-/* Focus rings — subtle, calm */
+/* Focus rings - subtle, calm */
 :where(button, a, input, textarea, [tabindex]):focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgb(var(--canvas)), 0 0 0 4px rgb(var(--line-2) / 0.6);

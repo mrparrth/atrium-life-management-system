@@ -201,6 +201,13 @@ export const useFinanceStore = defineStore('finance', () => {
     categories.value = categories.value.filter(c => c.id !== id)
   }
 
+  async function updateCategoryBudget(id, amount) {
+    const c = categories.value.find(x => x.id === id)
+    if (!c) return
+    c.yearlyBudget = amount ? +amount : 0
+    await db.finance_categories.put(plain(c))
+  }
+
   return {
     networthLogs, cashflowPeriods, categories,
     latestNetworth, currentNetWorth, networthSeries, allocation,
@@ -210,5 +217,6 @@ export const useFinanceStore = defineStore('finance', () => {
     addNetworthLog, updateNetworthLog, removeNetworthLog,
     addCashflowPeriod, updateCashflowPeriod, removeCashflowPeriod,
     categoriesForScope, visibleCategoriesForScope, addCategory, renameCategory, toggleArchiveCategory, removeCategory,
+    updateCategoryBudget,
   }
 })

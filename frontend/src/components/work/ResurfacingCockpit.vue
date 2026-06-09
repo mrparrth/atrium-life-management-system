@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkInvoicesStore } from '@/stores/workInvoices'
@@ -8,6 +9,7 @@ import { useUIStore } from '@/stores/ui'
 import { BellRing, ShieldAlert, Check, RefreshCw, Moon, EyeOff } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
+const router = useRouter()
 const clientsStore = useWorkClientsStore()
 const itemsStore = useWorkItemsStore()
 const invoicesStore = useWorkInvoicesStore()
@@ -42,6 +44,18 @@ function isSnoozed(id) {
   return true
 }
 
+function goToItem(alert) {
+  if (alert.type === 'client') {
+    router.push(`/work/clients/${alert.targetId}`)
+  } else if (alert.type === 'invoice') {
+    router.push(`/work/invoices?id=${alert.targetId}`)
+  } else if (alert.type === 'work_item') {
+    router.push(`/work/items?id=${alert.targetId}`)
+  } else if (alert.type === 'lead') {
+    router.push(`/work/leads?id=${alert.targetId}`)
+  }
+}
+
 const alerts = computed(() => {
   const list = []
   
@@ -54,6 +68,7 @@ const alerts = computed(() => {
       list.push({
         id: key,
         type: 'client',
+        targetId: c.id,
         title: `${c.name} has gone quiet`,
         description: `No interactions registered for ${daysSince} days. Check in to maintain relationship health.`,
         actionText: 'Mark checked-in',
@@ -73,6 +88,7 @@ const alerts = computed(() => {
       list.push({
         id: key,
         type: 'invoice',
+        targetId: inv.id,
         title: `Outstanding Account: ${inv.invoiceNumber}`,
         description: `Overdue since ${dayjs(inv.dueDate).format('MMM D')}. Total balance outstanding is ${Math.round(inv.amount - inv.amountPaid)}.`,
         actionText: 'Mark Paid',
@@ -94,6 +110,7 @@ const alerts = computed(() => {
         list.push({
           id: key,
           type: 'work_item',
+          targetId: item.id,
           title: `Untouched work: ${item.title}`,
           description: `Paused for ${daysSince} days. Review if this is still strategic or needs snoozing/archiving.`,
           actionText: 'Touch (mark active)',
@@ -114,6 +131,7 @@ const alerts = computed(() => {
       list.push({
         id: key,
         type: 'lead',
+        targetId: lead.id,
         title: `Lead follow-up: ${lead.title}`,
         description: `Follow-up was scheduled for ${dayjs(lead.followUpDate).format('MMM D')}. Check-in with ${lead.clientName}.`,
         actionText: 'Postpone 3d',
@@ -139,7 +157,8 @@ const alerts = computed(() => {
     
     <div class="grid grid-cols-1 gap-3">
       <div v-for="alert in alerts" :key="alert.id"
-        class="card p-4 flex items-start justify-between gap-4 border border-line bg-surface hover:border-line-2 transition-all duration-300">
+        @click="goToItem(alert)"
+        class="card p-4 flex items-start justify-between gap-4 border border-line bg-surface hover:border-line-2 transition-all duration-300 cursor-pointer">
         
         <div class="space-y-1">
           <div class="flex items-center gap-2">
@@ -152,7 +171,7 @@ const alerts = computed(() => {
           <p class="text-xs text-ink-2 leading-relaxed max-w-xl">{{ alert.description }}</p>
         </div>
 
-        <div class="flex items-center gap-2 shrink-0 self-center">
+        <div @click.stop class="flex items-center gap-2 shrink-0 self-center">
           <button @click="alert.action" class="btn-ghost !text-xs !py-1 px-2.5 bg-canvas hover:bg-line/40 rounded-lg flex items-center gap-1 text-ink font-medium">
             <Check class="w-3.5 h-3.5" /> {{ alert.actionText }}
           </button>

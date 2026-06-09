@@ -144,31 +144,23 @@ function isNodeHighlighted(id) {
       <svg ref="svgEl" :viewBox="`0 0 ${W} ${H}`" class="w-full h-[620px]">
         <!-- edges -->
         <g>
-          <line v-for="(e, i) in edgesResolved" :key="i"
-                :x1="e.x1" :y1="e.y1" :x2="e.x2" :y2="e.y2"
-                :stroke="isEdgeHighlighted(e) ? 'rgb(var(--ink))' : 'rgb(var(--line-2))'"
-                :stroke-opacity="isEdgeHighlighted(e) ? 0.9 : 0.4"
-                :stroke-width="isEdgeHighlighted(e) ? 1.8 : 1" />
+          <line v-for="(e, i) in edgesResolved" :key="i" :x1="e.x1" :y1="e.y1" :x2="e.x2" :y2="e.y2"
+            :stroke="isEdgeHighlighted(e) ? 'rgb(var(--ink))' : 'rgb(var(--line-2))'"
+            :stroke-opacity="isEdgeHighlighted(e) ? 0.9 : 0.4" :stroke-width="isEdgeHighlighted(e) ? 1.8 : 1" />
         </g>
         <!-- nodes -->
         <g>
-          <g v-for="n in nodesResolved" :key="n.id"
-             @mouseenter="hoverId = n.id" @mouseleave="hoverId = null"
-             @click="openNote(n)"
-             style="cursor:pointer"
-             :data-testid="`graph-node-${n.id}`">
+          <g v-for="n in nodesResolved" :key="n.id" @mouseenter="hoverId = n.id" @mouseleave="hoverId = null"
+            @click="openNote(n)" style="cursor:pointer" :data-testid="`graph-node-${n.id}`">
             <circle :cx="n.x" :cy="n.y" :r="nodeRadius(n) + 4" fill="rgb(var(--canvas))" />
             <circle :cx="n.x" :cy="n.y" :r="nodeRadius(n)"
-                    :fill="isNodeHighlighted(n.id) ? 'rgb(var(--ink))' : 'rgb(var(--ink-3))'"
-                    :stroke="isNodeHighlighted(n.id) ? 'rgb(var(--ink))' : 'rgb(var(--line-2))'"
-                    stroke-width="1.5"
-                    class="transition-colors duration-200" />
-            <text :x="n.x" :y="n.y - nodeRadius(n) - 6"
-                  text-anchor="middle"
-                  font-family="Newsreader, serif"
-                  :font-size="hoverId === n.id ? 16 : 12"
-                  :fill="isNodeHighlighted(n.id) ? 'rgb(var(--ink))' : 'rgb(var(--ink-2))'"
-                  class="transition-all duration-200 pointer-events-none">{{ n.title }}</text>
+              :fill="isNodeHighlighted(n.id) ? 'rgb(var(--ink))' : 'rgb(var(--ink-3))'"
+              :stroke="isNodeHighlighted(n.id) ? 'rgb(var(--ink))' : 'rgb(var(--line-2))'" stroke-width="1.5"
+              class="transition-colors duration-200" />
+            <text :x="n.x" :y="n.y - nodeRadius(n) - 6" text-anchor="middle" font-family="Newsreader, serif"
+              :font-size="hoverId === n.id ? 16 : 12"
+              :fill="isNodeHighlighted(n.id) ? 'rgb(var(--ink))' : 'rgb(var(--ink-2))'"
+              class="transition-all duration-200 pointer-events-none">{{ n.title }}</text>
           </g>
         </g>
       </svg>
@@ -176,11 +168,10 @@ function isNodeHighlighted(id) {
     <EmptyState v-else title="The graph is still" hint="Create a few notes with `[[wiki-links]]` between them." />
 
     <div v-if="isolatedNodes.length" class="mt-8" data-testid="isolated-notes">
-      <h3 class="overline mb-3">Standalone — {{ isolatedNodes.length }} unlinked</h3>
+      <h3 class="overline mb-3">Standalone - {{ isolatedNodes.length }} unlinked</h3>
       <div class="flex flex-wrap gap-2">
-        <button v-for="n in isolatedNodes" :key="n.id"
-                @click="openNote(n)"
-                class="px-3 py-1.5 rounded-full bg-elevated border border-line text-sm hover:border-line-2 transition-colors duration-300">
+        <button v-for="n in isolatedNodes" :key="n.id" @click="openNote(n)"
+          class="px-3 py-1.5 rounded-full bg-elevated border border-line text-sm hover:border-line-2 transition-colors duration-300">
           {{ n.title }}
         </button>
       </div>

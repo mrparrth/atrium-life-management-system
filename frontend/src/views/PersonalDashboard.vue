@@ -54,13 +54,13 @@ const lastWeeklyReview = computed(() => reviews.items.find(r => r.type === 'week
 async function openDailyJournal() {
   const today = dayjs().format('YYYY-MM-DD')
   const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
-  const title = `Journal — ${today}`
+  const title = `Journal - ${today}`
   const existing = notes.items.find(n => n.title === title)
   if (existing) {
     router.push(`/notes/${existing.id}`)
     return
   }
-  const body = `[[Journal — ${yesterday}]]
+  const body = `[[Journal - ${yesterday}]]
 
 **One small win**
 
@@ -98,7 +98,7 @@ async function openDailyJournal() {
     <!-- TODAY FOCUS -->
     <section class="mb-12" data-testid="section-today-focus">
       <SectionHeader overline="Today" title="Today focus"
-        :hint="focus.length ? 'A few quiet things to attend to.' : 'Nothing scheduled — the day is open.'">
+        :hint="focus.length ? 'A few quiet things to attend to.' : 'Nothing scheduled - the day is open.'">
         <template #right>
           <RouterLink to="/today" class="btn-ghost text-sm">Open today
             <ArrowRight class="w-3 h-3" />
@@ -115,7 +115,7 @@ async function openDailyJournal() {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
       <!-- Needs attention -->
       <section data-testid="section-needs-attention">
-        <SectionHeader overline="Now" title="Needs attention" hint="Critical items — gently surfaced." />
+        <SectionHeader overline="Now" title="Needs attention" hint="Critical items - gently surfaced." />
         <div v-if="needsAttention.length" class="space-y-3">
           <TaskCard v-for="t in needsAttention" :key="t.id" :task="t" />
         </div>
@@ -125,7 +125,7 @@ async function openDailyJournal() {
       <!-- Recently ignored -->
       <section data-testid="section-recently-ignored">
         <SectionHeader overline="Resurfaced" title="Recently ignored"
-          hint="Untouched for a while — still worthwhile?" />
+          hint="Untouched for a while - still worthwhile?" />
         <div v-if="ignored.length" class="space-y-3">
           <TaskCard v-for="t in ignored" :key="t.id" :task="t" />
         </div>
@@ -155,7 +155,7 @@ async function openDailyJournal() {
 
     <!-- STALE PROJECTS -->
     <section class="mb-12" data-testid="section-stale">
-      <SectionHeader overline="Drifting" title="Stale projects" hint="Quietly paused — return when you're ready.">
+      <SectionHeader overline="Drifting" title="Stale projects" hint="Quietly paused - return when you're ready.">
         <template #right>
           <RouterLink to="/projects" class="btn-ghost text-sm">All projects
             <ArrowRight class="w-3 h-3" />
@@ -170,7 +170,8 @@ async function openDailyJournal() {
           </div>
           <div class="font-serif text-xl text-ink mb-1">{{ p.title }}</div>
           <p v-if="p.description" class="text-sm text-ink-2 line-clamp-2">{{ p.description }}</p>
-          <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(p.lastViewedAt) }} · {{ p.openTaskCount }} open task<template v-if="p.openTaskCount !== 1">s</template></div>
+          <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(p.lastViewedAt) }} · {{ p.openTaskCount }} open
+            task<template v-if="p.openTaskCount !== 1">s</template></div>
         </RouterLink>
       </div>
       <EmptyState v-else title="Everything is in motion" hint="No project has gone quiet." />
@@ -185,7 +186,8 @@ async function openDailyJournal() {
             class="card p-4 block hover:border-line-2 transition-all duration-300"
             :data-testid="`resurface-note-${n.id}`">
             <div class="flex items-center gap-2">
-              <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt) }}</span>
+              <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
+                }}</span>
             </div>
             <div class="font-serif text-lg mt-1.5">{{ n.title }}</div>
             <p class="text-sm text-ink-2 mt-1 line-clamp-2">{{ n.body }}</p>
@@ -194,7 +196,8 @@ async function openDailyJournal() {
             class="card p-4 block hover:border-line-2 transition-all duration-300"
             :data-testid="`resurface-bookmark-${b.id}`">
             <div class="flex items-center gap-2">
-              <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{ fromNow(b.lastViewedAt) }}</span>
+              <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{ fromNow(b.lastViewedAt)
+                }}</span>
             </div>
             <div class="font-serif text-lg mt-1.5">{{ b.title }}</div>
             <p class="text-sm text-ink-2 mt-1 truncate">{{ b.url }}</p>
@@ -212,7 +215,9 @@ async function openDailyJournal() {
         <div>
           <div class="font-serif text-2xl">What did this week make of me?</div>
           <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
-          <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{ fromNow(lastWeeklyReview.createdAt) }}</p>
+          <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
+            fromNow(lastWeeklyReview.createdAt)
+            }}</p>
         </div>
         <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
       </div>

@@ -157,7 +157,7 @@ function onKey(e) {
   if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx.value = Math.min(flatItems.value.length - 1, activeIdx.value + 1) }
   if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx.value = Math.max(0, activeIdx.value - 1) }
   if (e.key === 'Enter') { e.preventDefault(); const item = flatItems.value[activeIdx.value]; if (item) run(item) }
-  
+
   if (e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey) {
     const num = parseInt(e.key)
     if (!isNaN(num)) {
@@ -200,13 +200,14 @@ function onKey(e) {
                 </span>
                 <div class="flex items-center gap-2 shrink-0">
                   <span v-if="item.kbd" class="kbd">{{ item.kbd }}</span>
-                  <span v-else-if="flatItems.indexOf(item) < 10" class="kbd text-ink-3">⌘{{ flatItems.indexOf(item) === 9 ? 0 : flatItems.indexOf(item) + 1 }}</span>
+                  <span v-else-if="flatItems.indexOf(item) < 10" class="kbd text-ink-3">⌘{{ flatItems.indexOf(item) ===
+                    9 ? 0 : flatItems.indexOf(item) + 1 }}</span>
                 </div>
               </li>
             </ul>
           </div>
         </template>
-        <div v-else class="px-5 py-10 text-center text-ink-3 text-sm font-serif italic">Nothing here yet — try a
+        <div v-else class="px-5 py-10 text-center text-ink-3 text-sm font-serif italic">Nothing here yet - try a
           different word.
         </div>
       </div>

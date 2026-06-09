@@ -19,12 +19,14 @@ const today = computed(() => dayjs().format('dddd, MMMM D'))
   <div class="px-8 md:px-12 py-10 max-w-3xl mx-auto" data-testid="today-view">
     <PageHeader :overline="today" title="Today focus" sub="A few quiet things to attend to.">
       <template #right>
-        <button class="btn-primary" @click="ui.openQuickCapture" data-testid="today-capture"><Plus class="w-4 h-4" /> Capture</button>
+        <button class="btn-primary" @click="ui.openQuickCapture" data-testid="today-capture">
+          <Plus class="w-4 h-4" /> Capture
+        </button>
       </template>
     </PageHeader>
     <div v-if="list.length" class="space-y-3">
       <TaskCard v-for="t in list" :key="t.id" :task="t" />
     </div>
-    <EmptyState v-else title="An open day" hint="Nothing scheduled. Let it be — or capture something gentle." />
+    <EmptyState v-else title="An open day" hint="Nothing scheduled. Let it be - or capture something gentle." />
   </div>
 </template>

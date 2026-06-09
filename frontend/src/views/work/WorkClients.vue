@@ -375,7 +375,7 @@ const filteredClients = computed(() => {
                     <Star class="w-2.5 h-2.5 fill-current" /> {{ client.rating }}
                   </span>
                 </td>
-                <td class="p-4 text-ink-2 font-medium">{{ client.companyName || '—' }}</td>
+                <td class="p-4 text-ink-2 font-medium">{{ client.companyName || '-' }}</td>
                 <td class="p-4">
                   <span class="px-2 py-0.5 rounded text-[9px] uppercase font-bold border"
                     :class="clientsStore.getStatusStyle(client.status).color">
@@ -388,7 +388,7 @@ const filteredClients = computed(() => {
                     {{ getHealthStatus(client).label }}
                   </span>
                 </td>
-                <td class="p-4 text-ink-3 font-mono text-[10px]">{{ client.clientSource || '—' }}</td>
+                <td class="p-4 text-ink-3 font-mono text-[10px]">{{ client.clientSource || '-' }}</td>
                 <td class="p-4 text-right text-ink font-semibold font-mono">${{
                   getClientTotalCharged(client).toLocaleString() }}</td>
               </tr>

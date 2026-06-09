@@ -12,8 +12,8 @@ npm run dev &
 SERVER_PID=$!
 
 # Wait 2 seconds for server to start, then open the browser
-sleep 2
-open http://localhost:3000
+# sleep 2
+# open http://localhost:3000
 
 echo ""
 echo "App launched at http://localhost:3000."

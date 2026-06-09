@@ -94,7 +94,7 @@ onKeyStroke('Escape', (e) => {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <FolderKanban class="w-3.5 h-3.5 text-ink-3" /><span class="overline">{{ areaOf(p.areaId)?.name || 'Project'
-            }}</span>
+              }}</span>
           </div>
           <span v-if="stale.has(p.id)"
             class="text-[10px] uppercase tracking-overline text-pri-interruptive">stale</span>
@@ -109,7 +109,7 @@ onKeyStroke('Escape', (e) => {
         </div>
       </RouterLink>
     </div>
-    <EmptyState v-else title="No projects yet" hint="Start one — even a small one." />
+    <EmptyState v-else title="No projects yet" hint="Start one - even a small one." />
 
     <!-- New project modal -->
     <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4"
@@ -128,13 +128,13 @@ onKeyStroke('Escape', (e) => {
         <div class="grid grid-cols-2 gap-3 mb-5">
           <label class="block"><span class="overline block mb-1">Area</span>
             <select v-model="newArea" class="input-block text-sm">
-              <option :value="null">—</option>
+              <option :value="null">-</option>
               <option v-for="a in areas.items" :key="a.id" :value="a.id">{{ a.name }}</option>
             </select>
           </label>
           <label class="block"><span class="overline block mb-1">Goal</span>
             <select v-model="newGoal" class="input-block text-sm">
-              <option :value="null">—</option>
+              <option :value="null">-</option>
               <option v-for="g in goals.items" :key="g.id" :value="g.id">{{ g.title }}</option>
             </select>
           </label>

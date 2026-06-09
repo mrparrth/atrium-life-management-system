@@ -30,12 +30,12 @@ async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?'
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-4xl mx-auto" data-testid="reviews-view">
-    <PageHeader overline="Reflection" title="Reviews" sub="Daily, weekly, monthly, yearly — gentle rituals." />
+    <PageHeader overline="Reflection" title="Reviews" sub="Daily, weekly, monthly, yearly - gentle rituals." />
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-      <button v-for="t in ['daily','weekly','monthly','yearly']" :key="t"
-              class="card p-5 text-left hover:border-line-2 transition-all duration-300 group"
-              @click="startReview(t)" :data-testid="`start-${t}-review`">
+      <button v-for="t in ['daily', 'weekly', 'monthly', 'yearly']" :key="t"
+        class="card p-5 text-left hover:border-line-2 transition-all duration-300 group" @click="startReview(t)"
+        :data-testid="`start-${t}-review`">
         <Sparkles class="w-4 h-4 text-ink-3 mb-2" />
         <div class="font-serif text-lg capitalize">{{ t }}</div>
         <div class="text-xs text-ink-3 mt-1">{{ grouped[t].length }} past</div>
@@ -44,18 +44,33 @@ async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?'
 
     <template v-for="(items, t) in grouped" :key="t">
       <section v-if="items.length" class="mb-10">
-        <SectionHeader :overline="t" :title="`${items.length} reflection${items.length>1?'s':''}`" />
+        <SectionHeader :overline="t" :title="`${items.length} reflection${items.length > 1 ? 's' : ''}`" />
         <div class="space-y-4">
           <div v-for="r in items" :key="r.id" class="card p-6 group" :data-testid="`review-${r.id}`">
             <div class="flex items-center justify-between mb-3">
               <span class="overline">{{ r.date }}</span>
-              <button class="btn-ghost !p-1.5 opacity-0 group-hover:opacity-100 hover:text-pri-critical" @click="remove(r.id)"><Trash2 class="w-3.5 h-3.5" /></button>
+              <button class="btn-ghost !p-1.5 opacity-0 group-hover:opacity-100 hover:text-pri-critical"
+                @click="remove(r.id)">
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div v-if="r.wins"><div class="overline mb-1">Wins</div><p class="text-ink-2 whitespace-pre-line">{{ r.wins }}</p></div>
-              <div v-if="r.challenges"><div class="overline mb-1">Challenges</div><p class="text-ink-2 whitespace-pre-line">{{ r.challenges }}</p></div>
-              <div v-if="r.gratitude"><div class="overline mb-1">Gratitude</div><p class="text-ink-2 whitespace-pre-line">{{ r.gratitude }}</p></div>
-              <div v-if="r.nextFocus"><div class="overline mb-1">Next focus</div><p class="text-ink-2 whitespace-pre-line">{{ r.nextFocus }}</p></div>
+              <div v-if="r.wins">
+                <div class="overline mb-1">Wins</div>
+                <p class="text-ink-2 whitespace-pre-line">{{ r.wins }}</p>
+              </div>
+              <div v-if="r.challenges">
+                <div class="overline mb-1">Challenges</div>
+                <p class="text-ink-2 whitespace-pre-line">{{ r.challenges }}</p>
+              </div>
+              <div v-if="r.gratitude">
+                <div class="overline mb-1">Gratitude</div>
+                <p class="text-ink-2 whitespace-pre-line">{{ r.gratitude }}</p>
+              </div>
+              <div v-if="r.nextFocus">
+                <div class="overline mb-1">Next focus</div>
+                <p class="text-ink-2 whitespace-pre-line">{{ r.nextFocus }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -65,22 +80,29 @@ async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?'
 
     <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNew = false"></div>
-      <form @submit.prevent="save" class="relative w-full max-w-2xl card p-8 animate-rise-in max-h-[85vh] overflow-y-auto">
-        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false"><X class="w-4 h-4" /></button>
+      <form @submit.prevent="save"
+        class="relative w-full max-w-2xl card p-8 animate-rise-in max-h-[85vh] overflow-y-auto">
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false">
+          <X class="w-4 h-4" />
+        </button>
         <div class="overline capitalize">{{ form.type }} reflection</div>
         <h2 class="font-serif text-3xl mt-1 mb-6">A quiet look back</h2>
         <div class="space-y-5">
           <label class="block"><span class="overline block mb-1">Wins</span>
-            <textarea v-model="form.wins" rows="2" class="input-block resize-none" placeholder="Small or large." data-testid="review-wins"></textarea>
+            <textarea v-model="form.wins" rows="2" class="input-block resize-none" placeholder="Small or large."
+              data-testid="review-wins"></textarea>
           </label>
           <label class="block"><span class="overline block mb-1">Challenges</span>
-            <textarea v-model="form.challenges" rows="2" class="input-block resize-none" placeholder="What was hard?" data-testid="review-challenges"></textarea>
+            <textarea v-model="form.challenges" rows="2" class="input-block resize-none" placeholder="What was hard?"
+              data-testid="review-challenges"></textarea>
           </label>
           <label class="block"><span class="overline block mb-1">Gratitude</span>
-            <textarea v-model="form.gratitude" rows="2" class="input-block resize-none" placeholder="What lifted you?" data-testid="review-gratitude"></textarea>
+            <textarea v-model="form.gratitude" rows="2" class="input-block resize-none" placeholder="What lifted you?"
+              data-testid="review-gratitude"></textarea>
           </label>
           <label class="block"><span class="overline block mb-1">Next focus</span>
-            <textarea v-model="form.nextFocus" rows="2" class="input-block resize-none" placeholder="A gentle direction." data-testid="review-next"></textarea>
+            <textarea v-model="form.nextFocus" rows="2" class="input-block resize-none"
+              placeholder="A gentle direction." data-testid="review-next"></textarea>
           </label>
         </div>
         <div class="flex justify-end gap-2 mt-6">

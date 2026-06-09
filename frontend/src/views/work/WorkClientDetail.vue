@@ -13,7 +13,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
   Calendar, Settings, Sparkles, Plus, Clock, MessageSquare,
-  HardDrive, ExternalLink
+  HardDrive, ExternalLink, Trash2
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -190,6 +190,21 @@ async function savePrefs() {
   ui.showToast('Workspace settings saved', 'success')
 }
 
+async function deleteClient() {
+  const approved = await ui.confirm({
+    title: 'Delete Client Workspace',
+    message: `Are you sure you want to permanently delete "${client.value.name}"? This action will erase all preferences and settings for this workspace and cannot be undone.`,
+    confirmText: 'Delete Workspace',
+    isDestructive: true
+  })
+  if (approved) {
+    await clientsStore.remove(props.id)
+    isEditingPrefs.value = false
+    ui.showToast('Client workspace deleted', 'success')
+    router.push('/work/clients')
+  }
+}
+
 async function triggerCreateDriveFolder() {
   if (!client.value) return
   const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
@@ -228,7 +243,7 @@ function handleInvoiceClick(inv) {
   if (inv.isExternal && inv.externalUrl) {
     window.open(inv.externalUrl, '_blank')
   } else {
-    router.push('/work/invoices')
+    router.push(`/work/invoices?id=${inv.id}`)
   }
 }
 
@@ -532,7 +547,8 @@ async function addNewTask() {
             <tr v-for="inv in clientInvoices" :key="inv.id" @click="handleInvoiceClick(inv)"
               class="border-b border-line last:border-0 hover:bg-canvas/40 cursor-pointer transition-colors">
               <td class="p-4 font-semibold text-ink flex items-center gap-1.5">
-                {{ inv.invoiceNumber }}
+                <span v-if="inv.isExternal">ext_{{ inv.invoiceNumber }}</span>
+                <span v-else>{{ inv.invoiceNumber }}</span>
                 <ExternalLink v-if="inv.isExternal" class="w-3 h-3 text-pri-strategic shrink-0" />
               </td>
               <td class="p-4">
@@ -651,9 +667,14 @@ async function addNewTask() {
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-2">
-          <button @click="isEditingPrefs = false" class="btn-ghost">Cancel</button>
-          <button @click="savePrefs" class="btn-primary">Save Changes</button>
+        <div class="flex justify-between items-center pt-2">
+          <button @click="deleteClient" class="btn-ghost !text-pri-critical hover:bg-pri-critical-bg font-semibold flex items-center gap-1">
+            <Trash2 class="w-3.5 h-3.5" /> Delete Client
+          </button>
+          <div class="flex gap-3">
+            <button @click="isEditingPrefs = false" class="btn-ghost">Cancel</button>
+            <button @click="savePrefs" class="btn-primary">Save Changes</button>
+          </div>
         </div>
       </div>
     </div>

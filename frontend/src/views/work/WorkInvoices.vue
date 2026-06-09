@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch, nextTick, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useWorkInvoicesStore } from '@/stores/workInvoices'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
@@ -21,6 +21,7 @@ const isEditing = ref(false)
 const editInvoiceId = ref(null)
 
 const route = useRoute()
+const router = useRouter()
 const isExternal = ref(false)
 const externalUrl = ref('')
 const externalAmount = ref(0)
@@ -33,6 +34,8 @@ onMounted(() => {
     }
   }
 })
+
+
 
 const clientId = ref('')
 const invoiceNumber = ref('')
@@ -512,6 +515,21 @@ const summary = computed(() => {
     overdue: totalOverdueUSD
   }
 })
+
+watch([() => invoicesStore.items, () => route.query.id], ([items, id]) => {
+  if (id && items && items.length) {
+    const inv = items.find(x => x.id === id)
+    if (inv) {
+      loadInvoiceForEdit(inv)
+    }
+  }
+}, { immediate: true })
+
+watch(showAddModal, (isOpen) => {
+  if (!isOpen && route.query.id) {
+    router.replace({ query: { ...route.query, id: undefined } })
+  }
+})
 </script>
 
 <template>
@@ -559,7 +577,16 @@ const summary = computed(() => {
           <tbody>
             <tr v-for="inv in invoicesStore.items" :key="inv.id" 
               class="border-b border-line last:border-0 hover:bg-canvas/30 transition-colors">
-              <td class="p-4 font-mono font-semibold text-ink">{{ inv.invoiceNumber }}</td>
+              <td class="p-4 font-mono font-semibold text-ink">
+                <template v-if="inv.isExternal && inv.externalUrl">
+                  <a :href="inv.externalUrl" target="_blank" class="text-pri-strategic hover:underline inline-flex items-center gap-1">
+                    ext_{{ inv.invoiceNumber }} <ExternalLink class="w-3 h-3" />
+                  </a>
+                </template>
+                <template v-else>
+                  {{ inv.invoiceNumber }}
+                </template>
+              </td>
               <td class="p-4 text-ink-2">{{ getClientName(inv.clientId) }}</td>
               <td class="p-4">
                 <span class="px-2.5 py-0.5 rounded text-[9px] uppercase font-bold border"

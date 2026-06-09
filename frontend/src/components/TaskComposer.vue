@@ -33,7 +33,7 @@ async function save() {
     dueDate: dueDate.value || null,
     important: important.value, urgent: urgent.value,
   }
-  
+
   if (props.initialTask) {
     await tasks.update(props.initialTask.id, payload)
     ui.showToast('Task updated', 'success')
@@ -82,7 +82,7 @@ async function save() {
     <label class="block">
       <span class="overline block mb-1">Project</span>
       <select v-model="projectId" class="input-block text-sm" data-testid="task-project-select">
-        <option :value="null">— none —</option>
+        <option :value="null">- none -</option>
         <option v-for="p in projects.items.filter(p => p.status === 'active')" :key="p.id" :value="p.id">{{ p.title }}
         </option>
       </select>
@@ -92,7 +92,9 @@ async function save() {
       <button type="button" class="btn-ghost" @click="$emit('close')" data-testid="task-cancel">Cancel</button>
       <button type="submit" class="btn-primary" data-testid="task-save">
         <template v-if="initialTask">Save changes</template>
-        <template v-else><Plus class="w-4 h-4" /> Capture</template>
+        <template v-else>
+          <Plus class="w-4 h-4" /> Capture
+        </template>
       </button>
     </div>
   </form>

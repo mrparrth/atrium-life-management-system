@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
@@ -8,6 +9,9 @@ import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { Plus, Target, DollarSign, Calendar, MessageSquare, Trash, Briefcase } from 'lucide-vue-next'
 import dayjs from 'dayjs'
+
+const route = useRoute()
+const router = useRouter()
 
 const leadsStore = useWorkLeadsStore()
 const clientsStore = useWorkClientsStore()
@@ -25,7 +29,7 @@ const status = ref('lead')
 
 async function createLead() {
   if (!title.value.trim() || !clientName.value.trim()) return
-  
+
   await leadsStore.add({
     title: title.value.trim(),
     clientName: clientName.value.trim(),
@@ -97,13 +101,72 @@ async function convertToClient(lead) {
   await leadsStore.update(lead.id, { status: 'won' })
   ui.showToast(`Successfully converted ${lead.clientName} to Client Workspace!`, 'success')
 }
+
+const showEditModal = ref(false)
+const editLead = ref(null)
+const editForm = ref({
+  title: '',
+  clientName: '',
+  estimatedValue: 0,
+  expectedHours: 0,
+  probability: 50,
+  followUpDate: '',
+  notes: '',
+  status: 'lead'
+})
+
+function loadLeadForEdit(lead) {
+  editLead.value = lead
+  editForm.value = {
+    title: lead.title || '',
+    clientName: lead.clientName || '',
+    estimatedValue: lead.estimatedValue || 0,
+    expectedHours: lead.expectedHours || 0,
+    probability: Math.round((lead.probability || 0.5) * 100),
+    followUpDate: lead.followUpDate || '',
+    notes: lead.notes || '',
+    status: lead.status || 'lead'
+  }
+  showEditModal.value = true
+}
+
+async function saveLeadEdit() {
+  if (!editLead.value) return
+  await leadsStore.update(editLead.value.id, {
+    title: editForm.value.title.trim(),
+    clientName: editForm.value.clientName.trim(),
+    estimatedValue: Number(editForm.value.estimatedValue) || 0,
+    expectedHours: Number(editForm.value.expectedHours) || 0,
+    probability: editForm.value.probability / 100,
+    followUpDate: editForm.value.followUpDate,
+    notes: editForm.value.notes.trim(),
+    status: editForm.value.status
+  })
+  showEditModal.value = false
+  ui.showToast('Lead opportunity updated', 'success')
+}
+
+watch([() => leadsStore.items, () => route.query.id], ([items, id]) => {
+  if (id && items && items.length) {
+    const lead = items.find(x => x.id === id)
+    if (lead) {
+      loadLeadForEdit(lead)
+    }
+  }
+}, { immediate: true })
+
+watch(showEditModal, (isOpen) => {
+  if (!isOpen && route.query.id) {
+    router.replace({ query: { ...route.query, id: undefined } })
+  }
+})
 </script>
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto space-y-8 animate-fade-in" data-testid="work-leads">
-    
+
     <!-- HEADER -->
-    <PageHeader overline="Business" title="Leads funnel" sub="Track opportunities, discovery stages, and weighted forecasts without corporate CRM clutter.">
+    <PageHeader overline="Business" title="Leads funnel" sub="Great opportunities deserve great follow-through">
       <template #right>
         <button @click="showAddModal = true" class="btn-primary">
           <Plus class="w-4 h-4" /> Create Lead
@@ -116,7 +179,7 @@ async function convertToClient(lead) {
       <div class="card p-4 bg-surface/50 border border-line">
         <div class="overline text-ink-3">Total Estimated Pipeline</div>
         <div class="font-serif text-2xl font-bold mt-1 text-ink">
-          ${{ leadsStore.items.reduce((acc, x) => acc + x.estimatedValue, 0).toLocaleString() }}
+          ${{leadsStore.items.reduce((acc, x) => acc + x.estimatedValue, 0).toLocaleString()}}
         </div>
       </div>
       <div class="card p-4 bg-surface/50 border border-line">
@@ -141,14 +204,15 @@ async function convertToClient(lead) {
 
     <!-- PIPELINE COLUMNS BOARD -->
     <div class="flex gap-4 overflow-x-auto pb-6 -mx-8 px-8 snap-x">
-      <div v-for="stage in stages" :key="stage.key" 
+      <div v-for="stage in stages" :key="stage.key"
         class="w-80 shrink-0 select-none flex flex-col h-[600px] bg-canvas/30 rounded-2xl border border-line/60 p-4 snap-start">
-        
+
         <!-- Column Header -->
         <div class="flex items-center justify-between pb-3 mb-4 border-b border-line/50">
           <div>
             <h3 class="font-serif text-sm font-semibold text-ink">{{ stage.name }}</h3>
-            <span class="text-[10px] text-ink-3 font-semibold uppercase tracking-wider">${{ getStageTotalValue(stage.key).toLocaleString() }}</span>
+            <span class="text-[10px] text-ink-3 font-semibold uppercase tracking-wider">${{
+              getStageTotalValue(stage.key).toLocaleString() }}</span>
           </div>
           <span class="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-canvas border text-ink-2">
             {{ getLeadsByStage(stage.key).length }}
@@ -158,8 +222,9 @@ async function convertToClient(lead) {
         <!-- Column Cards Container -->
         <div class="flex-1 overflow-y-auto space-y-3 pr-1">
           <div v-for="lead in getLeadsByStage(stage.key)" :key="lead.id"
-            class="card p-4 bg-surface border border-line hover:border-line-2 hover:shadow-sm transition-all duration-300 relative group/card">
-            
+            @click="loadLeadForEdit(lead)"
+            class="card p-4 bg-surface border border-line hover:border-line-2 hover:shadow-sm transition-all duration-300 relative group/card cursor-pointer">
+
             <div class="space-y-1">
               <div class="text-[10px] uppercase font-semibold tracking-wider text-ink-3">{{ lead.clientName }}</div>
               <h4 class="font-medium text-ink text-sm leading-snug">{{ lead.title }}</h4>
@@ -184,30 +249,33 @@ async function convertToClient(lead) {
                 Status updated: {{ dayjs(lead.statusChangedAt).format('MMM D, h:mm A') }}
               </span>
             </div>
-            
+
             <!-- Quick actions -->
-            <div class="mt-3 pt-2 border-t border-line/30 flex justify-between gap-2 items-center opacity-0 group-hover/card:opacity-100 transition-opacity">
+            <div @click.stop
+              class="mt-3 pt-2 border-t border-line/30 flex justify-between gap-2 items-center opacity-0 group-hover/card:opacity-100 transition-opacity">
               <!-- Select drop stage switcher -->
-              <select :value="lead.status" @change="updateStage(lead.id, $event.target.value)" 
+              <select :value="lead.status" @change="updateStage(lead.id, $event.target.value)"
                 class="text-[10px] bg-canvas border rounded px-1.5 py-0.5 text-ink-2 focus:outline-none">
                 <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
                 <option value="lost">Lost</option>
               </select>
-              
+
               <div class="flex items-center gap-1.5">
-                <button v-if="lead.status !== 'won' && lead.status !== 'onboarding'" 
-                  class="text-[10px] text-pri-strategic hover:underline flex items-center gap-0.5" 
+                <button v-if="lead.status !== 'won' && lead.status !== 'onboarding'"
+                  class="text-[10px] text-pri-strategic hover:underline flex items-center gap-0.5"
                   @click="convertToClient(lead)" title="Convert to Workspace Client">
                   <Briefcase class="w-3 h-3" /> Convert
                 </button>
-                <button @click="deleteLead(lead.id)" class="text-ink-3 hover:text-pri-critical p-1 rounded" title="Delete Opportunity">
+                <button @click="deleteLead(lead.id)" class="text-ink-3 hover:text-pri-critical p-1 rounded"
+                  title="Delete Opportunity">
                   <Trash class="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           </div>
 
-          <div v-if="!getLeadsByStage(stage.key).length" class="h-24 flex items-center justify-center border border-dashed border-line rounded-xl text-[11px] text-ink-3 italic">
+          <div v-if="!getLeadsByStage(stage.key).length"
+            class="h-24 flex items-center justify-center border border-dashed border-line rounded-xl text-[11px] text-ink-3 italic">
             Column empty
           </div>
         </div>
@@ -215,7 +283,8 @@ async function convertToClient(lead) {
     </div>
 
     <!-- CREATE LEAD DIALOG -->
-    <div v-if="showAddModal" @keydown.window.esc="showAddModal = false" class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
+    <div v-if="showAddModal" @keydown.window.esc="showAddModal = false"
+      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddModal = false"></div>
       <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
         <div>
@@ -249,7 +318,8 @@ async function convertToClient(lead) {
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-semibold text-ink-2 mb-1">Probability ({{ probability }}%)</label>
-              <input type="range" v-model="probability" min="10" max="100" step="5" class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
+              <input type="range" v-model="probability" min="10" max="100" step="5"
+                class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
             </div>
             <div>
               <label class="block text-xs font-semibold text-ink-2 mb-1">Follow-up Target Date</label>
@@ -268,13 +338,83 @@ async function convertToClient(lead) {
 
           <div>
             <label class="block text-xs font-semibold text-ink-2 mb-1">Opportunity Notes</label>
-            <textarea v-model="notes" rows="3" placeholder="Timeline requirements, references, next actions..." class="input-block text-sm resize-none"></textarea>
+            <textarea v-model="notes" rows="3" placeholder="Timeline requirements, references, next actions..."
+              class="input-block text-sm resize-none"></textarea>
           </div>
         </div>
 
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddModal = false" class="btn-ghost">Cancel</button>
           <button @click="createLead" class="btn-primary">Add Opportunity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT LEAD DIALOG -->
+    <div v-if="showEditModal" @keydown.window.esc="showEditModal = false"
+      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showEditModal = false"></div>
+      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
+        <div>
+          <div class="overline">Modify Sales Lead</div>
+          <h2 class="font-serif text-2xl mt-1">Edit opportunity</h2>
+        </div>
+
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-ink-2 mb-1">Opportunity Title</label>
+              <input v-model="editForm.title" placeholder="e.g. Website Overhaul" class="input-block text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-ink-2 mb-1">Prospect Name</label>
+              <input v-model="editForm.clientName" placeholder="e.g. Alpha Design" class="input-block text-sm" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-ink-2 mb-1">Est. Deal Value ($)</label>
+              <input type="number" v-model="editForm.estimatedValue" min="0" class="input-block text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-ink-2 mb-1">Expected Scoped Hours</label>
+              <input type="number" v-model="editForm.expectedHours" min="0" class="input-block text-sm" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-ink-2 mb-1">Probability ({{ editForm.probability }}%)</label>
+              <input type="range" v-model="editForm.probability" min="10" max="100" step="5"
+                class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-ink-2 mb-1">Follow-up Target Date</label>
+              <input type="date" v-model="editForm.followUpDate" class="input-block text-sm text-ink-2 font-mono" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-ink-2 mb-1">Pipeline Stage</label>
+              <select v-model="editForm.status" class="input-block text-sm font-semibold">
+                <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
+                <option value="lost">Lost</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-ink-2 mb-1">Opportunity Notes</label>
+            <textarea v-model="editForm.notes" rows="3" placeholder="Timeline requirements..."
+              class="input-block text-sm resize-none"></textarea>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button @click="showEditModal = false" class="btn-ghost">Cancel</button>
+          <button @click="saveLeadEdit" class="btn-primary">Save Changes</button>
         </div>
       </div>
     </div>

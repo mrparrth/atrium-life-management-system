@@ -87,7 +87,7 @@ onKeyStroke('Escape', (e) => {
 <template>
   <div class="px-8 md:px-12 py-10 max-w-6xl mx-auto" data-testid="bookmarks-view">
     <PageHeader overline="Memory" title="Bookmarks"
-      sub="Pages worth returning to — grouped into collections, or kept loose.">
+      sub="Pages worth returning to - grouped into collections, or kept loose.">
       <template #right>
         <button class="btn-secondary" @click="showNewPage = true" data-testid="new-page-btn">
           <FolderOpen class="w-4 h-4" /> New collection
@@ -179,7 +179,7 @@ onKeyStroke('Escape', (e) => {
           data-testid="new-bookmark-tags" />
         <label class="block mb-3"><span class="overline block mb-1">Collection</span>
           <select v-model="newBm.pageId" class="input-block text-sm" data-testid="new-bookmark-page">
-            <option :value="null">— none (loose) —</option>
+            <option :value="null">- none (loose) -</option>
             <option v-for="p in bookmarks.pages" :key="p.id" :value="p.id">{{ p.emoji }} {{ p.title }}</option>
           </select>
         </label>

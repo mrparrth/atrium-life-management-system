@@ -67,6 +67,11 @@ onMounted(async () => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
       e.preventDefault(); ui.closeCommand(); ui.openQuickCapture()
     }
+    if (e.altKey && (e.code === 'KeyM' || e.code === 'KeyW')) {
+      e.preventDefault();
+      ui.toggleMode();
+      ui.showToast(`Swapped to ${ui.mode === 'work' ? 'Work Mode' : 'Personal Mode'}`, 'info');
+    }
     if (e.key === 'Escape') {
       if (ui.commandOpen) ui.closeCommand()
       if (ui.quickCaptureOpen) ui.closeQuickCapture()

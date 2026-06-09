@@ -23,44 +23,46 @@ db.version(1).stores({
   settings: "id",
 });
 
-// v2 — Cash flow + custom categories (INR)
+// v2 - Cash flow + custom categories (INR)
 db.version(2).stores({
   finance_cashflow: "id, type, category, recurring, date, createdAt, updatedAt",
   finance_categories: "id, scope, name, createdAt",
 });
 
-// v3 — Next steps checklist + bookmark pages
+// v3 - Next steps checklist + bookmark pages
 db.version(3).stores({
   next_steps: "id, order, done, createdAt, updatedAt",
   bookmark_pages: "id, createdAt, updatedAt",
 });
 
-// v4 — Net worth logs (dated, multi-category) + Cash flow monthly periods (multi-category)
+// v4 - Net worth logs (dated, multi-category) + Cash flow monthly periods (multi-category)
 db.version(4).stores({
   finance_networth_logs: "id, date, createdAt, updatedAt",
   finance_cashflow_periods: "id, month, createdAt, updatedAt",
 });
 
-// v5 — Next steps section-based tasks & notes
+// v5 - Next steps section-based tasks & notes
 db.version(5).stores({
   next_steps_sections: "id, order, createdAt, updatedAt",
 });
 
-// v6 — Work Mode integration
+// v6 - Work Mode integration
 db.version(6).stores({
   work_clients: "id, name, status, lastInteractionAt, createdAt, updatedAt",
-  work_items: "id, clientId, status, important, urgent, dueDate, resurfaceDate, snoozedUntil, charged, createdAt, updatedAt",
+  work_items:
+    "id, clientId, status, important, urgent, dueDate, resurfaceDate, snoozedUntil, charged, createdAt, updatedAt",
   work_leads: "id, status, followUpDate, createdAt, updatedAt",
   work_invoices: "id, clientId, status, invoiceNumber, dueDate, createdAt, updatedAt",
-  work_meetings: "id, googleCalendarId, clientId, startDateTime, endDateTime, associatedType, associatedId, createdAt, updatedAt",
+  work_meetings:
+    "id, googleCalendarId, clientId, startDateTime, endDateTime, associatedType, associatedId, createdAt, updatedAt",
   work_capacity: "id, weekStartDate, createdAt, updatedAt",
   work_templates: "id, name, type, createdAt, updatedAt",
-  work_communication_logs: "id, clientId, channel, date, createdAt"
+  work_communication_logs: "id, clientId, channel, date, createdAt",
 });
 
-// v7 — Work Resources (credentials and URLs)
+// v7 - Work Resources (credentials and URLs)
 db.version(7).stores({
-  work_resources: "id, clientId, type, title, createdAt"
+  work_resources: "id, clientId, type, title, createdAt",
 });
 
 export function newId() {
@@ -130,7 +132,7 @@ export async function ensureDefaultCategories() {
   await db.finance_categories.bulkAdd(DEFAULT_CATEGORIES.map((c) => ({ id: newId(), ...c, createdAt: ts })));
 }
 
-// Seed helper — only runs once if DB is empty
+// Seed helper - only runs once if DB is empty
 export async function seedIfEmpty() {
   await ensureDefaultCategories();
 
@@ -249,7 +251,7 @@ export async function seedIfEmpty() {
     },
     {
       id: newId(),
-      title: "Reading list — winter",
+      title: "Reading list - winter",
       body: "- The Order of Time, Carlo Rovelli\n- Four Thousand Weeks\n- A Pattern Language",
       tags: ["reading"],
       projectId: proj1.id,
@@ -262,7 +264,7 @@ export async function seedIfEmpty() {
   await db.bookmarks.bulkAdd([
     {
       id: newId(),
-      title: "Calm Technology — Amber Case",
+      title: "Calm Technology - Amber Case",
       url: "https://calmtech.com/",
       category: "Inspiration",
       tags: ["design"],
@@ -435,7 +437,8 @@ export async function seedIfEmpty() {
       id: newId(),
       clientId: clientNexusId,
       title: "UX Workflow Audit",
-      description: "Map and analyze the user onboarding checklist and checkout flow to find drops in funnel conversion.",
+      description:
+        "Map and analyze the user onboarding checklist and checkout flow to find drops in funnel conversion.",
       status: "open",
       important: true,
       urgent: false,
@@ -533,9 +536,7 @@ export async function seedIfEmpty() {
       paidAt: new Date(Date.now() - 9 * 86400000).toISOString().slice(0, 10),
       billingType: "fixed",
       taxRate: 18,
-      items: [
-        { description: "Homepage Design Layouts", quantity: 1, rate: 80000, amount: 80000 },
-      ],
+      items: [{ description: "Homepage Design Layouts", quantity: 1, rate: 80000, amount: 80000 }],
       amount: 94400, // 80000 + 18% tax
       createdAt: now(),
       updatedAt: now(),
@@ -548,9 +549,7 @@ export async function seedIfEmpty() {
       dueDate: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
       billingType: "fixed",
       taxRate: 18,
-      items: [
-        { description: "Development Phase 1 Kickoff", quantity: 1, rate: 65000, amount: 65000 },
-      ],
+      items: [{ description: "Development Phase 1 Kickoff", quantity: 1, rate: 65000, amount: 65000 }],
       amount: 76700,
       createdAt: now(),
       updatedAt: now(),
@@ -563,9 +562,7 @@ export async function seedIfEmpty() {
       dueDate: new Date(Date.now() - 15 * 86400000).toISOString().slice(0, 10),
       billingType: "fixed",
       taxRate: 0,
-      items: [
-        { description: "Shopify Store Re-config", quantity: 1, rate: 45000, amount: 45000 },
-      ],
+      items: [{ description: "Shopify Store Re-config", quantity: 1, rate: 45000, amount: 45000 }],
       amount: 45000,
       createdAt: now(),
       updatedAt: now(),
@@ -651,4 +648,3 @@ export async function seedIfEmpty() {
 
   await db.settings.put({ id: "app", theme: "light", firstRun: false, lastDailyReview: null, lastWeeklyReview: null });
 }
-

@@ -329,38 +329,40 @@ onUnmounted(() => {
           <div class="relative inline-block">
             <button @click.stop="showStatusMenu = !showStatusMenu"
               class="text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1.5 hover:opacity-85 transition-all cursor-pointer"
-              :class="statusStyle.color"
-              title="Change status">
+              :class="statusStyle.color" title="Change status">
               <span class="w-1.5 h-1.5 rounded-full" :class="statusStyle.dotColor"></span>
               {{ statusStyle.label }}
             </button>
 
             <!-- Status Dropdown Menu -->
-            <div v-if="showStatusMenu" class="absolute left-0 top-6 w-48 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
+            <div v-if="showStatusMenu"
+              class="absolute left-0 top-6 w-48 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
               <div class="overline px-2.5 py-1">Change status</div>
-              
+
               <!-- To-do Group -->
               <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1">To-do</div>
-              <button v-for="st in statusGroups.to_do" :key="st.key" 
-                @click.stop="updateStatus(st.key)"
+              <button v-for="st in statusGroups.to_do" :key="st.key" @click.stop="updateStatus(st.key)"
                 class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
                 {{ st.label }}
               </button>
 
               <!-- In Progress Group -->
-              <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">In progress</div>
-              <button v-for="st in statusGroups.in_progress" :key="st.key" 
-                @click.stop="updateStatus(st.key)"
+              <div
+                class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
+                In
+                progress</div>
+              <button v-for="st in statusGroups.in_progress" :key="st.key" @click.stop="updateStatus(st.key)"
                 class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
                 {{ st.label }}
               </button>
 
               <!-- Complete Group -->
-              <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">Complete</div>
-              <button v-for="st in statusGroups.complete" :key="st.key" 
-                @click.stop="updateStatus(st.key)"
+              <div
+                class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
+                Complete</div>
+              <button v-for="st in statusGroups.complete" :key="st.key" @click.stop="updateStatus(st.key)"
                 class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
                 {{ st.label }}
@@ -384,7 +386,7 @@ onUnmounted(() => {
           </span>
           <span class="flex items-center gap-1" :class="isOverran ? 'text-pri-critical font-medium' : ''">
             <Clock class="w-3.5 h-3.5" />
-            {{ props.item.actualHours }}h tracked / {{ props.item.estimatedHours || '—' }}h est
+            {{ props.item.actualHours }}h tracked / {{ props.item.estimatedHours || '-' }}h est
             <span v-if="isOverran"
               class="text-[9px] px-1 rounded bg-pri-critical-bg text-pri-critical border border-pri-critical-bd shrink-0">Creep</span>
           </span>
@@ -412,7 +414,8 @@ onUnmounted(() => {
       <!-- Checkbox / Mark Done -->
       <button @click.stop="toggleStatus"
         class="text-ink-3 hover:text-ink shrink-0 transition-colors mr-1 cursor-pointer">
-        <CheckCircle2 v-if="itemsStore.isCompleted(props.item.status)" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
+        <CheckCircle2 v-if="itemsStore.isCompleted(props.item.status)"
+          class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
         <Circle v-else class="w-5 h-5" />
       </button>
 
@@ -471,7 +474,8 @@ onUnmounted(() => {
 
     <!-- Rating modal upon closing a task -->
     <Teleport to="body">
-      <div v-if="showRatingModal" @keydown.window.esc="skipRating" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
+      <div v-if="showRatingModal" @keydown.window.esc="skipRating"
+        class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
         <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="skipRating"></div>
         <div class="relative w-full max-w-sm card p-6 shadow-xl bg-surface z-50 animate-rise-in space-y-4">
           <div class="text-center">
@@ -569,7 +573,8 @@ onUnmounted(() => {
               </div>
               <div>
                 <label class="block text-xs font-semibold text-ink-2 mb-1">Charged ($)</label>
-                <input type="number" v-model="editForm.charged" min="0" step="1" class="input-block text-sm" placeholder="e.g. 500" />
+                <input type="number" v-model="editForm.charged" min="0" step="1" class="input-block text-sm"
+                  placeholder="e.g. 500" />
               </div>
             </div>
 

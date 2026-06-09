@@ -44,7 +44,7 @@ async function backup() {
 async function restore() {
   if (!await ui.confirm({ message: 'Replace ALL local data with the Drive backup? This cannot be undone.', title: 'Restore Backup' })) return
   busy.value = true
-  try { await driveRestore(); ui.showToast('Restored — reloading…', 'success'); setTimeout(() => location.reload(), 800) }
+  try { await driveRestore(); ui.showToast('Restored - reloading…', 'success'); setTimeout(() => location.reload(), 800) }
   catch (e) { ui.showToast(`Restore failed: ${e.message}`, 'error') }
   finally { busy.value = false }
 }
@@ -66,7 +66,7 @@ async function importJson(e) {
     const data = payload?.data || payload
     const { importAllData } = await import('@/services/drive')
     await importAllData(data)
-    ui.showToast('Imported — reloading…', 'success')
+    ui.showToast('Imported - reloading…', 'success')
     setTimeout(() => location.reload(), 700)
   } catch (err) { ui.showToast(`Import failed: ${err.message}`, 'error') }
 }
