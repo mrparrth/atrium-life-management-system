@@ -5,7 +5,10 @@ import { ChevronDown, Check } from 'lucide-vue-next'
 const props = defineProps({
   options: { type: Array, required: true }, // Array of { key, label }
   modelValue: { type: String, default: '' },
-  placeholder: { type: String, default: 'Select...' }
+  placeholder: { type: String, default: 'Select...' },
+  isField: { type: Boolean, default: false },
+  label: { type: String, default: '' },
+  required: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -46,18 +49,42 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
 </script>
 
 <template>
-  <div class="relative w-64" ref="container">
-    <button 
-      type="button" 
-      class="w-full bg-surface border border-line hover:border-line-2 transition-colors rounded-xl px-3 py-2 text-xs outline-none focus:border-line-2 font-serif flex items-center justify-between text-left"
-      @click="isOpen = !isOpen"
-    >
-      <span class="truncate" :class="modelValue ? 'text-ink' : 'text-ink-3'">
-        {{ selectedLabel || placeholder }}
-      </span>
-      <ChevronDown class="w-3.5 h-3.5 text-ink-3 shrink-0 ml-2" />
-    </button>
+  <div :class="isField ? 'v-field-group relative w-full' : 'relative w-64'" ref="container">
+    <!-- Notched Field Variant -->
+    <template v-if="isField">
+      <button 
+        type="button" 
+        class="v-field-input text-left flex items-center justify-between"
+        :class="{ 'border-pri-strategic ring-2 ring-pri-strategic/10': isOpen }"
+        @click="isOpen = !isOpen"
+      >
+        <span class="truncate text-sm" :class="modelValue ? 'text-ink font-medium' : 'text-ink-3'">
+          {{ selectedLabel || ' ' }}
+        </span>
+        <span class="v-field-arrow">▼</span>
+      </button>
+      <label 
+        :class="['v-field-label', (modelValue || isOpen) ? 'v-field-label--floating' : '', isOpen ? 'v-field-label--floating-focused' : '']"
+      >
+        {{ label }} <span v-if="required" class="text-pri-critical">*</span>
+      </label>
+    </template>
 
+    <!-- Standard Selector Variant -->
+    <template v-else>
+      <button 
+        type="button" 
+        class="w-full bg-surface border border-line hover:border-line-2 transition-colors rounded-xl px-3 py-2 text-xs outline-none focus:border-line-2 font-serif flex items-center justify-between text-left"
+        @click="isOpen = !isOpen"
+      >
+        <span class="truncate" :class="modelValue ? 'text-ink' : 'text-ink-3'">
+          {{ selectedLabel || placeholder }}
+        </span>
+        <ChevronDown class="w-3.5 h-3.5 text-ink-3 shrink-0 ml-2" />
+      </button>
+    </template>
+
+    <!-- Shared Dropdown List -->
     <div 
       v-if="isOpen" 
       class="absolute z-50 w-full mt-1.5 bg-surface border border-line rounded-xl shadow-xl overflow-hidden flex flex-col max-h-72"

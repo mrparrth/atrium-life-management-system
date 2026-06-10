@@ -1,9 +1,10 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useUIStore } from '@/stores/ui'
+import { createClientDriveFolder } from '@/services/drive'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -24,43 +25,50 @@ const clientCompanyName = ref('')
 const clientAddress = ref('')
 const clientEmail = ref('')
 const clientPhone = ref('')
-const clientTimezone = ref('Asia/Kolkata')
+const clientTimezone = ref('America/Los_Angeles')
 const clientComm = ref('Slack')
-const clientTech = ref('')
 const clientSensitivity = ref('Medium')
-const clientMeeting = ref('')
-const clientNotes = ref('')
 const clientSource = ref('Upwork')
 const clientTagsString = ref('')
 const clientTechSavvy = ref(false)
 const clientUpcharge = ref(0)
 const createDriveFolder = ref(false)
 const clientStatus = ref('normal')
+const focusedFields = ref({})
+
 
 const timezoneOptions = [
-  { value: 'Pacific/Honolulu', label: '(GMT-10.0) Hawaii Time (HST)' },
-  { value: 'America/Anchorage', label: '(GMT-9.0) Alaska Time (AKST)' },
-  { value: 'America/Los_Angeles', label: '(GMT-8.0) US Pacific Time (PST)' },
-  { value: 'America/Denver', label: '(GMT-7.0) US Mountain Time (MST)' },
-  { value: 'America/Phoenix', label: '(GMT-7.0) US Mountain Time (MST, No DST)' },
-  { value: 'America/Chicago', label: '(GMT-6.0) US Central Time (CST)' },
-  { value: 'America/New_York', label: '(GMT-5.0) US Eastern Time (EST)' },
-  { value: 'America/Sao_Paulo', label: '(GMT-3.0) Brazil Time (BRT)' },
-  { value: 'UTC', label: '(GMT+0.0) UTC/GMT' },
-  { value: 'Europe/London', label: '(GMT+0.0) London Time (GMT/BST)' },
-  { value: 'Europe/Paris', label: '(GMT+1.0) Central European Time (CET)' },
-  { value: 'Europe/Athens', label: '(GMT+2.0) Eastern European Time (EET)' },
-  { value: 'Europe/Moscow', label: '(GMT+3.0) Moscow Time (MSK)' },
-  { value: 'Asia/Dubai', label: '(GMT+4.0) Gulf Standard Time (GST)' },
-  { value: 'Asia/Kolkata', label: '(GMT+5.5) India Standard Time (IST)' },
-  { value: 'Asia/Jakarta', label: '(GMT+7.0) Western Indonesia Time (WIB)' },
-  { value: 'Asia/Singapore', label: '(GMT+8.0) Singapore Time (SGT)' },
-  { value: 'Asia/Hong_Kong', label: '(GMT+8.0) Hong Kong Time (HKT)' },
-  { value: 'Asia/Tokyo', label: '(GMT+9.0) Japan Standard Time (JST)' },
-  { value: 'Asia/Seoul', label: '(GMT+9.0) Korea Standard Time (KST)' },
-  { value: 'Australia/Sydney', label: '(GMT+10.0) Australia Eastern Time (AEST)' },
-  { value: 'Pacific/Auckland', label: '(GMT+12.0) New Zealand Time (NZST)' }
+  { value: 'Pacific/Honolulu', label: '(GMT-10.0) HST · Honolulu' },
+  { value: 'America/Anchorage', label: '(GMT-9.0) AKST · Anchorage' },
+  { value: 'America/Los_Angeles', label: '(GMT-8.0) PST · Los Angeles, Seattle' },
+  { value: 'America/Denver', label: '(GMT-7.0) MST · Denver, Salt Lake' },
+  { value: 'America/Phoenix', label: '(GMT-7.0) MST (No DST) · Phoenix' },
+  { value: 'America/Chicago', label: '(GMT-6.0) CST · Chicago, Dallas' },
+  { value: 'America/New_York', label: '(GMT-5.0) EST · New York, Miami' },
+  { value: 'America/Sao_Paulo', label: '(GMT-3.0) BRT · São Paulo, Rio' },
+  { value: 'UTC', label: '(GMT+0.0) UTC' },
+  { value: 'Europe/London', label: '(GMT+0.0) GMT/BST · London, Dublin' },
+  { value: 'Europe/Paris', label: '(GMT+1.0) CET · Paris, Berlin, Rome' },
+  { value: 'Europe/Athens', label: '(GMT+2.0) EET · Athens, Cairo' },
+  { value: 'Europe/Moscow', label: '(GMT+3.0) MSK · Moscow, St. Petersburg' },
+  { value: 'Asia/Dubai', label: '(GMT+4.0) GST · Dubai, Abu Dhabi' },
+  { value: 'Asia/Kolkata', label: '(GMT+5.5) IST · New Delhi, Mumbai' },
+  { value: 'Asia/Jakarta', label: '(GMT+7.0) WIB · Jakarta, Bangkok' },
+  { value: 'Asia/Singapore', label: '(GMT+8.0) SGT · Singapore' },
+  { value: 'Asia/Hong_Kong', label: '(GMT+8.0) HKT · Hong Kong' },
+  { value: 'Asia/Tokyo', label: '(GMT+9.0) JST · Tokyo, Osaka' },
+  { value: 'Asia/Seoul', label: '(GMT+9.0) KST · Seoul' },
+  { value: 'Australia/Sydney', label: '(GMT+10.0) AEST · Sydney, Melbourne' },
+  { value: 'Pacific/Auckland', label: '(GMT+12.0) NZST · Auckland, Wellington' }
 ]
+
+function formatTimezoneShort(tzValue) {
+  const option = timezoneOptions.find(o => o.value === tzValue)
+  if (option) {
+    return option.label.split('·')[0].trim()
+  }
+  return tzValue
+}
 
 function getClientLocalTime(tzName) {
   if (!tzName) return ''
@@ -82,6 +90,10 @@ const predefinedTagOptions = [
   'demanding', 'agency', 'startup', 'clear-brief'
 ]
 
+const surchargeTagOptions = [
+  '10%', '20%', '30%', '40%', '50%', '75%', '100%'
+]
+
 function togglePredefinedTag(tag) {
   let currentTags = clientTagsString.value
     ? clientTagsString.value.split(',').map(t => t.trim()).filter(Boolean)
@@ -89,25 +101,51 @@ function togglePredefinedTag(tag) {
   if (currentTags.includes(tag)) {
     currentTags = currentTags.filter(t => t !== tag)
   } else {
+    if (tag.endsWith('%')) {
+      currentTags = currentTags.filter(t => !t.endsWith('%'))
+    }
     currentTags.push(tag)
   }
   clientTagsString.value = currentTags.join(', ')
 }
 
+function addPredefinedTagFromDropdown(event) {
+  const tag = event.target.value
+  if (!tag) return
+  togglePredefinedTag(tag)
+  event.target.value = ''
+}
+
 async function createClient() {
-  if (!clientName.value.trim()) return
+  if (!clientCompanyName.value.trim()) return
 
   // Parse tags
   const tags = clientTagsString.value
     ? clientTagsString.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
     : []
 
+  // Extract upcharge percentage from tags ending in %
+  let upcharge = 0
+  for (const tag of tags) {
+    if (tag.endsWith('%')) {
+      const val = parseInt(tag.slice(0, -1), 10)
+      if (!isNaN(val)) {
+        upcharge = val
+        break
+      }
+    }
+  }
+
   // Check if Drive folder creation was selected
   let folderId = ''
   if (createDriveFolder.value) {
     const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
-    folderId = `mock-drive-folder-${Date.now()}`
-    ui.showToast(`Simulated Drive Folder: "${rootDir}/${clientName.value.trim()}" created!`, 'success')
+    ui.showToast('Connecting to Google Drive...', 'info')
+    try {
+      folderId = await createClientDriveFolder(clientName.value.trim(), rootDir)
+    } catch (e) {
+      ui.showToast(`Failed to create Drive folder: ${e.message}`, 'error')
+    }
   }
 
   const created = await clientsStore.add({
@@ -118,13 +156,12 @@ async function createClient() {
     phone: clientPhone.value.trim(),
     timezone: clientTimezone.value,
     preferredCommunication: clientComm.value,
-    technicalStack: clientTech.value,
+    technicalStack: '',
     pricingSensitivity: clientSensitivity.value,
-    meetingPreference: clientMeeting.value,
-    relationshipNotes: clientNotes.value,
+    relationshipNotes: '',
     tags,
     techSavvy: clientTechSavvy.value,
-    upchargePercentage: Number(clientUpcharge.value) || 0,
+    upchargePercentage: upcharge,
     clientSource: clientSource.value.trim(),
     driveFolderId: folderId,
     status: clientStatus.value
@@ -135,8 +172,6 @@ async function createClient() {
   clientAddress.value = ''
   clientEmail.value = ''
   clientPhone.value = ''
-  clientTech.value = ''
-  clientNotes.value = ''
   clientTagsString.value = ''
   clientTechSavvy.value = false
   clientUpcharge.value = 0
@@ -144,14 +179,33 @@ async function createClient() {
   clientStatus.value = 'normal'
   showAddModal.value = false
   ui.showToast('Client workspace created', 'success')
-  router.push(`/work/clients/${created.id}`)
+  if (created && created.id) {
+    router.push(`/work/clients/${created.id}`)
+  }
+}
+
+function autoGrowTextarea(event) {
+  const el = event.target
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight}px`
 }
 
 const itemsStore = useWorkItemsStore()
 
+function handleGlobalKeydown(e) {
+  if (e.key === 'Escape') {
+    showAddModal.value = false
+  }
+}
+
 onMounted(async () => {
   await clientsStore.load()
   await itemsStore.load()
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
 })
 
 function getHealthStatus(client) {
@@ -219,7 +273,8 @@ const filteredClients = computed(() => {
       sub="Your relationship hubs, operational workspaces, and memory system.">
       <template #right>
         <button @click="showAddModal = true" class="btn-primary">
-          <Plus class="w-4 h-4" /> Create Client
+          <Plus class="w-4 h-4" /> Create Client <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
@@ -403,148 +458,178 @@ const filteredClients = computed(() => {
 
     <!-- CREATE CLIENT MODAL -->
     <div v-if="showAddModal" @keydown.window.esc="showAddModal = false"
-      class="fixed inset-0 z-40 flex items-start justify-center pt-16 pb-16 overflow-y-auto px-4">
+      class="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto px-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddModal = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 my-8 animate-rise-in space-y-6">
+      <div class="relative w-full max-w-3xl card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
         <div>
-          <div class="overline">New Workspace</div>
-          <h2 class="font-serif text-2xl mt-1">Create client context</h2>
+          <h2 class="font-serif text-2xl text-ink">Create Client Workspace</h2>
+          <p class="text-xs text-ink-3 mt-1">Set up a new client workspace, communication hubs, and operational
+            integrations.</p>
         </div>
 
-        <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Client Contact Name</label>
-              <input v-model="clientName" placeholder="e.g. Fame Lounge Contact" class="input-block text-sm" />
+        <div class="space-y-6">
+          <!-- [ Basic Information ] -->
+          <div class="space-y-3">
+            <h3
+              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
+              Basic Information ]</h3>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="v-field-group">
+                <input v-model="clientName" placeholder=" " class="v-field-input" required />
+                <label class="v-field-label">Client Contact Name *</label>
+              </div>
+              <div class="space-y-1">
+                <div class="v-field-group">
+                  <select v-model="clientTimezone" @focus="focusedFields.timezone = true"
+                    @blur="focusedFields.timezone = false" class="v-field-select">
+                    <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
+                      {{ tz.label }}
+                    </option>
+                  </select>
+                  <span class="v-field-arrow">▼</span>
+                  <label
+                    :class="['v-field-label', (clientTimezone || focusedFields.timezone) ? 'v-field-label--floating' : '', focusedFields.timezone ? 'v-field-label--floating-focused' : '']">Timezone</label>
+                </div>
+                <div v-if="getClientLocalTime(clientTimezone)"
+                  class="text-[10px] text-pri-strategic font-semibold pl-3.5">
+                  {{ formatTimezoneShort(clientTimezone) }} · {{ getClientLocalTime(clientTimezone) }} local
+                </div>
+              </div>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Company / Workspace Name</label>
-              <input v-model="clientCompanyName" placeholder="e.g. Fame Lounge" class="input-block text-sm" />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Billing Address</label>
-            <textarea v-model="clientAddress" placeholder="e.g. United States of America (USA)" rows="2"
-              class="input-block text-sm resize-none"></textarea>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Email</label>
-              <input v-model="clientEmail" placeholder="e.g. contact@client.com" class="input-block text-sm" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Phone</label>
-              <input v-model="clientPhone" placeholder="e.g. +1 (555) 019-2834" class="input-block text-sm" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Timezone</label>
-              <select v-model="clientTimezone" class="input-block text-sm">
-                <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
-                  {{ tz.label }}
-                </option>
-              </select>
-              <span v-if="getClientLocalTime(clientTimezone)"
-                class="text-[10px] text-pri-strategic mt-1 block font-medium">
-                Their Local Time: {{ getClientLocalTime(clientTimezone) }}
-              </span>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Preferred Communication</label>
-              <select v-model="clientComm" class="input-block text-sm">
-                <option value="Slack">Slack</option>
-                <option value="Email">Email</option>
-                <option value="WhatsApp">WhatsApp</option>
-                <option value="Teams">Microsoft Teams</option>
-              </select>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="v-field-group">
+                <input v-model="clientCompanyName" placeholder=" " class="v-field-input" />
+                <label class="v-field-label">Company / Workspace Name</label>
+              </div>
+              <div class="v-field-group">
+                <select v-model="clientStatus" @focus="focusedFields.status = true" @blur="focusedFields.status = false"
+                  class="v-field-select font-semibold">
+                  <option v-for="(val, key) in clientsStore.STATUS_MAP" :key="key" :value="key">
+                    {{ val.label }}
+                  </option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (clientStatus || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Client
+                  Status</label>
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Technical Stack</label>
-              <input v-model="clientTech" placeholder="e.g. Vue, Node, Firebase" class="input-block text-sm" />
+          <!-- [ Contact ] -->
+          <div class="space-y-3">
+            <h3
+              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
+              Contact ]</h3>
+            <div class="grid grid-cols-3 gap-4 items-start">
+              <div class="v-field-group">
+                <input v-model="clientEmail" placeholder=" " class="v-field-input" />
+                <label class="v-field-label">Email</label>
+              </div>
+              <div class="v-field-group">
+                <input v-model="clientPhone" placeholder=" " class="v-field-input" />
+                <label class="v-field-label">Phone</label>
+              </div>
+              <div class="v-field-group">
+                <select v-model="clientComm" @focus="focusedFields.comm = true" @blur="focusedFields.comm = false"
+                  class="v-field-select">
+                  <option value="Slack">Slack</option>
+                  <option value="Email">Email</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Teams">Microsoft Teams</option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (clientComm || focusedFields.comm) ? 'v-field-label--floating' : '', focusedFields.comm ? 'v-field-label--floating-focused' : '']">Preferred
+                  Communication</label>
+              </div>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Pricing Sensitivity</label>
-              <select v-model="clientSensitivity" class="input-block text-sm">
-                <option value="Low">Low (Value-driven)</option>
-                <option value="Medium">Medium (Budget-aware)</option>
-                <option value="High">High (Cost-focused)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Client Status</label>
-              <select v-model="clientStatus" class="input-block text-sm font-semibold">
-                <option v-for="(val, key) in clientsStore.STATUS_MAP" :key="key" :value="key">
-                  {{ val.label }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Acquisition Source</label>
-              <select v-model="clientSource" class="input-block text-sm">
-                <option value="Upwork">Upwork</option>
-                <option value="Referral">Referral</option>
-                <option value="Cold Email">Cold Email</option>
-                <option value="LinkedIn">LinkedIn</option>
-                <option value="Twitter/X">Twitter/X</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Premium Upcharge %</label>
-              <input type="number" v-model="clientUpcharge" placeholder="e.g. 15 for 15% increase"
-                class="input-block text-sm" min="0" max="100" />
+            <div class="v-field-group">
+              <input v-model="clientAddress" placeholder=" " class="v-field-input" />
+              <label class="v-field-label">Billing Address</label>
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Client Tags (comma separated)</label>
-            <input v-model="clientTagsString" placeholder="e.g. agency, high-ticket, long-term"
-              class="input-block text-sm" />
-            <div class="flex flex-wrap gap-1.5 mt-2">
-              <button v-for="tag in predefinedTagOptions" :key="tag" @click="togglePredefinedTag(tag)" type="button"
-                class="text-[10px] px-2 py-0.5 rounded-full border transition-all" :class="clientTagsString.split(',').map(t => t.trim()).includes(tag)
-                  ? 'bg-pri-strategic-bg text-pri-strategic border-pri-strategic-bd font-semibold'
-                  : 'bg-canvas text-ink-3 border-line hover:text-ink hover:border-line-2'">
-                {{ tag }}
-              </button>
+          <!-- [ Business Context ] -->
+          <div class="space-y-3">
+            <h3
+              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
+              Business Context ]</h3>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="v-field-group">
+                <select v-model="clientSource" @focus="focusedFields.source = true" @blur="focusedFields.source = false"
+                  class="v-field-select">
+                  <option value="Upwork">Upwork</option>
+                  <option value="Referral">Referral</option>
+                  <option value="Cold Email">Cold Email</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="Twitter/X">Twitter/X</option>
+                  <option value="Other">Other</option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (clientSource || focusedFields.source) ? 'v-field-label--floating' : '', focusedFields.source ? 'v-field-label--floating-focused' : '']">Acquisition
+                  Source</label>
+              </div>
+              <div class="v-field-group">
+                <select v-model="clientSensitivity" @focus="focusedFields.sensitivity = true"
+                  @blur="focusedFields.sensitivity = false" class="v-field-select">
+                  <option value="Low">Low (Value-driven)</option>
+                  <option value="Medium">Medium (Budget-aware)</option>
+                  <option value="High">High (Cost-focused)</option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (clientSensitivity || focusedFields.sensitivity) ? 'v-field-label--floating' : '', focusedFields.sensitivity ? 'v-field-label--floating-focused' : '']">Pricing
+                  Sensitivity</label>
+              </div>
             </div>
-          </div>
+            <div class="v-field-group">
+              <input v-model="clientTagsString" placeholder=" " class="v-field-input" />
+              <label class="v-field-label">Client Tags (comma separated)</label>
+            </div>
 
-          <div class="flex flex-col gap-3 p-3 bg-canvas/40 border border-line rounded-xl">
-            <label class="flex items-center gap-2 text-xs font-semibold text-ink-2 cursor-pointer">
-              <input type="checkbox" v-model="createDriveFolder"
-                class="rounded border-line text-pri-strategic focus:ring-pri-strategic" />
-              <span class="flex items-center gap-1">
-                <HardDrive class="w-3.5 h-3.5 text-ink-3" /> Create Google Drive Workspace folder on client creation
-              </span>
-            </label>
-          </div>
+            <div class="grid grid-cols-2 gap-4 items-start pt-1">
+              <div class="v-field-group">
+                <select @change="addPredefinedTagFromDropdown" @focus="focusedFields.stdTags = true"
+                  @blur="focusedFields.stdTags = false" class="v-field-select text-xs cursor-pointer">
+                  <option value="">-- Add standard tag --</option>
+                  <option v-for="tag in predefinedTagOptions" :key="tag" :value="tag">{{ tag }}</option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', focusedFields.stdTags ? 'v-field-label--floating text-pri-strategic' : 'v-field-label--floating']">Standard
+                  Tags</label>
+              </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Meeting Preferences</label>
-            <input v-model="clientMeeting" placeholder="e.g. Tuesdays 10:00 AM" class="input-block text-sm" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Relationship Context</label>
-            <textarea v-model="clientNotes" rows="3" placeholder="Timezone overlaps, team size, key contacts..."
-              class="input-block text-sm resize-none"></textarea>
+              <div>
+                <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Surcharge
+                  Suffix</label>
+                <div class="flex flex-wrap gap-1">
+                  <button v-for="tag in surchargeTagOptions" :key="tag" @click="togglePredefinedTag(`surcharge-${tag}`)"
+                    type="button" class="text-[10px] px-2 py-1 rounded-lg border transition-all" :class="clientTagsString.split(',').map(t => t.trim()).includes(tag)
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold'
+                      : 'bg-canvas text-ink-3 border-line hover:text-ink hover:border-line-2'">
+                    {{ tag }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-2">
-          <button @click="showAddModal = false" class="btn-ghost">Cancel</button>
-          <button @click="createClient" class="btn-primary">Create Workspace</button>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-line gap-4">
+          <label class="flex items-center gap-2 text-xs font-semibold text-ink-2 cursor-pointer select-none">
+            <input type="checkbox" v-model="createDriveFolder"
+              class="rounded border-line text-pri-strategic focus:ring-pri-strategic" />
+            <span class="flex items-center gap-1.5">
+              <HardDrive class="w-3.5 h-3.5 text-ink-3" /> Create Google Drive folder
+            </span>
+          </label>
+          <div class="flex justify-end gap-3">
+            <button @click="showAddModal = false" class="btn-ghost">Cancel</button>
+            <button @click="createClient" class="btn-primary">Create Workspace</button>
+          </div>
         </div>
       </div>
     </div>

@@ -21,7 +21,9 @@ import { useWorkForecastStore } from '@/stores/workForecast'
 import { useWorkTemplatesStore } from '@/stores/workTemplates'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { db, seedIfEmpty } from '@/db'
-import { backup as driveBackup, isConnected, lastBackupAt } from '@/services/drive'
+import { backup as driveBackup, isConnected, lastBackupAt, autoBackup } from '@/services/drive'
+import { initNotificationsOnLoad } from '@/lib/notifications'
+
 
 import AppSidebar from '@/components/AppSidebar.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
@@ -37,6 +39,7 @@ const router = useRouter()
 
 
 onMounted(async () => {
+  initNotificationsOnLoad()
   await db.open()
   await seedIfEmpty()
   await Promise.all([
@@ -60,17 +63,71 @@ onMounted(async () => {
     useWorkResourcesStore().load(),
   ])
 
+  // Dynamic periodic auto-backup check (runs silent checks in the background)
+  setTimeout(() => autoBackup(), 5000)
+  setInterval(() => autoBackup(), 60000) // check every minute, actual backup respects interval setting
+
   window.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+      const forecastNext = document.querySelector('.forecasting-next-btn')
+      if (forecastNext) {
+        e.preventDefault()
+        forecastNext.click()
+      } else {
+        const btn = document.querySelector('.btn-primary')
+        if (btn) {
+          e.preventDefault()
+          btn.click()
+        }
+      }
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+      const forecastPrev = document.querySelector('.forecasting-prev-btn')
+      if (forecastPrev) {
+        e.preventDefault()
+        forecastPrev.click()
+      } else {
+        const btn = document.querySelector('.btn-secondary')
+        if (btn) {
+          e.preventDefault()
+          btn.click()
+        } else {
+          const input = document.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea')
+          if (input) {
+            e.preventDefault()
+            input.focus()
+          }
+        }
+      }
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === '3') {
+      const quickInput = document.querySelector('.dashboard-quick-input')
+      if (quickInput) {
+        e.preventDefault()
+        quickInput.focus()
+      } else {
+        const btn = document.querySelector('.btn-tertiary')
+        if (btn) {
+          e.preventDefault()
+          btn.click()
+        }
+      }
+    }
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault(); ui.closeQuickCapture(); ui.openCommand()
     }
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
-      e.preventDefault(); ui.closeCommand(); ui.openQuickCapture()
+      e.preventDefault();
+      ui.closeCommand();
+      if (ui.mode === 'work') {
+        router.push('/work/notes?new=true')
+      } else {
+        ui.openQuickCapture()
+      }
     }
     if (e.altKey && (e.code === 'KeyM' || e.code === 'KeyW')) {
       e.preventDefault();
       ui.toggleMode();
-      ui.showToast(`Swapped to ${ui.mode === 'work' ? 'Work Mode' : 'Personal Mode'}`, 'info');
     }
     if (e.key === 'Escape') {
       if (ui.commandOpen) ui.closeCommand()

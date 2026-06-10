@@ -7,7 +7,37 @@ export const useWorkMeetingsStore = defineStore('workMeetings', () => {
   const items = ref([])
 
   async function load() {
-    items.value = await db.work_meetings.toArray()
+    const all = await db.work_meetings.toArray()
+    const seen = new Set()
+    const unique = []
+    const toDelete = []
+    
+    // Sort to prioritize meetings with Google Calendar ID or linked client, and newer updates
+    all.sort((a, b) => {
+      if (a.googleCalendarId && !b.googleCalendarId) return -1
+      if (!a.googleCalendarId && b.googleCalendarId) return 1
+      if (a.clientId && !b.clientId) return -1
+      if (!a.clientId && b.clientId) return 1
+      return (b.updatedAt || '').localeCompare(a.updatedAt || '')
+    })
+    
+    for (const m of all) {
+      const timeMs = new Date(m.startDateTime).getTime()
+      const key = `${(m.title || '').trim().toLowerCase()}_${timeMs}`
+      if (seen.has(key)) {
+        toDelete.push(m.id)
+      } else {
+        seen.add(key)
+        unique.push(m)
+      }
+    }
+    
+    if (toDelete.length > 0) {
+      await Promise.all(toDelete.map(id => db.work_meetings.delete(id)))
+      console.log(`Deduplicated ${toDelete.length} meetings from DB`)
+    }
+    
+    items.value = unique
   }
 
   async function add(payload) {
@@ -19,6 +49,7 @@ export const useWorkMeetingsStore = defineStore('workMeetings', () => {
       description: payload.description || '',
       startDateTime: payload.startDateTime || now(),
       endDateTime: payload.endDateTime || now(),
+      meetLink: payload.meetLink || '',
       associatedType: payload.associatedType || 'none', // client, work_item, none
       associatedId: payload.associatedId || '',
       createdAt: now(),

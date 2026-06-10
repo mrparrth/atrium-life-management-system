@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
@@ -8,6 +8,8 @@ import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useUIStore } from '@/stores/ui'
 import { BellRing, ShieldAlert, Check, RefreshCw, Moon, EyeOff } from 'lucide-vue-next'
 import dayjs from 'dayjs'
+import { sendDesktopNotification } from '@/lib/notifications'
+
 
 const router = useRouter()
 const clientsStore = useWorkClientsStore()
@@ -146,6 +148,29 @@ const alerts = computed(() => {
 
   return list
 })
+
+// Track which alerts have already generated a desktop notification
+const notifiedAlerts = ref(JSON.parse(localStorage.getItem('atrium.notified_alerts') || '[]'))
+
+function saveNotifiedAlerts() {
+  localStorage.setItem('atrium.notified_alerts', JSON.stringify(notifiedAlerts.value))
+}
+
+watch(alerts, (newAlerts) => {
+  newAlerts.forEach(alert => {
+    if (!notifiedAlerts.value.includes(alert.id)) {
+      sendDesktopNotification(alert.title, {
+        body: alert.description
+      })
+      notifiedAlerts.value.push(alert.id)
+    }
+  })
+  
+  // Clean up IDs that are no longer active alerts so they can notify again in future if they re-occur
+  const currentIds = newAlerts.map(a => a.id)
+  notifiedAlerts.value = notifiedAlerts.value.filter(id => currentIds.includes(id))
+  saveNotifiedAlerts()
+}, { immediate: true })
 </script>
 
 <template>

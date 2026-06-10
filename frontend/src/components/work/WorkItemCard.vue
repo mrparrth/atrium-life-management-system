@@ -1,6 +1,6 @@
 <script setup>
-import { computed, ref, onUnmounted, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, onUnmounted, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
@@ -9,7 +9,9 @@ import {
   Trash, Calendar, MoreVertical, CheckCircle2, Circle, BellOff, Star, HardDrive, Edit3
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
+import Combobox from '@/components/Combobox.vue'
 
+const route = useRoute()
 const router = useRouter()
 const showStatusMenu = ref(false)
 const targetCompletedStatus = ref('complete')
@@ -56,6 +58,7 @@ function closeMenus() {
 
 onMounted(() => {
   window.addEventListener('click', closeMenus)
+  window.addEventListener('keydown', handleEscKey)
 })
 
 const props = defineProps({
@@ -68,6 +71,15 @@ const ui = useUIStore()
 
 const showMenu = ref(false)
 const showEditModal = ref(false)
+const focusedFields = ref({})
+
+const clientOptions = computed(() => {
+  return [
+    { key: '', label: '' },
+    ...clientsStore.items.map(c => ({ key: c.id, label: c.name }))
+  ]
+})
+
 const editForm = ref({
   title: '',
   description: '',
@@ -301,7 +313,29 @@ async function triggerLinkDriveFolder() {
 
 onUnmounted(() => {
   window.removeEventListener('click', closeMenus)
+  window.removeEventListener('keydown', handleEscKey)
   if (timerInterval) clearInterval(timerInterval)
+})
+
+function handleEscKey(e) {
+  if (e.key === 'Escape') {
+    if (showEditModal.value) showEditModal.value = false
+    if (showRatingModal.value) showRatingModal.value = false
+  }
+}
+
+watch(() => route.query.id, (newId) => {
+  if (newId === props.item.id) {
+    openEditModal()
+  } else if (showEditModal.value && newId !== props.item.id) {
+    showEditModal.value = false
+  }
+}, { immediate: true })
+
+watch(showEditModal, (isOpen) => {
+  if (!isOpen && route.query.id === props.item.id) {
+    router.replace({ query: { ...route.query, id: undefined } })
+  }
 })
 </script>
 
@@ -511,83 +545,87 @@ onUnmounted(() => {
             <h2 class="font-serif text-2xl mt-1">Edit Details</h2>
           </div>
 
-          <div class="space-y-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Title</label>
-              <input v-model="editForm.title" placeholder="Describe the deliverable..." class="input-block text-sm" />
+          <div class="space-y-4 pt-2">
+            <div class="v-field-group">
+              <input v-model="editForm.title" placeholder=" " class="v-field-input" id="edit-item-title" required />
+              <label for="edit-item-title" class="v-field-label">Title *</label>
             </div>
 
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Client Association</label>
-              <select v-model="editForm.clientId" class="input-block text-sm">
-                <option value="">No Client (Standalone task)</option>
-                <option v-for="c in clientsStore.items" :key="c.id" :value="c.id">{{ c.name }}</option>
-              </select>
-            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <Combobox :options="clientOptions" v-model="editForm.clientId" label="Client Association" is-field />
 
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Status</label>
-              <select v-model="editForm.status" class="input-block text-sm font-semibold">
-                <optgroup label="To-do">
-                  <option value="waiting_feedback">Waiting For Feedback</option>
-                  <option value="on_hold">On Hold</option>
-                  <option value="ask_milestone">Ask For Next Milestone</option>
-                  <option value="pending_closure">Pending Closure</option>
-                </optgroup>
-                <optgroup label="In progress">
-                  <option value="critical">Critical</option>
-                  <option value="in_progress">In Progress</option>
-                </optgroup>
-                <optgroup label="Complete">
-                  <option value="complete">Complete</option>
-                  <option value="dropped">Dropped</option>
-                </optgroup>
-              </select>
+              <div class="v-field-group">
+                <select v-model="editForm.status" @focus="focusedFields.status = true"
+                  @blur="focusedFields.status = false" class="v-field-select font-semibold">
+                  <optgroup label="To-do">
+                    <option value="waiting_feedback">Waiting For Feedback</option>
+                    <option value="on_hold">On Hold</option>
+                    <option value="ask_milestone">Ask For Next Milestone</option>
+                    <option value="pending_closure">Pending Closure</option>
+                  </optgroup>
+                  <optgroup label="In progress">
+                    <option value="critical">Critical</option>
+                    <option value="in_progress">In Progress</option>
+                  </optgroup>
+                  <optgroup label="Complete">
+                    <option value="complete">Complete</option>
+                    <option value="dropped">Dropped</option>
+                  </optgroup>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (editForm.status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Status</label>
+              </div>
             </div>
-
-            <div></div>
 
             <div class="grid grid-cols-3 gap-4">
-              <div>
-                <label class="block text-xs font-semibold text-ink-2 mb-1">Due Date</label>
-                <input type="date" v-model="editForm.dueDate" class="input-block text-sm text-ink-2 font-mono" />
+              <div class="v-field-group">
+                <input type="date" v-model="editForm.dueDate" placeholder=" " class="v-field-input text-ink-2 font-mono"
+                  id="edit-item-duedate" />
+                <label for="edit-item-duedate" class="v-field-label">Due Date</label>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-ink-2 mb-1">Est. Hours</label>
-                <input type="number" v-model="editForm.estimatedHours" min="0" step="0.5" class="input-block text-sm" />
+              <div class="v-field-group">
+                <input type="number" v-model="editForm.estimatedHours" min="0" step="0.5" placeholder=" "
+                  class="v-field-input" id="edit-item-esthours" />
+                <label for="edit-item-esthours" class="v-field-label">Est. Hours</label>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-ink-2 mb-1">Actual Tracked</label>
-                <input type="number" v-model="editForm.actualHours" min="0" step="0.5" class="input-block text-sm" />
+              <div class="v-field-group">
+                <input type="number" v-model="editForm.actualHours" min="0" step="0.5" placeholder=" "
+                  class="v-field-input" id="edit-item-acthours" />
+                <label for="edit-item-acthours" class="v-field-label">Actual Tracked</label>
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-semibold text-ink-2 mb-1">Billing Setup</label>
-                <select v-model="editForm.billingType" class="input-block text-sm">
+              <div class="v-field-group">
+                <select v-model="editForm.billingType" @focus="focusedFields.billingType = true"
+                  @blur="focusedFields.billingType = false" class="v-field-select">
                   <option value="fixed">Fixed-price milestone</option>
                   <option value="hourly">Hourly Contract</option>
                   <option value="none">Non-billable (admin)</option>
                 </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (editForm.billingType || focusedFields.billingType) ? 'v-field-label--floating' : '', focusedFields.billingType ? 'v-field-label--floating-focused' : '']">Billing
+                  Setup</label>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-ink-2 mb-1">Charged ($)</label>
-                <input type="number" v-model="editForm.charged" min="0" step="1" class="input-block text-sm"
-                  placeholder="e.g. 500" />
+              <div class="v-field-group">
+                <input type="number" v-model="editForm.charged" min="0" step="1" placeholder=" " class="v-field-input"
+                  id="edit-item-charged" />
+                <label for="edit-item-charged" class="v-field-label">Charged ($)</label>
               </div>
             </div>
 
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Google Drive Folder ID/URL</label>
-              <input v-model="editForm.driveFolderId" placeholder="e.g. mock-drive-folder-123"
-                class="input-block text-sm font-mono" />
+            <div class="v-field-group">
+              <input v-model="editForm.driveFolderId" placeholder=" " class="v-field-input font-mono"
+                id="edit-item-drive" />
+              <label for="edit-item-drive" class="v-field-label">Google Drive Folder ID/URL</label>
             </div>
 
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Additional description (optional)</label>
-              <textarea v-model="editForm.description" rows="2" placeholder="Sub-tasks, references, notes..."
-                class="input-block text-sm resize-none"></textarea>
+            <div class="v-field-group">
+              <textarea v-model="editForm.description" placeholder=" " class="v-field-input min-h-[80px] resize-none"
+                id="edit-item-desc"></textarea>
+              <label for="edit-item-desc" class="v-field-label">Additional description (optional)</label>
             </div>
           </div>
 

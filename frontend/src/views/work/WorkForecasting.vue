@@ -177,14 +177,14 @@ async function saveCapacitySettings() {
     <PageHeader overline="Business" title="Workload forecasting" sub="Model your available hours, meeting load, administrative overhead, and target deep work time.">
       <template #right>
         <div class="flex items-center gap-2 bg-white/70 border border-emerald-100/30 rounded-xl p-1 shadow-sm">
-          <button @click="forecastStore.changeWeek(-1)" class="px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors">
-            ← Prev
+          <button @click="forecastStore.changeWeek(-1)" class="forecasting-prev-btn px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1">
+            ← Prev <span class="text-[9px] opacity-70 bg-emerald-100 px-1 rounded select-none font-sans">⌘2</span>
           </button>
           <span class="text-xs font-mono font-bold text-ink px-2">
             Week of {{ dayjs(startOfWeekStr).format('MMM D, YYYY') }}
           </span>
-          <button @click="forecastStore.changeWeek(1)" class="px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors">
-            Next →
+          <button @click="forecastStore.changeWeek(1)" class="forecasting-next-btn px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1">
+            Next → <span class="text-[9px] opacity-70 bg-emerald-100 px-1 rounded select-none font-sans">⌘1</span>
           </button>
         </div>
       </template>

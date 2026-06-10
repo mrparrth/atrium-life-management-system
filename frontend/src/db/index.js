@@ -136,8 +136,9 @@ export async function ensureDefaultCategories() {
 export async function seedIfEmpty() {
   await ensureDefaultCategories();
 
-  const appSettings = await db.settings.get("app");
-  if (appSettings) return;
+  const yearsCount = await db.years.count();
+  const areasCount = await db.areas.count();
+  if (yearsCount > 0 || areasCount > 0) return;
 
   const year = {
     id: newId(),
@@ -237,54 +238,54 @@ export async function seedIfEmpty() {
       lastViewedAt: now(),
     },
   ];
-  await db.tasks.bulkAdd(tasks);
+  // await db.tasks.bulkAdd(tasks);
 
-  await db.notes.bulkAdd([
-    {
-      id: newId(),
-      title: "On slowness",
-      body: "A reminder: the unhurried mind sees more.\n\nNothing is being chased today.",
-      tags: ["reflection"],
-      createdAt: now(),
-      updatedAt: now(),
-      lastViewedAt: now(),
-    },
-    {
-      id: newId(),
-      title: "Reading list - winter",
-      body: "- The Order of Time, Carlo Rovelli\n- Four Thousand Weeks\n- A Pattern Language",
-      tags: ["reading"],
-      projectId: proj1.id,
-      createdAt: now(),
-      updatedAt: now(),
-      lastViewedAt: new Date(Date.now() - 20 * 86400000).toISOString(),
-    },
-  ]);
+  // await db.notes.bulkAdd([
+  //   {
+  //     id: newId(),
+  //     title: "On slowness",
+  //     body: "A reminder: the unhurried mind sees more.\n\nNothing is being chased today.",
+  //     tags: ["reflection"],
+  //     createdAt: now(),
+  //     updatedAt: now(),
+  //     lastViewedAt: now(),
+  //   },
+  //   {
+  //     id: newId(),
+  //     title: "Reading list - winter",
+  //     body: "- The Order of Time, Carlo Rovelli\n- Four Thousand Weeks\n- A Pattern Language",
+  //     tags: ["reading"],
+  //     projectId: proj1.id,
+  //     createdAt: now(),
+  //     updatedAt: now(),
+  //     lastViewedAt: new Date(Date.now() - 20 * 86400000).toISOString(),
+  //   },
+  // ]);
 
-  await db.bookmarks.bulkAdd([
-    {
-      id: newId(),
-      title: "Calm Technology - Amber Case",
-      url: "https://calmtech.com/",
-      category: "Inspiration",
-      tags: ["design"],
-      description: "Principles of calm tech.",
-      createdAt: now(),
-      updatedAt: now(),
-      lastViewedAt: now(),
-    },
-    {
-      id: newId(),
-      title: "The PARA Method",
-      url: "https://fortelabs.com/blog/para/",
-      category: "Method",
-      tags: ["productivity"],
-      description: "",
-      createdAt: now(),
-      updatedAt: now(),
-      lastViewedAt: new Date(Date.now() - 40 * 86400000).toISOString(),
-    },
-  ]);
+  // await db.bookmarks.bulkAdd([
+  //   {
+  //     id: newId(),
+  //     title: "Calm Technology - Amber Case",
+  //     url: "https://calmtech.com/",
+  //     category: "Inspiration",
+  //     tags: ["design"],
+  //     description: "Principles of calm tech.",
+  //     createdAt: now(),
+  //     updatedAt: now(),
+  //     lastViewedAt: now(),
+  //   },
+  //   {
+  //     id: newId(),
+  //     title: "The PARA Method",
+  //     url: "https://fortelabs.com/blog/para/",
+  //     category: "Method",
+  //     tags: ["productivity"],
+  //     description: "",
+  //     createdAt: now(),
+  //     updatedAt: now(),
+  //     lastViewedAt: new Date(Date.now() - 40 * 86400000).toISOString(),
+  //   },
+  // ]);
 
   // INR-based seed: 3 historical net worth logs
   const networthLogs = [];
@@ -308,7 +309,7 @@ export async function seedIfEmpty() {
       updatedAt: now(),
     });
   }
-  await db.finance_networth_logs.bulkAdd(networthLogs);
+  // await db.finance_networth_logs.bulkAdd(networthLogs);
 
   // 3 monthly cash-flow periods
   const cashflowPeriods = [];
@@ -334,7 +335,7 @@ export async function seedIfEmpty() {
       updatedAt: now(),
     });
   }
-  await db.finance_cashflow_periods.bulkAdd(cashflowPeriods);
+  // await db.finance_cashflow_periods.bulkAdd(cashflowPeriods);
 
   // Seed Work Mode Tables
   const clientAcmeId = newId();
@@ -351,7 +352,6 @@ export async function seedIfEmpty() {
       technicalStack: "React, Node.js, PostgreSQL",
       pricingSensitivity: "Low",
       workflowPreference: "Weekly sprints",
-      meetingPreference: "Tuesdays 10 AM",
       relationshipNotes: "Enjoys modern designs. Prefers crisp summaries over long paragraphs. Very stable funding.",
       lastInteractionAt: new Date(Date.now() - 2 * 86400000).toISOString(),
       createdAt: now(),
@@ -366,7 +366,6 @@ export async function seedIfEmpty() {
       technicalStack: "Vue 3, Firebase, Tailwind",
       pricingSensitivity: "Medium",
       workflowPreference: "Milestone-based",
-      meetingPreference: "Thursdays 3 PM",
       relationshipNotes: "Tech-savvy clients. Detail-oriented. Prefers formal documentation.",
       lastInteractionAt: new Date(Date.now() - 10 * 86400000).toISOString(),
       createdAt: now(),
@@ -381,14 +380,13 @@ export async function seedIfEmpty() {
       technicalStack: "Webflow, Shopify",
       pricingSensitivity: "High",
       workflowPreference: "Ad-hoc requests",
-      meetingPreference: "Fridays 11 AM",
       relationshipNotes: "Stale communication. Tends to scope-drift. Good pay but high management cost.",
       lastInteractionAt: new Date(Date.now() - 40 * 86400000).toISOString(),
       createdAt: now(),
       updatedAt: now(),
     },
   ];
-  await db.work_clients.bulkAdd(clients);
+  // await db.work_clients.bulkAdd(clients);
 
   const workItems = [
     {
@@ -492,7 +490,7 @@ export async function seedIfEmpty() {
       updatedAt: now(),
     },
   ];
-  await db.work_items.bulkAdd(workItems);
+  // await db.work_items.bulkAdd(workItems);
 
   const leads = [
     {
@@ -524,7 +522,7 @@ export async function seedIfEmpty() {
       updatedAt: now(),
     },
   ];
-  await db.work_leads.bulkAdd(leads);
+  // await db.work_leads.bulkAdd(leads);
 
   const invoices = [
     {
@@ -568,7 +566,7 @@ export async function seedIfEmpty() {
       updatedAt: now(),
     },
   ];
-  await db.work_invoices.bulkAdd(invoices);
+  // await db.work_invoices.bulkAdd(invoices);
 
   // Setup meeting 30 mins from now to display the "Meeting Prep Cockpit" widget!
   const prepMeetingTime = new Date(Date.now() + 20 * 60 * 1000); // 20 minutes from now
@@ -600,7 +598,7 @@ export async function seedIfEmpty() {
       updatedAt: now(),
     },
   ];
-  await db.work_meetings.bulkAdd(meetings);
+  // await db.work_meetings.bulkAdd(meetings);
 
   // Seed weekly capacity configs (current week & next week)
   const dStart = new Date();
@@ -615,7 +613,7 @@ export async function seedIfEmpty() {
       updatedAt: now(),
     },
   ];
-  await db.work_capacity.bulkAdd(capacity);
+  // await db.work_capacity.bulkAdd(capacity);
 
   const templates = [
     {
@@ -644,7 +642,7 @@ export async function seedIfEmpty() {
       createdAt: now(),
     },
   ];
-  await db.work_communication_logs.bulkAdd(logs);
+  // await db.work_communication_logs.bulkAdd(logs);
 
   await db.settings.put({ id: "app", theme: "light", firstRun: false, lastDailyReview: null, lastWeeklyReview: null });
 }

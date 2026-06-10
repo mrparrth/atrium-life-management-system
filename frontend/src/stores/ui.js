@@ -10,7 +10,7 @@ export const useUIStore = defineStore("ui", () => {
   const quickCaptureOpen = ref(false);
   const taskEditOpen = ref(false);
   const taskToEdit = ref(null);
-  const toast = ref(null);
+  const toasts = ref([]);
   const confirmState = ref(null);
 
   function applyTheme() {
@@ -48,10 +48,14 @@ export const useUIStore = defineStore("ui", () => {
     taskToEdit.value = null;
   }
   function showToast(msg, type = "info") {
-    toast.value = { msg, type, id: Date.now() };
+    const id = Date.now() + Math.random().toString(36).slice(2);
+    toasts.value.push({ id, msg, type });
     setTimeout(() => {
-      if (toast.value && toast.value.msg === msg) toast.value = null;
-    }, 2400);
+      removeToast(id);
+    }, 4000);
+  }
+  function removeToast(id) {
+    toasts.value = toasts.value.filter(t => t.id !== id);
   }
   function confirm(options) {
     return new Promise((resolve) => {
@@ -85,7 +89,7 @@ export const useUIStore = defineStore("ui", () => {
     quickCaptureOpen,
     taskEditOpen,
     taskToEdit,
-    toast,
+    toasts,
     confirmState,
     toggleTheme,
     toggleMode,
@@ -96,6 +100,7 @@ export const useUIStore = defineStore("ui", () => {
     openTaskEdit,
     closeTaskEdit,
     showToast,
+    removeToast,
     confirm,
   };
 });

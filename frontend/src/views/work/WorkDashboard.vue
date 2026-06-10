@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import dayjs from 'dayjs'
 import { useWorkClientsStore } from '@/stores/workClients'
@@ -8,7 +8,10 @@ import { useWorkInvoicesStore } from '@/stores/workInvoices'
 import { useWorkMeetingsStore } from '@/stores/workMeetings'
 import { useWorkForecastStore } from '@/stores/workForecast'
 import { useWorkLeadsStore } from '@/stores/workLeads'
+import { useNotesStore } from '@/stores/notes'
+import { useWorkResourcesStore } from '@/stores/workResources'
 import { useUIStore } from '@/stores/ui'
+import { isConnected as isGoogleConnected, syncGoogleCalendar } from '@/services/drive'
 
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
@@ -18,10 +21,24 @@ import WorkItemCard from '@/components/work/WorkItemCard.vue'
 import ResurfacingCockpit from '@/components/work/ResurfacingCockpit.vue'
 import ScopeCreepWidget from '@/components/work/ScopeCreepWidget.vue'
 
-import { 
-  ArrowRight, Plus, FolderKanban, Users, Target, Receipt, 
-  BarChart2, ShieldAlert, Sparkles, Zap, Award, ChevronRight, Calendar
+import {
+  ArrowRight, Plus, FolderKanban, Users, Target, Receipt,
+  BarChart2, ShieldAlert, Sparkles, Zap, Award, ChevronRight, Calendar, FileText,
+  RefreshCw, Video
 } from 'lucide-vue-next'
+
+const syncingCalendar = ref(false)
+async function manualCalendarSync() {
+  syncingCalendar.value = true
+  try {
+    await syncGoogleCalendar({ force: true })
+    ui.showToast('Google Calendar synced', 'success')
+  } catch (err) {
+    ui.showToast(`Calendar sync failed: ${err.message}`, 'error')
+  } finally {
+    syncingCalendar.value = false
+  }
+}
 
 const router = useRouter()
 const clientsStore = useWorkClientsStore()
@@ -30,6 +47,8 @@ const invoicesStore = useWorkInvoicesStore()
 const meetingsStore = useWorkMeetingsStore()
 const forecastStore = useWorkForecastStore()
 const leadsStore = useWorkLeadsStore()
+const notesStore = useNotesStore()
+const resourcesStore = useWorkResourcesStore()
 const ui = useUIStore()
 
 const greeting = computed(() => {
@@ -41,15 +60,6 @@ const greeting = computed(() => {
 })
 
 const todayDate = computed(() => dayjs().format('dddd, MMMM D'))
-
-// Single next upcoming meeting in the future
-const nextUpcomingMeeting = computed(() => {
-  const rightNow = new Date().toISOString()
-  const sorted = [...meetingsStore.items]
-    .filter(m => m.startDateTime > rightNow)
-    .sort((a, b) => a.startDateTime.localeCompare(b.startDateTime))
-  return sorted[0] || null
-})
 
 // Filter today's focus work items: due today or marked as in_progress (and not done)
 const focusItems = computed(() => {
@@ -76,85 +86,134 @@ function openQuickCapture() {
 // Inline quick add work item
 const quickTitle = ref('')
 const selectedClient = ref('')
+
+// Client Combobox dropdown state
+const showClientDropdown = ref(false)
+const clientSearchQuery = ref('')
+const selectedClientName = computed(() => {
+  const c = clientsStore.items.find(x => x.id === selectedClient.value)
+  return c ? c.name : 'Select Client...'
+})
+const filteredClientsForDropdown = computed(() => {
+  const q = clientSearchQuery.value.toLowerCase().trim()
+  if (!q) return clientsStore.items
+  return clientsStore.items.filter(c => c.name.toLowerCase().includes(q))
+})
+function selectClientFromDropdown(clientIdVal) {
+  selectedClient.value = clientIdVal
+  showClientDropdown.value = false
+  clientSearchQuery.value = ''
+}
+
 async function addQuickWork() {
   if (!quickTitle.value.trim()) return
+  if (!selectedClient.value) {
+    ui.showToast('Please select a client', 'warning')
+    return
+  }
+  const todayStr = dayjs().format('YYYY-MM-DD')
   await itemsStore.add({
     title: quickTitle.value.trim(),
     clientId: selectedClient.value,
-    important: false,
-    urgent: false,
+    important: true,
+    urgent: true,
+    dueDate: todayStr,
     billingType: 'fixed',
-    status: 'open'
+    status: 'critical'
   })
   quickTitle.value = ''
   selectedClient.value = ''
   ui.showToast('Work item added', 'success')
 }
+
+onMounted(async () => {
+  await syncGoogleCalendar()
+})
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-6xl mx-auto space-y-10" data-testid="work-dashboard">
-    
+  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto space-y-10" data-testid="work-dashboard">
+
     <!-- HEADER -->
     <PageHeader :overline="todayDate" :title="`${greeting}.`"
       :sub="capacity.burnoutRisk ? '⚠️ Your schedule indicates a high burnout risk. Take it slow.' : 'A focused operational space for your independent work.'">
       <template #right>
+        <button v-if="isGoogleConnected()" class="relative group btn-secondary text-xs flex items-center gap-1.5"
+          @click="manualCalendarSync" :disabled="syncingCalendar">
+          <Calendar class="w-3.5 h-3.5" />
+          <span>Sync Calendar</span>
+          <RefreshCw class="w-3.5 h-3.5 text-ink-3" :class="{ 'animate-spin': syncingCalendar }" />
+          <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
+            Sync Google Calendar
+            <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
+          </span>
+        </button>
         <button class="btn-secondary" @click="router.push('/work/forecasting')">
           <BarChart2 class="w-4 h-4" /> Capacity: {{ Math.round(capacity.totalLoad) }}/{{ capacity.availableHours }}h
+          <span class="kbd ml-1.5 font-sans select-none bg-elevated border-line text-ink-2">⌘2</span>
         </button>
-        <button class="btn-primary" @click="router.push('/work/items')">
-          <Plus class="w-4 h-4" /> New Work Item
+        <button class="btn-primary" @click="router.push('/work/items?new=true')">
+          <Plus class="w-4 h-4" /> New Work Item <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
 
-    <!-- MEETING PREP BANNER -->
+    <!-- UPCOMING SCHEDULE / MEETING PREP -->
     <MeetingPrep />
-
-    <!-- UPCOMING MEETING BRIEFING -->
-    <div v-if="nextUpcomingMeeting" class="card p-4 bg-surface/50 border border-line flex items-center justify-between gap-4 animate-fade-in">
-      <div class="flex items-center gap-3">
-        <div class="p-2 bg-canvas border rounded-xl text-ink-3">
-          <Calendar class="w-4.5 h-4.5" />
-        </div>
-        <div>
-          <span class="overline text-ink-3">Next Upcoming Meeting</span>
-          <h4 class="font-serif text-base text-ink font-semibold mt-0.5">{{ nextUpcomingMeeting.title }}</h4>
-          <p class="text-xs text-ink-2">
-            {{ dayjs(nextUpcomingMeeting.startDateTime).format('dddd, MMMM D [at] h:mm A') }}
-          </p>
-        </div>
-      </div>
-      <button @click="router.push(nextUpcomingMeeting.clientId ? `/work/clients/${nextUpcomingMeeting.clientId}` : '/')" 
-        class="btn-ghost !text-xs !py-1.5 px-3">
-        Open Workspace
-      </button>
-    </div>
 
     <!-- BRIEFING ALERTS (STALE STUFF) -->
     <ResurfacingCockpit />
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      
+
       <!-- TODAY'S COCKPIT (LEFT 2 COLS) -->
       <div class="lg:col-span-2 space-y-8">
-        
+
         <!-- FOCUS ITEMS -->
         <section>
           <SectionHeader overline="Execution" title="Today Focus" hint="The select tasks guiding your day.">
             <template #right>
-              <RouterLink to="/work/items" class="btn-ghost text-xs">All items <ChevronRight class="w-3.5 h-3.5" /></RouterLink>
+              <RouterLink to="/work/items" class="btn-ghost text-xs">All items
+                <ChevronRight class="w-3.5 h-3.5" />
+              </RouterLink>
             </template>
           </SectionHeader>
-          
+
           <!-- Quick item add -->
           <div class="card p-3.5 mb-4 border border-line bg-canvas flex gap-2 flex-wrap items-center">
-            <input v-model="quickTitle" @keyup.enter="addQuickWork" placeholder="Add quick work item..." 
-              class="bg-transparent border-0 focus:outline-none text-sm placeholder:text-ink-3 flex-1 min-w-[200px]" />
-            <select v-model="selectedClient" class="text-xs bg-surface border border-line rounded-lg px-2.5 py-1 text-ink focus:outline-none">
-              <option value="">No Client</option>
-              <option v-for="c in clientsStore.items" :key="c.id" :value="c.id">{{ c.name }}</option>
-            </select>
+            <input v-model="quickTitle" @keyup.enter="addQuickWork" placeholder="Add quick work item..."
+              class="dashboard-quick-input bg-transparent border-0 focus:outline-none text-sm placeholder:text-ink-3 flex-1 min-w-[200px]" />
+            <span class="kbd text-[10px] select-none text-ink-3 mr-1">⌘3</span>
+            <!-- Custom Combobox for Client -->
+            <div class="relative min-w-[150px] sm:min-w-[200px]">
+              <button @click="showClientDropdown = !showClientDropdown" type="button"
+                class="w-full text-left text-xs bg-surface border border-line rounded-lg px-2.5 py-1.5 text-ink flex items-center justify-between gap-1.5 focus:outline-none hover:border-line-2 transition-colors">
+                <span class="truncate">{{ selectedClientName }}</span>
+                <span class="text-ink-3">▼</span>
+              </button>
+
+              <div v-if="showClientDropdown" class="fixed inset-0 z-10" @click="showClientDropdown = false"></div>
+
+              <div v-if="showClientDropdown"
+                class="absolute right-0 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg z-20 p-2 space-y-1.5 min-w-[220px]">
+                <input v-model="clientSearchQuery" placeholder="Search client..."
+                  class="w-full text-xs bg-canvas border border-line rounded px-2 py-1 focus:outline-none focus:border-line-2"
+                  @click.stop />
+                <div class="max-h-36 overflow-y-auto space-y-0.5">
+
+                  <button v-for="c in filteredClientsForDropdown" :key="c.id" @click="selectClientFromDropdown(c.id)"
+                    type="button"
+                    class="w-full text-left text-xs px-2.5 py-1 rounded hover:bg-canvas text-ink transition-colors block truncate"
+                    :class="{ 'font-semibold bg-canvas': selectedClient === c.id }">
+                    {{ c.name }}
+                  </button>
+                  <div v-if="filteredClientsForDropdown.length === 0" class="text-[10px] text-ink-3 px-2 py-1">
+                    No matches found
+                  </div>
+                </div>
+              </div>
+            </div>
             <button @click="addQuickWork" class="btn-primary !py-1 !px-3 text-xs">Add</button>
           </div>
 
@@ -171,11 +230,11 @@ async function addQuickWork() {
 
       <!-- METRICS SIDEBAR (RIGHT 1 COL) -->
       <div class="space-y-8">
-        
+
         <!-- COCKPIT METRICS CARD -->
         <div class="card p-6 border bg-surface space-y-6">
           <h3 class="overline text-ink-3">Operational Vitality</h3>
-          
+
           <!-- Capacity Gauge -->
           <div class="space-y-2">
             <div class="flex justify-between text-xs font-semibold text-ink">
@@ -185,7 +244,7 @@ async function addQuickWork() {
               </span>
             </div>
             <div class="h-2 w-full bg-canvas rounded-full overflow-hidden border border-line">
-              <div class="h-full rounded-full transition-all duration-500" 
+              <div class="h-full rounded-full transition-all duration-500"
                 :class="capacity.burnoutRisk ? 'bg-pri-critical' : capacity.overloadRisk ? 'bg-pri-interruptive' : 'bg-pri-strategic'"
                 :style="{ width: `${Math.min(100, (capacity.totalLoad / capacity.availableHours) * 100)}%` }">
               </div>
@@ -199,15 +258,18 @@ async function addQuickWork() {
           <!-- Invoices Overview -->
           <div class="pt-4 border-t border-line space-y-3">
             <div class="text-xs font-semibold text-ink">Receivables Ledger</div>
-            
+
             <div class="grid grid-cols-2 gap-3">
               <div class="bg-canvas border border-line p-3 rounded-xl">
                 <div class="text-[10px] uppercase tracking-wider text-ink-3">Pending</div>
-                <div class="font-serif text-lg text-ink font-semibold mt-0.5">${{ pendingRevenue.toLocaleString() }}</div>
+                <div class="font-serif text-lg text-ink font-semibold mt-0.5">${{ pendingRevenue.toLocaleString() }}
+                </div>
               </div>
               <div class="bg-pri-critical-bg border border-pri-critical-bd p-3 rounded-xl">
                 <div class="text-[10px] uppercase tracking-wider text-pri-critical">Overdue</div>
-                <div class="font-serif text-lg text-pri-critical font-semibold mt-0.5">${{ overdueRevenue.toLocaleString() }}</div>
+                <div class="font-serif text-lg text-pri-critical font-semibold mt-0.5">${{
+                  overdueRevenue.toLocaleString()
+                  }}</div>
               </div>
             </div>
           </div>
@@ -220,7 +282,8 @@ async function addQuickWork() {
             </div>
             <div class="text-[11px] text-ink-2 flex justify-between">
               <span>High Confidence:</span>
-              <span class="text-pri-strategic font-semibold">${{ Math.round(leadsStore.forecast.high).toLocaleString() }}</span>
+              <span class="text-pri-strategic font-semibold">${{ Math.round(leadsStore.forecast.high).toLocaleString()
+                }}</span>
             </div>
           </div>
         </div>
@@ -232,7 +295,8 @@ async function addQuickWork() {
             <span class="overline text-pri-strategic font-bold">Sustainability check</span>
           </div>
           <p class="text-xs text-ink-2 leading-relaxed">
-            "We build systems to sustain ourselves, not to squeeze out every drop of human capability." Take a 5-minute breather between tasks.
+            "We build systems to sustain ourselves, not to squeeze out every drop of human capability." Take a 5-minute
+            breather between tasks.
           </p>
         </div>
 

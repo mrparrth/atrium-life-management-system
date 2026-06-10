@@ -6,9 +6,10 @@ import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, Trash, Eye, EyeOff, Search, FileText, Check, CornerDownLeft, Sparkles, Archive } from 'lucide-vue-next'
+import { Plus, Trash, Eye, EyeOff, Search, FileText, Check, CornerDownLeft, Sparkles, Archive, HelpCircle } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import { marked } from 'marked'
+import MarkdownHelpModal from '@/components/MarkdownHelpModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,6 +23,7 @@ const editTitle = ref('')
 const editBody = ref('')
 const editClientId = ref('')
 const previewMode = ref(false)
+const showMarkdownHelp = ref(false)
 
 const clientFilter = ref('')
 const showBackburner = ref(false)
@@ -89,8 +91,8 @@ const filteredNotes = computed(() => {
   // 3. Search query filter
   const term = q.value.trim().toLowerCase()
   if (!term) return list
-  return list.filter(n => 
-    n.title.toLowerCase().includes(term) || 
+  return list.filter(n =>
+    n.title.toLowerCase().includes(term) ||
     (n.body || '').toLowerCase().includes(term)
   )
 })
@@ -154,7 +156,7 @@ function selectNote(id) {
 async function createNewNote(templateKey = null) {
   let titleVal = 'Untitled Note'
   let bodyVal = ''
-  
+
   if (templateKey && NOTE_TEMPLATES[templateKey]) {
     titleVal = NOTE_TEMPLATES[templateKey].title
     bodyVal = NOTE_TEMPLATES[templateKey].body
@@ -172,7 +174,7 @@ async function createNewNote(templateKey = null) {
 
 async function saveNoteChanges() {
   if (!selectedNoteId.value || !activeNote.value) return
-  
+
   // Preserve existing tags, ensuring 'work' tag is present
   const tagsList = [...(activeNote.value.tags || [])]
   if (!tagsList.includes('work')) {
@@ -190,10 +192,10 @@ async function saveNoteChanges() {
 
 async function toggleBackburner() {
   if (!activeNote.value) return
-  
+
   const tagsList = [...(activeNote.value.tags || [])]
   const idx = tagsList.indexOf('backburner')
-  
+
   if (idx > -1) {
     tagsList.splice(idx, 1)
     ui.showToast('Document moved to Active', 'success')
@@ -203,7 +205,7 @@ async function toggleBackburner() {
   }
 
   await notesStore.update(selectedNoteId.value, { tags: tagsList })
-  
+
   // Clear selection to force list reload
   selectedNoteId.value = null
   router.replace({ query: {} })
@@ -229,14 +231,15 @@ const renderedMarkdown = computed(() => {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-6xl mx-auto h-[calc(100vh-80px)] flex flex-col" data-testid="work-notes">
-    
+  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto h-[calc(100vh-80px)] flex flex-col" data-testid="work-notes">
+
     <!-- HEADER -->
-    <PageHeader overline="Memory" title="Context Notes" sub="Store onboarding logs, project briefs, deployment procedures, and meeting minutes.">
+    <PageHeader overline="Memory" title="Context Notes"
+      sub="Store onboarding logs, project briefs, deployment procedures, and meeting minutes.">
       <template #right>
         <div class="flex items-center gap-2">
           <!-- Template selector dropdown -->
-          <select @change="createNewNote($event.target.value); $event.target.value = ''" 
+          <select @change="createNewNote($event.target.value); $event.target.value = ''"
             class="text-xs bg-surface border border-line rounded-xl px-3 py-2 text-ink focus:outline-none font-medium">
             <option value="">Choose note template...</option>
             <option value="meeting">Meeting Summary</option>
@@ -251,7 +254,7 @@ const renderedMarkdown = computed(() => {
 
     <!-- SPLIT WORKSPACE CONTAINER -->
     <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 border-t border-line/60 pt-6">
-      
+
       <!-- LEFT: FILE LIST SIDEBAR -->
       <div class="flex flex-col min-h-0 space-y-4">
         <!-- Search bar -->
@@ -264,13 +267,14 @@ const renderedMarkdown = computed(() => {
         <div class="flex gap-2 flex-wrap">
           <!-- Client Filter dropdown -->
           <div class="flex-1 min-w-[120px]">
-            <select v-model="clientFilter" class="w-full text-xs bg-surface border border-line rounded-lg px-2.5 py-1.5 text-ink-2 focus:outline-none">
+            <select v-model="clientFilter"
+              class="w-full text-xs bg-surface border border-line rounded-lg px-2.5 py-1.5 text-ink-2 focus:outline-none">
               <option value="">All Clients</option>
               <option v-for="c in clientsStore.items" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
           </div>
           <!-- Backburner status toggle -->
-          <button @click="showBackburner = !showBackburner" 
+          <button @click="showBackburner = !showBackburner"
             class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5"
             :class="showBackburner ? 'bg-pri-interruptive-bg border-pri-interruptive-bd text-pri-interruptive' : 'bg-surface border-line text-ink-2 hover:bg-canvas'">
             <Archive class="w-3.5 h-3.5" /> Backburner
@@ -279,20 +283,20 @@ const renderedMarkdown = computed(() => {
 
         <!-- Scrollable List -->
         <div class="flex-1 overflow-y-auto space-y-2 pr-1">
-          <div v-for="n in filteredNotes" :key="n.id"
-            @click="selectNote(n.id)"
+          <div v-for="n in filteredNotes" :key="n.id" @click="selectNote(n.id)"
             class="card p-4 border cursor-pointer transition-all duration-300"
             :class="selectedNoteId === n.id ? 'bg-surface border-line-2 shadow-sm' : 'bg-surface/40 border-line hover:border-line-2'">
-            
-            <div class="flex items-center justify-between gap-2 text-[10px] text-ink-3 font-semibold uppercase tracking-wider">
+
+            <div
+              class="flex items-center justify-between gap-2 text-[10px] text-ink-3 font-semibold uppercase tracking-wider">
               <span class="truncate">{{ dayjs(n.updatedAt).format('MMM D, YYYY') }}</span>
               <span v-if="n.clientId" class="text-pri-strategic">Workspace Linked</span>
             </div>
-            
+
             <h4 class="font-serif text-base text-ink font-semibold mt-2 truncate">{{ n.title || 'Untitled Note' }}</h4>
             <p class="text-xs text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ n.body || 'Empty document.' }}</p>
           </div>
-          
+
           <div v-if="!filteredNotes.length" class="text-center py-12 text-xs text-ink-3 italic">
             No documents found.
           </div>
@@ -302,17 +306,22 @@ const renderedMarkdown = computed(() => {
       <!-- RIGHT: SPLIT EDITOR WRITER (2 COLS) -->
       <div class="lg:col-span-2 flex flex-col min-h-0 card bg-surface p-6 border border-line">
         <div v-if="activeNote" class="flex-1 flex flex-col min-h-0 space-y-4">
-          
+
           <!-- Editor Title & Actions -->
           <div class="flex items-start justify-between gap-4 border-b border-line pb-4 flex-wrap">
             <div class="flex-1 min-w-[200px]">
-              <input v-model="editTitle" placeholder="Document title…" class="w-full bg-transparent font-serif text-2xl font-bold text-ink focus:outline-none placeholder:text-ink-3" />
+              <input v-model="editTitle" placeholder="Document title…"
+                class="w-full bg-transparent font-serif text-2xl font-bold text-ink focus:outline-none placeholder:text-ink-3" />
             </div>
 
             <div class="flex items-center gap-2">
-              <button @click="previewMode = !previewMode" class="btn-ghost !p-2 shrink-0" :title="previewMode ? 'Edit Mode' : 'Preview Mode'">
+              <button @click="previewMode = !previewMode" class="relative group btn-ghost !p-2 shrink-0">
                 <EyeOff v-if="previewMode" class="w-4 h-4" />
                 <Eye v-else class="w-4 h-4" />
+                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
+                  {{ previewMode ? 'Edit Mode' : 'Preview Mode' }}
+                  <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
+                </span>
               </button>
               <button @click="toggleBackburner" class="btn-ghost !py-1 px-3 text-xs flex items-center gap-1">
                 <Archive class="w-3.5 h-3.5 text-ink-3" />
@@ -321,8 +330,12 @@ const renderedMarkdown = computed(() => {
               <button @click="saveNoteChanges" class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
                 <Check class="w-3.5 h-3.5" /> Save
               </button>
-              <button @click="deleteNote" class="text-ink-3 hover:text-pri-critical p-2 rounded" title="Delete Note">
+              <button @click="deleteNote" class="relative group text-ink-3 hover:text-pri-critical p-2 rounded shrink-0">
                 <Trash class="w-4 h-4" />
+                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
+                  Delete Note
+                  <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
+                </span>
               </button>
             </div>
           </div>
@@ -340,15 +353,21 @@ const renderedMarkdown = computed(() => {
 
           <!-- Writer Editor Textarea or Markdown Preview -->
           <div class="flex-1 min-h-0">
-            <div v-if="previewMode" class="h-full overflow-y-auto prose-soft bg-canvas/20 border border-line rounded-xl p-4" v-html="renderedMarkdown">
+            <div v-if="previewMode"
+              class="h-full overflow-y-auto prose-soft bg-canvas/20 border border-line rounded-xl p-4"
+              v-html="renderedMarkdown">
             </div>
-            <textarea v-else v-model="editBody" placeholder="Start typing here... Markdown tags (#, -, [[Note Link]]) supported." 
+            <textarea v-else v-model="editBody"
+              placeholder="Start typing here... Markdown tags (#, -, [[Note Link]]) supported."
               class="w-full h-full bg-transparent border-0 focus:outline-none font-sans text-sm resize-none text-ink leading-relaxed placeholder:text-ink-3" />
           </div>
 
           <!-- Bottom keyboard helper -->
-          <div class="text-[10px] text-ink-3 flex justify-between pt-2 border-t border-line/40">
-            <span>Word count: {{ editBody.split(/\s+/).filter(x => x.length > 0).length }} words</span>
+          <div class="text-[10px] text-ink-3 flex justify-between pt-2 border-t border-line/40 items-center">
+            <span>Word count: {{editBody.split(/\s+/).filter(x => x.length > 0).length}} words</span>
+            <button @click="showMarkdownHelp = true" class="text-ink-3 hover:text-ink transition-colors flex items-center gap-1 font-semibold">
+              <HelpCircle class="w-3.5 h-3.5" /> Markdown Guide
+            </button>
           </div>
 
         </div>
@@ -360,5 +379,7 @@ const renderedMarkdown = computed(() => {
 
     </div>
 
+    <!-- Markdown help overlay -->
+    <MarkdownHelpModal :isOpen="showMarkdownHelp" @close="showMarkdownHelp = false" />
   </div>
 </template>

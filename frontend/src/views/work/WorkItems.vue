@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkClientsStore } from '@/stores/workClients'
@@ -9,6 +9,9 @@ import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import WorkItemCard from '@/components/work/WorkItemCard.vue'
 import { Plus, CheckCircle, Clock, AlertCircle, Sparkles } from 'lucide-vue-next'
+import Combobox from '@/components/Combobox.vue'
+
+import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,43 +20,57 @@ const itemsStore = useWorkItemsStore()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
 
+const focusedFields = ref({})
+
+const clientOptions = computed(() => {
+  return [
+    { key: '', label: '' },
+    ...clientsStore.items.map(c => ({ key: c.id, label: c.name }))
+  ]
+})
+
 const activeTab = ref('active') // active, completed
 
 const showAddDrawer = ref(false)
 const title = ref('')
 const description = ref('')
 const clientId = ref('')
-const isImportant = ref(false)
-const isUrgent = ref(false)
-const dueDate = ref('')
+const status = ref('critical')
+const dueDate = ref(dayjs().format('YYYY-MM-DD'))
 const estimatedHours = ref(0)
+const actualHours = ref(0)
 const billingType = ref('fixed')
 const charged = ref(0)
+const driveFolderId = ref('')
 
 async function createWorkItem() {
   if (!title.value.trim()) return
-  
+
   await itemsStore.add({
     title: title.value.trim(),
     description: description.value.trim(),
     clientId: clientId.value,
-    important: isImportant.value,
-    urgent: isUrgent.value,
+    important: status.value === 'critical',
+    urgent: status.value === 'critical',
     dueDate: dueDate.value,
     estimatedHours: estimatedHours.value,
+    actualHours: actualHours.value,
     billingType: billingType.value,
-    charged: Number(charged.value) || 0
+    charged: Number(charged.value) || 0,
+    driveFolderId: driveFolderId.value.trim(),
+    status: status.value
   })
 
   title.value = ''
   description.value = ''
   clientId.value = ''
-  isImportant.value = false
-  isUrgent.value = false
-  dueDate.value = ''
+  status.value = 'critical'
+  dueDate.value = dayjs().format('YYYY-MM-DD')
   estimatedHours.value = 0
+  actualHours.value = 0
   billingType.value = 'fixed'
   charged.value = 0
+  driveFolderId.value = ''
   showAddDrawer.value = false
   ui.showToast('Work item created', 'success')
 }
@@ -134,86 +151,49 @@ const completedItems = computed(() => {
   return itemsStore.items.filter(item => itemsStore.isCompleted(item.status))
 })
 
-const showEditDrawer = ref(false)
-const editItem = ref(null)
-const editForm = ref({
-  title: '',
-  description: '',
-  clientId: '',
-  important: false,
-  urgent: false,
-  estimatedHours: 0,
-  actualHours: 0,
-  dueDate: '',
-  billingType: 'fixed',
-  charged: 0,
-  driveFolderId: '',
-  status: 'in_progress'
-})
-
-function loadItemForEdit(item) {
-  editItem.value = item
-  editForm.value = {
-    title: item.title || '',
-    description: item.description || '',
-    clientId: item.clientId || '',
-    important: !!item.important,
-    urgent: !!item.urgent,
-    estimatedHours: item.estimatedHours || 0,
-    actualHours: item.actualHours || 0,
-    dueDate: item.dueDate || '',
-    billingType: item.billingType || 'fixed',
-    charged: item.charged || 0,
-    driveFolderId: item.driveFolderId || '',
-    status: item.status || 'in_progress'
-  }
-  showEditDrawer.value = true
-}
-
-async function saveEdit() {
-  if (!editItem.value) return
-  await itemsStore.update(editItem.value.id, {
-    title: editForm.value.title.trim(),
-    description: editForm.value.description.trim(),
-    clientId: editForm.value.clientId,
-    important: editForm.value.important,
-    urgent: editForm.value.urgent,
-    estimatedHours: Number(editForm.value.estimatedHours) || 0,
-    actualHours: Number(editForm.value.actualHours) || 0,
-    dueDate: editForm.value.dueDate,
-    billingType: editForm.value.billingType,
-    charged: Number(editForm.value.charged) || 0,
-    driveFolderId: editForm.value.driveFolderId.trim(),
-    status: editForm.value.status
-  })
-  showEditDrawer.value = false
-  ui.showToast('Work item updated', 'success')
-}
-
-watch([() => itemsStore.items, () => route.query.id], ([items, id]) => {
-  if (id && items && items.length) {
-    const item = items.find(x => x.id === id)
-    if (item) {
-      loadItemForEdit(item)
-    }
+watch(() => route.query.new, (isNew) => {
+  if (isNew === 'true') {
+    showAddDrawer.value = true
   }
 }, { immediate: true })
 
-watch(showEditDrawer, (isOpen) => {
-  if (!isOpen && route.query.id) {
-    router.replace({ query: { ...route.query, id: undefined } })
+watch(showAddDrawer, (isOpen) => {
+  if (!isOpen && route.query.new === 'true') {
+    router.replace({ query: { ...route.query, new: undefined } })
   }
+})
+
+function handleEscKey(e) {
+  if (e.key === 'Escape' && showAddDrawer.value) {
+    showAddDrawer.value = false
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+    if (!showAddDrawer.value) {
+      e.preventDefault()
+      showAddDrawer.value = true
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleEscKey)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEscKey)
 })
 </script>
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-5xl mx-auto space-y-8" data-testid="work-items">
-    
+
     <!-- HEADER -->
-    <PageHeader overline="Execution" title="Work scope" sub="Frictionless tasking and time tracking without rigid hierarchy constraints.">
+    <PageHeader overline="Execution" title="Work scope"
+      sub="Frictionless tasking and time tracking without rigid hierarchy constraints.">
       <template #right>
         <button @click="showAddDrawer = true" class="btn-primary">
-          <Plus class="w-4 h-4" /> Create Work Item
+          <Plus class="w-4 h-4" /> Create Work Item <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
@@ -222,7 +202,7 @@ watch(showEditDrawer, (isOpen) => {
     <div class="flex border-b border-line gap-6 text-sm font-medium">
       <button @click="activeTab = 'active'" class="pb-3 border-b-2"
         :class="activeTab === 'active' ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
-        Active Scope ({{ Object.values(groupedActiveItems).reduce((sum, list) => sum + list.length, 0) }})
+        Active Scope ({{Object.values(groupedActiveItems).reduce((sum, list) => sum + list.length, 0)}})
       </button>
       <button @click="activeTab = 'completed'" class="pb-3 border-b-2"
         :class="activeTab === 'completed' ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
@@ -243,7 +223,8 @@ watch(showEditDrawer, (isOpen) => {
 
       <!-- Empty state check -->
       <div v-if="Object.values(groupedActiveItems).every(list => !list.length)">
-        <EmptyState title="All scopes clear" hint="Add tasks using the quick composer or click 'Create Work Item' above." />
+        <EmptyState title="All scopes clear"
+          hint="Add tasks using the quick composer or click 'Create Work Item' above." />
       </div>
     </div>
 
@@ -256,7 +237,8 @@ watch(showEditDrawer, (isOpen) => {
     </div>
 
     <!-- QUICK ADD DRAWER -->
-    <div v-if="showAddDrawer" @keydown.window.esc="showAddDrawer = false" class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
+    <div v-if="showAddDrawer" @keydown.window.esc="showAddDrawer = false"
+      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddDrawer = false"></div>
       <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
         <div>
@@ -264,69 +246,86 @@ watch(showEditDrawer, (isOpen) => {
           <h2 class="font-serif text-2xl mt-1">Compose work item</h2>
         </div>
 
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Title</label>
-            <input v-model="title" placeholder="Describe the deliverable..." class="input-block text-sm" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Client Association</label>
-            <select v-model="clientId" class="input-block text-sm">
-              <option value="">No Client (Standalone task)</option>
-              <option v-for="c in clientsStore.items" :key="c.id" :value="c.id">{{ c.name }}</option>
-            </select>
+        <div class="space-y-4 pt-2">
+          <div class="v-field-group">
+            <input v-model="title" placeholder=" " class="v-field-input" id="item-title" required />
+            <label for="item-title" class="v-field-label">Title *</label>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <!-- Urgent Checkbox -->
-            <label class="flex items-center gap-2.5 p-3 rounded-xl border border-line bg-canvas/40 cursor-pointer select-none">
-              <input type="checkbox" v-model="isUrgent" class="w-4 h-4 rounded border-line text-ink focus:ring-0" />
-              <div class="text-xs">
-                <span class="font-semibold block">Urgent</span>
-                <span class="text-[10px] text-ink-3">Requires swift action</span>
-              </div>
-            </label>
+            <Combobox :options="clientOptions" v-model="clientId" label="Client Association" is-field />
 
-            <!-- Important Checkbox -->
-            <label class="flex items-center gap-2.5 p-3 rounded-xl border border-line bg-canvas/40 cursor-pointer select-none">
-              <input type="checkbox" v-model="isImportant" class="w-4 h-4 rounded border-line text-ink focus:ring-0" />
-              <div class="text-xs">
-                <span class="font-semibold block">Important</span>
-                <span class="text-[10px] text-ink-3">High strategic impact</span>
-              </div>
-            </label>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Due Date</label>
-              <input type="date" v-model="dueDate" class="input-block text-sm text-ink-2" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Est. Hours</label>
-              <input type="number" v-model="estimatedHours" min="0" step="0.5" class="input-block text-sm" />
+            <div class="v-field-group">
+              <select v-model="status" @focus="focusedFields.status = true" @blur="focusedFields.status = false"
+                class="v-field-select font-semibold">
+                <optgroup label="To-do">
+                  <option value="waiting_feedback">Waiting For Feedback</option>
+                  <option value="on_hold">On Hold</option>
+                  <option value="ask_milestone">Ask For Next Milestone</option>
+                  <option value="pending_closure">Pending Closure</option>
+                </optgroup>
+                <optgroup label="In progress">
+                  <option value="critical">Critical</option>
+                  <option value="in_progress">In Progress</option>
+                </optgroup>
+                <optgroup label="Complete">
+                  <option value="complete">Complete</option>
+                  <option value="dropped">Dropped</option>
+                </optgroup>
+              </select>
+              <span class="v-field-arrow">▼</span>
+              <label
+                :class="['v-field-label', (status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Status</label>
             </div>
           </div>
 
+          <div class="grid grid-cols-3 gap-4">
+            <div class="v-field-group">
+              <input type="date" v-model="dueDate" placeholder=" " class="v-field-input text-ink-2 font-mono"
+                id="item-duedate" />
+              <label for="item-duedate" class="v-field-label">Due Date</label>
+            </div>
+            <div class="v-field-group">
+              <input type="number" v-model="estimatedHours" min="0" step="0.5" placeholder=" " class="v-field-input"
+                id="item-esthours" />
+              <label for="item-esthours" class="v-field-label">Est. Hours</label>
+            </div>
+            <div class="v-field-group">
+              <input type="number" v-model="actualHours" min="0" step="0.5" placeholder=" " class="v-field-input"
+                id="item-acthours" />
+              <label for="item-acthours" class="v-field-label">Actual Tracked</label>
+            </div>
+          </div>
+
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Billing Setup</label>
-              <select v-model="billingType" class="input-block text-sm">
+            <div class="v-field-group">
+              <select v-model="billingType" @focus="focusedFields.billingType = true"
+                @blur="focusedFields.billingType = false" class="v-field-select">
                 <option value="fixed">Fixed-price milestone</option>
                 <option value="hourly">Hourly Contract</option>
                 <option value="none">Non-billable (admin)</option>
               </select>
+              <span class="v-field-arrow">▼</span>
+              <label
+                :class="['v-field-label', (billingType || focusedFields.billingType) ? 'v-field-label--floating' : '', focusedFields.billingType ? 'v-field-label--floating-focused' : '']">Billing
+                Setup</label>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Charged ($)</label>
-              <input type="number" v-model="charged" min="0" step="1" class="input-block text-sm" placeholder="e.g. 500" />
+            <div class="v-field-group">
+              <input type="number" v-model="charged" min="0" step="1" placeholder=" " class="v-field-input"
+                id="item-charged" />
+              <label for="item-charged" class="v-field-label">Charged ($)</label>
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Additional description (optional)</label>
-            <textarea v-model="description" rows="2" placeholder="Sub-tasks, references, notes..." class="input-block text-sm resize-none"></textarea>
+          <div class="v-field-group">
+            <input v-model="driveFolderId" placeholder=" " class="v-field-input font-mono" id="item-drive" />
+            <label for="item-drive" class="v-field-label">Google Drive Folder ID/URL</label>
+          </div>
+
+          <div class="v-field-group">
+            <textarea v-model="description" placeholder=" " class="v-field-input min-h-[80px] resize-none"
+              id="item-desc"></textarea>
+            <label for="item-desc" class="v-field-label">Additional description (optional)</label>
           </div>
         </div>
 
@@ -337,96 +336,7 @@ watch(showEditDrawer, (isOpen) => {
       </div>
     </div>
 
-    <!-- QUICK EDIT DRAWER -->
-    <div v-if="showEditDrawer" @keydown.window.esc="showEditDrawer = false" class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showEditDrawer = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
-        <div>
-          <div class="overline">Modify Work Item</div>
-          <h2 class="font-serif text-2xl mt-1">Edit Details</h2>
-        </div>
 
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Title</label>
-            <input v-model="editForm.title" placeholder="Describe the deliverable..." class="input-block text-sm" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Client Association</label>
-            <select v-model="editForm.clientId" class="input-block text-sm">
-              <option value="">No Client (Standalone task)</option>
-              <option v-for="c in clientsStore.items" :key="c.id" :value="c.id">{{ c.name }}</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Status</label>
-            <select v-model="editForm.status" class="input-block text-sm font-semibold">
-              <optgroup label="To-do">
-                <option value="waiting_feedback">Waiting For Feedback</option>
-                <option value="on_hold">On Hold</option>
-                <option value="ask_milestone">Ask For Next Milestone</option>
-                <option value="pending_closure">Pending Closure</option>
-              </optgroup>
-              <optgroup label="In progress">
-                <option value="critical">Critical</option>
-                <option value="in_progress">In Progress</option>
-              </optgroup>
-              <optgroup label="Complete">
-                <option value="complete">Complete</option>
-                <option value="dropped">Dropped</option>
-              </optgroup>
-            </select>
-          </div>
-
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Due Date</label>
-              <input type="date" v-model="editForm.dueDate" class="input-block text-sm text-ink-2 font-mono" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Est. Hours</label>
-              <input type="number" v-model="editForm.estimatedHours" min="0" step="0.5" class="input-block text-sm" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Actual Tracked</label>
-              <input type="number" v-model="editForm.actualHours" min="0" step="0.5" class="input-block text-sm" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Billing Setup</label>
-              <select v-model="editForm.billingType" class="input-block text-sm">
-                <option value="fixed">Fixed-price milestone</option>
-                <option value="hourly">Hourly Contract</option>
-                <option value="none">Non-billable (admin)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Charged ($)</label>
-              <input type="number" v-model="editForm.charged" min="0" step="1" class="input-block text-sm" placeholder="e.g. 500" />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Google Drive Folder ID/URL</label>
-            <input v-model="editForm.driveFolderId" placeholder="e.g. mock-drive-folder-123" class="input-block text-sm font-mono" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Additional description (optional)</label>
-            <textarea v-model="editForm.description" rows="2" placeholder="Sub-tasks, references, notes..." class="input-block text-sm resize-none"></textarea>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-3 pt-2">
-          <button @click="showEditDrawer = false" class="btn-ghost">Cancel</button>
-          <button @click="saveEdit" class="btn-primary">Save Changes</button>
-        </div>
-      </div>
-    </div>
 
   </div>
 </template>

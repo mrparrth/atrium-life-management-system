@@ -7,7 +7,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { fromNow } from '@/lib/date'
-import { Plus, X, Bookmark as BookmarkIcon, Trash2, ExternalLink, FolderOpen, ArrowRight } from 'lucide-vue-next'
+import { Plus, X, Bookmark as BookmarkIcon, Trash2, ExternalLink, FolderOpen, ArrowRight, PenLine } from 'lucide-vue-next'
 import { onKeyStroke } from '@vueuse/core'
 
 const bookmarks = useBookmarksStore()
@@ -19,6 +19,8 @@ const router = useRouter()
 
 const showNewBm = ref(false)
 const showNewPage = ref(false)
+const showEditBm = ref(false)
+const editBmId = ref(null)
 
 import { onMounted, watch } from 'vue'
 
@@ -33,6 +35,7 @@ watch(() => route.query, handleQuery)
 
 const newBm = ref({ title: '', url: '', description: '', category: 'General', tags: '', pageId: null })
 const newPage = ref({ title: '', description: '', emoji: '◗', tags: '' })
+const editBmForm = ref({ title: '', url: '', description: '', tags: '', pageId: null })
 
 const looseBookmarks = computed(() => bookmarks.looseBookmarks())
 
@@ -73,6 +76,43 @@ async function closeNewCollection() {
   showNewPage.value = false
 }
 
+function startEditBookmark(b) {
+  editBmId.value = b.id
+  editBmForm.value = {
+    title: b.title || '',
+    url: b.url,
+    description: b.description || '',
+    tags: arrToTags(b.tags),
+    pageId: b.pageId || null
+  }
+  showEditBm.value = true
+}
+
+async function saveBookmarkEdit() {
+  if (!editBmForm.value.url.trim()) return
+  await bookmarks.update(editBmId.value, {
+    ...editBmForm.value,
+    tags: tagsToArr(editBmForm.value.tags)
+  })
+  showEditBm.value = false
+  ui.showToast('Bookmark updated', 'success')
+}
+
+async function closeEditBookmark() {
+  const original = bookmarks.bookmarks.find(b => b.id === editBmId.value)
+  if (original) {
+    const isModified = editBmForm.value.url.trim() !== (original.url || '') ||
+                       editBmForm.value.title.trim() !== (original.title || '') ||
+                       editBmForm.value.description.trim() !== (original.description || '') ||
+                       editBmForm.value.tags.trim() !== arrToTags(original.tags) ||
+                       editBmForm.value.pageId !== (original.pageId || null)
+    if (isModified) {
+      if (!await ui.confirm({ title: 'Discard changes?', message: 'You have unsaved changes. Discard them?' })) return
+    }
+  }
+  showEditBm.value = false
+}
+
 onKeyStroke('Escape', (e) => {
   if (showNewBm.value) {
     e.preventDefault()
@@ -80,6 +120,9 @@ onKeyStroke('Escape', (e) => {
   } else if (showNewPage.value) {
     e.preventDefault()
     closeNewCollection()
+  } else if (showEditBm.value) {
+    e.preventDefault()
+    closeEditBookmark()
   }
 })
 </script>
@@ -132,29 +175,42 @@ onKeyStroke('Escape', (e) => {
     <!-- LOOSE BOOKMARKS -->
     <SectionHeader overline="Loose" :title="`${looseBookmarks.length} unfiled`"
       hint="Bookmarks not yet in a collection." />
-    <div v-if="looseBookmarks.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div v-if="looseBookmarks.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       <div v-for="b in looseBookmarks" :key="b.id"
-        class="card p-5 group hover:border-line-2 transition-all duration-300" :data-testid="`bookmark-card-${b.id}`">
-        <div class="flex items-start gap-3">
-          <BookmarkIcon class="w-4 h-4 text-ink-3 mt-1 shrink-0" />
-          <div class="min-w-0 flex-1">
-            <div class="font-serif text-lg leading-snug">{{ b.title }}</div>
-            <p class="text-xs text-ink-3 truncate mt-1">{{ b.url }}</p>
-            <p v-if="b.description" class="text-sm text-ink-2 mt-2">{{ b.description }}</p>
-            <div v-if="b.tags?.length" class="flex flex-wrap gap-1 mt-2">
-              <span v-for="t in b.tags" :key="t" class="text-[11px] px-2 py-0.5 rounded-full bg-elevated text-ink-2">{{
-                t
-                }}</span>
+        class="card p-4 group hover:border-line-2 hover:bg-canvas/20 transition-all duration-300 flex flex-col justify-between" :data-testid="`bookmark-card-${b.id}`">
+        <div class="flex items-start justify-between gap-2 min-w-0">
+          <div class="min-w-0 flex-1 space-y-1.5">
+            <div class="font-serif text-base font-semibold text-ink leading-tight flex items-center gap-1.5">
+              <BookmarkIcon class="w-3.5 h-3.5 text-ink-3 shrink-0" />
+              <span class="truncate" :title="b.title || b.url">{{ b.title || b.url }}</span>
             </div>
-            <div class="text-[11px] text-ink-3 mt-3">last opened {{ fromNow(b.lastViewedAt) }}</div>
+            <p v-if="b.description" class="text-xs text-ink-2 line-clamp-1 leading-normal">{{ b.description }}</p>
+            
+            <div class="flex items-center gap-2 flex-wrap min-w-0">
+              <a :href="b.url" target="_blank" @click.prevent="openBookmark(b)" 
+                class="text-[10px] text-ink-3 hover:text-pri-strategic truncate hover:underline flex-1 min-w-0">
+                {{ b.url }}
+              </a>
+              <div v-if="b.tags?.length" class="flex flex-wrap gap-1 shrink-0">
+                <span v-for="t in b.tags" :key="t" 
+                  class="text-[10px] font-medium px-2 py-0.5 rounded bg-line/60 text-ink-2 border border-line/30 select-none">
+                  #{{ t }}
+                </span>
+              </div>
+            </div>
+            
+            <div class="text-[10px] text-ink-3/70 leading-none">opened {{ fromNow(b.lastViewedAt) }}</div>
           </div>
-          <div class="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
-            <button class="btn-ghost !p-1.5" @click="openBookmark(b)" :data-testid="`bookmark-open-${b.id}`">
-              <ExternalLink class="w-3.5 h-3.5" />
+          
+          <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0 self-start">
+            <button class="btn-ghost !p-1" @click="openBookmark(b)" :data-testid="`bookmark-open-${b.id}`" title="Open Link">
+              <ExternalLink class="w-3 h-3" />
             </button>
-            <button class="btn-ghost !p-1.5 hover:text-pri-critical" @click="remove(b)"
-              :data-testid="`bookmark-delete-${b.id}`">
-              <Trash2 class="w-3.5 h-3.5" />
+            <button class="btn-ghost !p-1" @click="startEditBookmark(b)" :data-testid="`bookmark-edit-${b.id}`" title="Edit">
+              <PenLine class="w-3 h-3" />
+            </button>
+            <button class="btn-ghost !p-1 hover:text-pri-critical" @click="remove(b)" :data-testid="`bookmark-delete-${b.id}`" title="Delete">
+              <Trash2 class="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -188,6 +244,36 @@ onKeyStroke('Escape', (e) => {
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="closeNewBookmark">Cancel</button>
           <button type="submit" class="btn-primary" data-testid="new-bookmark-save">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- EDIT BOOKMARK -->
+    <div v-if="showEditBm" class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4" data-testid="edit-bookmark-modal">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="closeEditBookmark"></div>
+      <form @submit.prevent="saveBookmarkEdit" class="relative w-full max-w-md card p-8 animate-rise-in">
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeEditBookmark">
+          <X class="w-4 h-4" />
+        </button>
+        <div class="overline">Edit bookmark</div>
+        <h2 class="font-serif text-2xl mt-1 mb-5">Update bookmark</h2>
+        <input v-model="editBmForm.url" type="url" placeholder="https://…" class="input-soft mb-3" required
+          data-testid="edit-bookmark-url" />
+        <input v-model="editBmForm.title" placeholder="Title (optional)" class="input-soft mb-3"
+          data-testid="edit-bookmark-title" />
+        <input v-model="editBmForm.tags" placeholder="Tags (comma separated)" class="input-soft mb-3"
+          data-testid="edit-bookmark-tags" />
+        <label class="block mb-3"><span class="overline block mb-1">Collection</span>
+          <select v-model="editBmForm.pageId" class="input-block text-sm" data-testid="edit-bookmark-page">
+            <option :value="null">- none (loose) -</option>
+            <option v-for="p in bookmarks.pages" :key="p.id" :value="p.id">{{ p.emoji }} {{ p.title }}</option>
+          </select>
+        </label>
+        <textarea v-model="editBmForm.description" placeholder="Why save it?" rows="2"
+          class="input-soft resize-none mb-5" data-testid="edit-bookmark-description"></textarea>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn-ghost" @click="closeEditBookmark">Cancel</button>
+          <button type="submit" class="btn-primary" data-testid="edit-bookmark-save">Save</button>
         </div>
       </form>
     </div>

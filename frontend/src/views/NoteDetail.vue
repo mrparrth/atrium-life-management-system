@@ -7,7 +7,8 @@ import { useUIStore } from '@/stores/ui'
 import { marked } from 'marked'
 import EmptyState from '@/components/EmptyState.vue'
 import { wikilinkPreprocess, backlinksOf, findWikiTargets, resolveTitle } from '@/lib/wikilinks'
-import { ArrowLeft, Trash2, Edit3, Save, Link2 } from 'lucide-vue-next'
+import { ArrowLeft, Trash2, Edit3, Save, Link2, HelpCircle } from 'lucide-vue-next'
+import MarkdownHelpModal from '@/components/MarkdownHelpModal.vue'
 
 const props = defineProps({ id: String })
 const router = useRouter()
@@ -18,6 +19,7 @@ const ui = useUIStore()
 
 const note = computed(() => notes.items.find(n => n.id === props.id))
 const editing = ref(false)
+const showHelp = ref(false)
 const draftTitle = ref(''); const draftBody = ref('')
 const bodyTextarea = ref(null)
 
@@ -172,8 +174,12 @@ function onArticleClick(e) {
           </div>
         </div>
       </div>
-      <p class="text-xs text-ink-3 mt-3">Tip: type <span class="kbd">[</span><span class="kbd">[</span> to link another
-        note.</p>
+      <div class="flex justify-between items-center mt-3">
+        <p class="text-xs text-ink-3">Tip: type <span class="kbd">[</span><span class="kbd">[</span> to link another note.</p>
+        <button type="button" @click="showHelp = true" class="text-xs text-ink-3 hover:text-ink flex items-center gap-1 transition-colors">
+          <HelpCircle class="w-3.5 h-3.5" /> Markdown Guide
+        </button>
+      </div>
     </template>
 
     <template v-else>
@@ -222,6 +228,9 @@ function onArticleClick(e) {
     </template>
   </div>
   <EmptyState v-else title="Note not found" />
+  
+  <!-- Markdown guide overlay -->
+  <MarkdownHelpModal :isOpen="showHelp" @close="showHelp = false" />
 </template>
 
 <style scoped>

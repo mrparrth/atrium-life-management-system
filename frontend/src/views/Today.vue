@@ -16,7 +16,7 @@ const today = computed(() => dayjs().format('dddd, MMMM D'))
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-3xl mx-auto" data-testid="today-view">
+  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="today-view">
     <PageHeader :overline="today" title="Today focus" sub="A few quiet things to attend to.">
       <template #right>
         <button class="btn-primary" @click="ui.openQuickCapture" data-testid="today-capture">

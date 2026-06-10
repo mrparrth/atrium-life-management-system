@@ -3,7 +3,7 @@ defineProps({ overline: String, title: String, sub: String, count: [Number, Stri
 </script>
 
 <template>
-  <header class="mb-8 flex items-end justify-between gap-4 flex-wrap">
+  <header class="mb-2 flex items-end justify-between gap-4 flex-wrap">
     <div>
       <div v-if="overline" class="overline mb-2">{{ overline }}</div>
       <h1 class="font-serif text-4xl md:text-5xl tracking-tight leading-none">{{ title }}</h1>

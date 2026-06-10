@@ -31,7 +31,7 @@ async function removeGoal(g) {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-5xl mx-auto" data-testid="goals-view">
+  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="goals-view">
     <PageHeader overline="Horizon" title="Goals" sub="The few large things this year is for.">
       <template #right><button class="btn-primary" @click="showNew = true" data-testid="new-goal-btn">
           <Plus class="w-4 h-4" /> New goal

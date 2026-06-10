@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
@@ -9,6 +9,7 @@ import { useWorkMeetingsStore } from '@/stores/workMeetings'
 import { useUIStore } from '@/stores/ui'
 import WorkItemCard from '@/components/work/WorkItemCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import { createClientDriveFolder } from '@/services/drive'
 
 import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
@@ -70,7 +71,7 @@ const totalTrackedHours = computed(() => {
 const totalPendingAmount = computed(() => {
   return clientInvoices.value
     .filter(i => i.status !== 'paid')
-    .reduce((sum, inv) => sum + (inv.amount - inv.amountPaid), 0)
+    .reduce((sum, inv) => sum + (inv.amount - (inv.amountPaid || 0)), 0)
 })
 
 const totalChargedAmount = computed(() => {
@@ -79,12 +80,17 @@ const totalChargedAmount = computed(() => {
 
 // Preferences Edit Form
 const isEditingPrefs = ref(false)
+const focusedFields = ref({})
 const editForm = ref({
+  name: '',
+  companyName: '',
+  email: '',
+  phone: '',
+  address: '',
   timezone: '',
   preferredCommunication: '',
   technicalStack: '',
   pricingSensitivity: '',
-  meetingPreference: '',
   relationshipNotes: '',
   clientSource: '',
   upchargePercentage: 0,
@@ -92,6 +98,7 @@ const editForm = ref({
   tagsString: '',
   status: ''
 })
+
 
 const predefinedTagOptions = [
   'tech-savvy', 'slow-communication', 'slow-payer',
@@ -153,11 +160,15 @@ function togglePredefinedTagInEdit(tag) {
 function startEditPrefs() {
   if (!client.value) return
   editForm.value = {
+    name: client.value.name || '',
+    companyName: client.value.companyName || '',
+    email: client.value.email || '',
+    phone: client.value.phone || '',
+    address: client.value.address || '',
     timezone: client.value.timezone || '',
     preferredCommunication: client.value.preferredCommunication || 'Slack',
     technicalStack: client.value.technicalStack || '',
     pricingSensitivity: client.value.pricingSensitivity || 'Medium',
-    meetingPreference: client.value.meetingPreference || '',
     relationshipNotes: client.value.relationshipNotes || '',
     clientSource: client.value.clientSource || '',
     upchargePercentage: client.value.upchargePercentage || 0,
@@ -174,12 +185,16 @@ async function savePrefs() {
     : []
 
   await clientsStore.update(props.id, {
+    name: editForm.value.name.trim(),
+    companyName: editForm.value.companyName.trim(),
+    email: editForm.value.email.trim(),
+    phone: editForm.value.phone.trim(),
+    address: editForm.value.address.trim(),
     timezone: editForm.value.timezone,
     preferredCommunication: editForm.value.preferredCommunication,
-    technicalStack: editForm.value.technicalStack,
+    technicalStack: editForm.value.technicalStack.trim(),
     pricingSensitivity: editForm.value.pricingSensitivity,
-    meetingPreference: editForm.value.meetingPreference,
-    relationshipNotes: editForm.value.relationshipNotes,
+    relationshipNotes: editForm.value.relationshipNotes.trim(),
     clientSource: editForm.value.clientSource,
     upchargePercentage: Number(editForm.value.upchargePercentage) || 0,
     techSavvy: editForm.value.techSavvy,
@@ -187,7 +202,7 @@ async function savePrefs() {
     status: editForm.value.status
   })
   isEditingPrefs.value = false
-  ui.showToast('Workspace settings saved', 'success')
+  ui.showToast('Workspace profile saved', 'success')
 }
 
 async function deleteClient() {
@@ -208,11 +223,16 @@ async function deleteClient() {
 async function triggerCreateDriveFolder() {
   if (!client.value) return
   const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
-  const simulatedId = `mock-drive-folder-${Date.now()}`
-  await clientsStore.update(props.id, {
-    driveFolderId: simulatedId
-  })
-  ui.showToast(`Folder created: "${rootDir}/${client.value.name}"`, 'success')
+  ui.showToast('Connecting to Google Drive...', 'info')
+  try {
+    const folderId = await createClientDriveFolder(client.value.name, rootDir)
+    await clientsStore.update(props.id, {
+      driveFolderId: folderId
+    })
+    ui.showToast(`Folder created successfully in Google Drive`, 'success')
+  } catch (e) {
+    ui.showToast(`Failed to create Drive folder: ${e.message}`, 'error')
+  }
 }
 
 // Add note modal actions
@@ -261,6 +281,29 @@ async function addNewTask() {
   newTaskTitle.value = ''
   ui.showToast('Work item added to scope', 'success')
 }
+
+function handleClientKeydown(e) {
+  if (isEditingPrefs.value || showAddNoteModal.value) return
+
+  if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+    e.preventDefault()
+    startEditPrefs()
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+    if (client.value?.driveFolderId) {
+      e.preventDefault()
+      window.open(`https://drive.google.com/drive/folders/${client.value.driveFolderId}`, '_blank')
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleClientKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleClientKeydown)
+})
 </script>
 
 <template>
@@ -281,7 +324,7 @@ async function addNewTask() {
 
         <div class="flex gap-2">
           <button @click="startEditPrefs" class="btn-secondary">
-            <Settings class="w-4 h-4" /> Preferences
+            <User class="w-4 h-4" /> Edit Profile <span class="kbd ml-1.5 font-sans select-none">⌘1</span>
           </button>
           <button v-if="activeTab === 'work'"
             @click="newTaskTitle = ''; ui.showToast('Use quick composer below', 'info')" class="btn-primary">
@@ -343,7 +386,7 @@ async function addNewTask() {
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-            <div class="space-y-1 col-span-2">
+            <div class="space-y-1">
               <span class="text-xs uppercase tracking-overline text-ink-3">Client Status</span>
               <p class="font-medium text-ink">
                 <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border"
@@ -383,10 +426,6 @@ async function addNewTask() {
                   class="ml-1 text-[10px] bg-pri-critical-bg text-pri-critical px-1.5 py-0.5 rounded border border-pri-critical-bd/50 font-normal">+{{
                     client.upchargePercentage }}% Upcharge</span>
               </p>
-            </div>
-            <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Meeting Schedule Preference</span>
-              <p class="font-medium text-ink">{{ client.meetingPreference || 'Not specified' }}</p>
             </div>
             <div class="space-y-1">
               <span class="text-xs uppercase tracking-overline text-ink-3">Acquisition Source</span>
@@ -440,7 +479,7 @@ async function addNewTask() {
             <p class="text-xs text-ink-2">Client has a workspace folder linked to this directory context.</p>
             <a :href="`https://drive.google.com/drive/folders/${client.driveFolderId}`" target="_blank"
               class="w-full btn-secondary text-center text-xs block py-2">
-              Open Client Folder
+              Open Client Folder <span class="kbd ml-1.5 font-sans select-none">⌘2</span>
             </a>
           </div>
           <div v-else class="space-y-3">
@@ -571,104 +610,171 @@ async function addNewTask() {
     <div v-if="isEditingPrefs" @keydown.window.esc="isEditingPrefs = false"
       class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="isEditingPrefs = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
+      <div
+        class="relative w-full max-w-3xl card p-8 shadow-xl bg-surface z-50 animate-rise-in max-h-[85vh] overflow-y-auto space-y-6">
         <div>
-          <div class="overline">Edit Workspace Settings</div>
-          <h2 class="font-serif text-2xl mt-1">Adjust preferences</h2>
+          <div class="overline">Workspace Profile</div>
+          <h2 class="font-serif text-2xl mt-1">Edit Client Profile</h2>
         </div>
 
-        <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Timezone</label>
-              <select v-model="editForm.timezone" class="input-block text-sm">
-                <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
-                  {{ tz.label }}
-                </option>
-              </select>
-              <span v-if="getClientLocalTime(editForm.timezone)"
-                class="text-[10px] text-pri-strategic mt-1 block font-medium">
-                Their Local Time: {{ getClientLocalTime(editForm.timezone) }}
-              </span>
+        <div class="space-y-6">
+          <!-- [ Basic Information ] -->
+          <div class="space-y-3">
+            <h3
+              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
+              Basic Information ]</h3>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="v-field-group">
+                <input v-model="editForm.name" placeholder=" " class="v-field-input" required />
+                <label class="v-field-label">Client Contact Name *</label>
+              </div>
+              <div class="space-y-1">
+                <div class="v-field-group">
+                  <select v-model="editForm.timezone" @focus="focusedFields.timezone = true"
+                    @blur="focusedFields.timezone = false" class="v-field-select">
+                    <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
+                      {{ tz.label }}
+                    </option>
+                  </select>
+                  <span class="v-field-arrow">▼</span>
+                  <label
+                    :class="['v-field-label', (editForm.timezone || focusedFields.timezone) ? 'v-field-label--floating' : '', focusedFields.timezone ? 'v-field-label--floating-focused' : '']">Timezone</label>
+                </div>
+                <div v-if="getClientLocalTime(editForm.timezone)"
+                  class="text-[10px] text-pri-strategic font-semibold pl-3.5">
+                  Their Local Time: {{ getClientLocalTime(editForm.timezone) }}
+                </div>
+              </div>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Preferred Communication</label>
-              <select v-model="editForm.preferredCommunication" class="input-block text-sm">
-                <option value="Slack">Slack</option>
-                <option value="Email">Email</option>
-                <option value="WhatsApp">WhatsApp</option>
-                <option value="Teams">Microsoft Teams</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Technical Stack</label>
-              <input v-model="editForm.technicalStack" class="input-block text-sm" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Pricing Sensitivity</label>
-              <select v-model="editForm.pricingSensitivity" class="input-block text-sm">
-                <option value="Low">Low (Value-driven)</option>
-                <option value="Medium">Medium (Budget-aware)</option>
-                <option value="High">High (Cost-focused)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Client Status</label>
-              <select v-model="editForm.status" class="input-block text-sm font-semibold">
-                <option v-for="(val, key) in clientsStore.STATUS_MAP" :key="key" :value="key">
-                  {{ val.label }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Acquisition Source</label>
-              <select v-model="editForm.clientSource" class="input-block text-sm">
-                <option value="Upwork">Upwork</option>
-                <option value="Referral">Referral</option>
-                <option value="Cold Email">Cold Email</option>
-                <option value="LinkedIn">LinkedIn</option>
-                <option value="Twitter/X">Twitter/X</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Upcharge %</label>
-              <input type="number" v-model="editForm.upchargePercentage" class="input-block text-sm" />
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="v-field-group">
+                <input v-model="editForm.companyName" placeholder=" " class="v-field-input" />
+                <label class="v-field-label">Company / Workspace Name</label>
+              </div>
+              <div class="v-field-group">
+                <select v-model="editForm.status" @focus="focusedFields.status = true"
+                  @blur="focusedFields.status = false" class="v-field-select font-semibold">
+                  <option v-for="(val, key) in clientsStore.STATUS_MAP" :key="key" :value="key">
+                    {{ val.label }}
+                  </option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (editForm.status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Client
+                  Status</label>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Client Tags (comma separated)</label>
-            <input v-model="editForm.tagsString" class="input-block text-sm" placeholder="e.g. agency, direct" />
-            <div class="flex flex-wrap gap-1.5 mt-2">
-              <button v-for="tag in predefinedTagOptions" :key="tag" @click="togglePredefinedTagInEdit(tag)"
-                type="button" class="text-[10px] px-2 py-0.5 rounded-full border transition-all" :class="editForm.tagsString.split(',').map(t => t.trim()).includes(tag)
-                  ? 'bg-pri-strategic-bg text-pri-strategic border-pri-strategic-bd font-semibold'
-                  : 'bg-canvas text-ink-3 border-line hover:text-ink hover:border-line-2'">
-                {{ tag }}
-              </button>
+          <!-- [ Contact ] -->
+          <div class="space-y-3">
+            <h3
+              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
+              Contact ]</h3>
+            <div class="grid grid-cols-3 gap-4 items-start">
+              <div class="v-field-group">
+                <input v-model="editForm.email" placeholder=" " class="v-field-input" />
+                <label class="v-field-label">Email</label>
+              </div>
+              <div class="v-field-group">
+                <input v-model="editForm.phone" placeholder=" " class="v-field-input" />
+                <label class="v-field-label">Phone</label>
+              </div>
+              <div class="v-field-group">
+                <select v-model="editForm.preferredCommunication" @focus="focusedFields.comm = true"
+                  @blur="focusedFields.comm = false" class="v-field-select">
+                  <option value="Slack">Slack</option>
+                  <option value="Email">Email</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Teams">Microsoft Teams</option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (editForm.preferredCommunication || focusedFields.comm) ? 'v-field-label--floating' : '', focusedFields.comm ? 'v-field-label--floating-focused' : '']">Preferred
+                  Communication</label>
+              </div>
+            </div>
+            <div class="v-field-group">
+              <input v-model="editForm.address" placeholder=" " class="v-field-input" />
+              <label class="v-field-label">Billing Address</label>
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Meeting Schedule Preference</label>
-            <input v-model="editForm.meetingPreference" class="input-block text-sm" />
-          </div>
+          <!-- [ Business Context ] -->
+          <div class="space-y-3">
+            <h3
+              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
+              Business Context & Technical Details ]</h3>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="v-field-group">
+                <select v-model="editForm.clientSource" @focus="focusedFields.source = true"
+                  @blur="focusedFields.source = false" class="v-field-select">
+                  <option value="Upwork">Upwork</option>
+                  <option value="Referral">Referral</option>
+                  <option value="Cold Email">Cold Email</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="Twitter/X">Twitter/X</option>
+                  <option value="Other">Other</option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (editForm.clientSource || focusedFields.source) ? 'v-field-label--floating' : '', focusedFields.source ? 'v-field-label--floating-focused' : '']">Acquisition
+                  Source</label>
+              </div>
+              <div class="v-field-group">
+                <select v-model="editForm.pricingSensitivity" @focus="focusedFields.sensitivity = true"
+                  @blur="focusedFields.sensitivity = false" class="v-field-select">
+                  <option value="Low">Low (Value-driven)</option>
+                  <option value="Medium">Medium (Budget-aware)</option>
+                  <option value="High">High (Cost-focused)</option>
+                </select>
+                <span class="v-field-arrow">▼</span>
+                <label
+                  :class="['v-field-label', (editForm.pricingSensitivity || focusedFields.sensitivity) ? 'v-field-label--floating' : '', focusedFields.sensitivity ? 'v-field-label--floating-focused' : '']">Pricing
+                  Sensitivity</label>
+              </div>
+            </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Relationship Context</label>
-            <textarea v-model="editForm.relationshipNotes" rows="3" class="input-block text-sm resize-none"></textarea>
+            <div class="grid grid-cols-2 gap-4 items-start">
+              <div class="v-field-group">
+                <input v-model="editForm.technicalStack" placeholder=" " class="v-field-input" />
+                <label class="v-field-label">Technical Stack</label>
+              </div>
+              <div class="v-field-group">
+                <input type="number" v-model="editForm.upchargePercentage" placeholder=" " class="v-field-input" />
+                <label class="v-field-label">Upcharge %</label>
+              </div>
+            </div>
+
+            <div class="v-field-group">
+              <input v-model="editForm.tagsString" placeholder=" " class="v-field-input" />
+              <label class="v-field-label">Client Tags (comma separated)</label>
+            </div>
+
+            <div class="pt-1">
+              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-2 font-semibold">Standard Tags
+                Quick Add</label>
+              <div class="flex flex-wrap gap-1.5">
+                <button v-for="tag in predefinedTagOptions" :key="tag" @click="togglePredefinedTagInEdit(tag)"
+                  type="button" class="text-[10px] px-2 py-1 rounded-lg border transition-all" :class="editForm.tagsString.split(',').map(t => t.trim()).includes(tag)
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold'
+                    : 'bg-canvas text-ink-3 border-line hover:text-ink hover:border-line-2'">
+                  {{ tag }}
+                </button>
+              </div>
+            </div>
+
+            <div class="v-field-group">
+              <textarea v-model="editForm.relationshipNotes" placeholder=" "
+                class="v-field-input min-h-[80px] resize-none"></textarea>
+              <label class="v-field-label">Relationship Context & Notes</label>
+            </div>
           </div>
         </div>
 
         <div class="flex justify-between items-center pt-2">
-          <button @click="deleteClient" class="btn-ghost !text-pri-critical hover:bg-pri-critical-bg font-semibold flex items-center gap-1">
+          <button @click="deleteClient"
+            class="btn-ghost !text-pri-critical hover:bg-pri-critical-bg font-semibold flex items-center gap-1">
             <Trash2 class="w-3.5 h-3.5" /> Delete Client
           </button>
           <div class="flex gap-3">

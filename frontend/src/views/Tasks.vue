@@ -37,7 +37,7 @@ const groups = computed(() => {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-5xl mx-auto" data-testid="tasks-view">
+  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="tasks-view">
     <PageHeader overline="All tasks" title="Tasks" sub="Grouped quietly by the meaning they carry.">
       <template #right>
         <button class="btn-primary" @click="ui.openQuickCapture" data-testid="tasks-capture-btn">

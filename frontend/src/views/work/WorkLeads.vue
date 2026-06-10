@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useWorkClientsStore } from '@/stores/workClients'
@@ -16,6 +16,8 @@ const router = useRouter()
 const leadsStore = useWorkLeadsStore()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
+
+const focusedFields = ref({})
 
 const showAddModal = ref(false)
 const title = ref('')
@@ -160,6 +162,21 @@ watch(showEditModal, (isOpen) => {
     router.replace({ query: { ...route.query, id: undefined } })
   }
 })
+
+function handleEscKey(e) {
+  if (e.key === 'Escape') {
+    if (showAddModal.value) showAddModal.value = false
+    if (showEditModal.value) showEditModal.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleEscKey)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEscKey)
+})
 </script>
 
 <template>
@@ -169,7 +186,7 @@ watch(showEditModal, (isOpen) => {
     <PageHeader overline="Business" title="Leads funnel" sub="Great opportunities deserve great follow-through">
       <template #right>
         <button @click="showAddModal = true" class="btn-primary">
-          <Plus class="w-4 h-4" /> Create Lead
+          <Plus class="w-4 h-4" /> Create Lead <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
@@ -292,54 +309,54 @@ watch(showEditModal, (isOpen) => {
           <h2 class="font-serif text-2xl mt-1">Add sales opportunity</h2>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4 pt-2">
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Opportunity Title</label>
-              <input v-model="title" placeholder="e.g. Website Overhaul" class="input-block text-sm" />
+            <div class="v-field-group">
+              <input v-model="title" placeholder=" " class="v-field-input" id="lead-title" required />
+              <label for="lead-title" class="v-field-label">Opportunity Title *</label>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Prospect Name</label>
-              <input v-model="clientName" placeholder="e.g. Alpha Design" class="input-block text-sm" />
+            <div class="v-field-group">
+              <input v-model="clientName" placeholder=" " class="v-field-input" id="lead-client" required />
+              <label for="lead-client" class="v-field-label">Prospect Name *</label>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Est. Deal Value ($)</label>
-              <input type="number" v-model="value" min="0" class="input-block text-sm" />
+            <div class="v-field-group">
+              <input type="number" v-model="value" min="0" placeholder=" " class="v-field-input" id="lead-value" />
+              <label for="lead-value" class="v-field-label">Est. Deal Value ($)</label>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Expected Scoped Hours</label>
-              <input type="number" v-model="hours" min="0" class="input-block text-sm" />
+            <div class="v-field-group">
+              <input type="number" v-model="hours" min="0" placeholder=" " class="v-field-input" id="lead-hours" />
+              <label for="lead-hours" class="v-field-label">Expected Scoped Hours</label>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Probability ({{ probability }}%)</label>
+          <div class="grid grid-cols-2 gap-4 items-center">
+            <div class="py-1">
+              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{ probability }}%)</label>
               <input type="range" v-model="probability" min="10" max="100" step="5"
                 class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Follow-up Target Date</label>
-              <input type="date" v-model="followUpDate" class="input-block text-sm text-ink-2" />
+            <div class="v-field-group">
+              <input type="date" v-model="followUpDate" placeholder=" " class="v-field-input text-ink-2" id="lead-followup" />
+              <label for="lead-followup" class="v-field-label">Follow-up Target Date</label>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Initial Stage</label>
-              <select v-model="status" class="input-block text-sm">
+            <div class="v-field-group">
+              <select v-model="status" @focus="focusedFields.status = true" @blur="focusedFields.status = false" class="v-field-select">
                 <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
               </select>
+              <span class="v-field-arrow">▼</span>
+              <label :class="['v-field-label', (status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Initial Stage</label>
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Opportunity Notes</label>
-            <textarea v-model="notes" rows="3" placeholder="Timeline requirements, references, next actions..."
-              class="input-block text-sm resize-none"></textarea>
+          <div class="v-field-group">
+            <textarea v-model="notes" placeholder=" " class="v-field-input min-h-[80px] resize-none" id="lead-notes"></textarea>
+            <label for="lead-notes" class="v-field-label">Opportunity Notes</label>
           </div>
         </div>
 
@@ -360,55 +377,55 @@ watch(showEditModal, (isOpen) => {
           <h2 class="font-serif text-2xl mt-1">Edit opportunity</h2>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4 pt-2">
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Opportunity Title</label>
-              <input v-model="editForm.title" placeholder="e.g. Website Overhaul" class="input-block text-sm" />
+            <div class="v-field-group">
+              <input v-model="editForm.title" placeholder=" " class="v-field-input" id="edit-lead-title" required />
+              <label for="edit-lead-title" class="v-field-label">Opportunity Title *</label>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Prospect Name</label>
-              <input v-model="editForm.clientName" placeholder="e.g. Alpha Design" class="input-block text-sm" />
+            <div class="v-field-group">
+              <input v-model="editForm.clientName" placeholder=" " class="v-field-input" id="edit-lead-client" required />
+              <label for="edit-lead-client" class="v-field-label">Prospect Name *</label>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Est. Deal Value ($)</label>
-              <input type="number" v-model="editForm.estimatedValue" min="0" class="input-block text-sm" />
+            <div class="v-field-group">
+              <input type="number" v-model="editForm.estimatedValue" min="0" placeholder=" " class="v-field-input" id="edit-lead-value" />
+              <label for="edit-lead-value" class="v-field-label">Est. Deal Value ($)</label>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Expected Scoped Hours</label>
-              <input type="number" v-model="editForm.expectedHours" min="0" class="input-block text-sm" />
+            <div class="v-field-group">
+              <input type="number" v-model="editForm.expectedHours" min="0" placeholder=" " class="v-field-input" id="edit-lead-hours" />
+              <label for="edit-lead-hours" class="v-field-label">Expected Scoped Hours</label>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Probability ({{ editForm.probability }}%)</label>
+          <div class="grid grid-cols-2 gap-4 items-center">
+            <div class="py-1">
+              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{ editForm.probability }}%)</label>
               <input type="range" v-model="editForm.probability" min="10" max="100" step="5"
                 class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Follow-up Target Date</label>
-              <input type="date" v-model="editForm.followUpDate" class="input-block text-sm text-ink-2 font-mono" />
+            <div class="v-field-group">
+              <input type="date" v-model="editForm.followUpDate" placeholder=" " class="v-field-input text-ink-2 font-mono" id="edit-lead-followup" />
+              <label for="edit-lead-followup" class="v-field-label">Follow-up Target Date</label>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-ink-2 mb-1">Pipeline Stage</label>
-              <select v-model="editForm.status" class="input-block text-sm font-semibold">
+            <div class="v-field-group">
+              <select v-model="editForm.status" @focus="focusedFields.editStatus = true" @blur="focusedFields.editStatus = false" class="v-field-select font-semibold">
                 <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
                 <option value="lost">Lost</option>
               </select>
+              <span class="v-field-arrow">▼</span>
+              <label :class="['v-field-label', (editForm.status || focusedFields.editStatus) ? 'v-field-label--floating' : '', focusedFields.editStatus ? 'v-field-label--floating-focused' : '']">Pipeline Stage</label>
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-ink-2 mb-1">Opportunity Notes</label>
-            <textarea v-model="editForm.notes" rows="3" placeholder="Timeline requirements..."
-              class="input-block text-sm resize-none"></textarea>
+          <div class="v-field-group">
+            <textarea v-model="editForm.notes" placeholder=" " class="v-field-input min-h-[80px] resize-none" id="edit-lead-notes"></textarea>
+            <label for="edit-lead-notes" class="v-field-label">Opportunity Notes</label>
           </div>
         </div>
 

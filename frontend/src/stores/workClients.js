@@ -34,7 +34,6 @@ export const useWorkClientsStore = defineStore('workClients', () => {
       technicalStack: payload.technicalStack || '',
       pricingSensitivity: payload.pricingSensitivity || 'Medium',
       workflowPreference: payload.workflowPreference || '',
-      meetingPreference: payload.meetingPreference || '',
       relationshipNotes: payload.relationshipNotes || '',
       lastInteractionAt: payload.lastInteractionAt || now(),
       tags: payload.tags || [],

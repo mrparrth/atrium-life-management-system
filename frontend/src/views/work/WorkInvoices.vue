@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, nextTick, onMounted } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkInvoicesStore } from '@/stores/workInvoices'
 import { useWorkClientsStore } from '@/stores/workClients'
@@ -530,6 +530,20 @@ watch(showAddModal, (isOpen) => {
     router.replace({ query: { ...route.query, id: undefined } })
   }
 })
+
+function handleEscKey(e) {
+  if (e.key === 'Escape' && showAddModal.value) {
+    showAddModal.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleEscKey)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEscKey)
+})
 </script>
 
 <template>
@@ -539,7 +553,7 @@ watch(showAddModal, (isOpen) => {
     <PageHeader overline="Business" title="Invoices Ledger" sub="Generate editable bills, select multi-currency contract parameters, and print PDF logs.">
       <template #right>
         <button @click="openCreateModal()" class="btn-primary">
-          <Plus class="w-4 h-4" /> Create Invoice
+          <Plus class="w-4 h-4" /> Create Invoice <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
