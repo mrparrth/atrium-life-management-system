@@ -7,6 +7,7 @@ import { useProjectsStore } from '@/stores/projects'
 import { useNotesStore } from '@/stores/notes'
 import { useBookmarksStore } from '@/stores/bookmarks'
 import { useGoalsStore } from '@/stores/goals'
+import { useWorkNotesStore } from '@/stores/workNotes'
 import { Search, ArrowRight, FolderKanban, CheckSquare, NotebookPen, Bookmark, Target, Plus, X } from 'lucide-vue-next'
 
 const ui = useUIStore()
@@ -30,6 +31,7 @@ import { useWorkInvoicesStore } from '@/stores/workInvoices'
 const workClients = useWorkClientsStore()
 const workItems = useWorkItemsStore()
 const workInvoices = useWorkInvoicesStore()
+const workNotesStore = useWorkNotesStore()
 
 const navItemsPersonal = [
   { type: 'nav', label: 'Dashboard', to: '/', icon: 'home' },
@@ -111,7 +113,7 @@ const results = computed(() => {
     const clients = workClients.items.filter(c => match(c.name) || match(c.relationshipNotes)).slice(0, 6).map(c => ({ type: 'project', label: c.name, to: `/work/clients/${c.id}`, item: c }))
     const items = workItems.items.filter(i => match(i.title) || match(i.description)).slice(0, 8).map(i => ({ type: 'task', label: i.title, to: `/work/items`, item: i }))
     const invoices = workInvoices.items.filter(inv => match(inv.invoiceNumber)).slice(0, 6).map(inv => ({ type: 'bookmark', label: inv.invoiceNumber, to: `/work/invoices`, item: inv }))
-    const wNotes = notes.items.filter(n => (n.tags?.includes('work') || n.clientId) && (match(n.title) || match(n.body))).slice(0, 6).map(n => ({ type: 'note', label: n.title, to: `/work/notes?id=${n.id}`, item: n }))
+    const wNotes = workNotesStore.items.filter(n => match(n.title) || match(n.body)).slice(0, 6).map(n => ({ type: 'note', label: n.title, to: `/work/notes?id=${n.id}`, item: n }))
 
     const groups = []
     if (qa.length) groups.push({ group: 'Quick actions', items: qa })

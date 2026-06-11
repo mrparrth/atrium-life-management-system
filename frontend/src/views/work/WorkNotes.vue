@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useNotesStore } from '@/stores/notes'
+import { useWorkNotesStore } from '@/stores/workNotes'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
@@ -13,7 +13,7 @@ import MarkdownHelpModal from '@/components/MarkdownHelpModal.vue'
 
 const route = useRoute()
 const router = useRouter()
-const notesStore = useNotesStore()
+const notesStore = useWorkNotesStore()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
 
@@ -67,14 +67,8 @@ const NOTE_TEMPLATES = {
   }
 }
 
-// Filter notes for Work Mode (contain tag 'work' or associate with a client)
-const workNotes = computed(() => {
-  return notesStore.items.filter(n => {
-    const isWorkTag = n.tags && n.tags.includes('work')
-    const hasClient = !!n.clientId
-    return isWorkTag || hasClient
-  })
-})
+// All notes in this store are work notes
+const workNotes = computed(() => notesStore.items)
 
 const filteredNotes = computed(() => {
   // 1. Backburner check

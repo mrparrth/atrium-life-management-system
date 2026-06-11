@@ -20,7 +20,7 @@ const today = computed(() => dayjs().format('dddd, MMMM D'))
     <PageHeader :overline="today" title="Today focus" sub="A few quiet things to attend to.">
       <template #right>
         <button class="btn-primary" @click="ui.openQuickCapture" data-testid="today-capture">
-          <Plus class="w-4 h-4" /> Capture
+          <Plus class="w-4 h-4" /> Capture <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>

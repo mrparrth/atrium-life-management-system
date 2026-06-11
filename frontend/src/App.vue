@@ -7,6 +7,7 @@ import { useProjectsStore } from '@/stores/projects'
 import { useGoalsStore } from '@/stores/goals'
 import { useYearsStore } from '@/stores/years'
 import { useNotesStore } from '@/stores/notes'
+import { useWorkNotesStore } from '@/stores/workNotes'
 import { useBookmarksStore } from '@/stores/bookmarks'
 import { useFinanceStore } from '@/stores/finance'
 import { useAreasStore } from '@/stores/areas'
@@ -48,6 +49,7 @@ onMounted(async () => {
     useProjectsStore().load(),
     useTasksStore().load(),
     useNotesStore().load(),
+    useWorkNotesStore().load(),
     useBookmarksStore().load(),
     useFinanceStore().load(),
     useAreasStore().load(),

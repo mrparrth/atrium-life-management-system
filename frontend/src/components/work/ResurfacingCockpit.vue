@@ -60,7 +60,7 @@ function goToItem(alert) {
 
 const alerts = computed(() => {
   const list = []
-  
+
   // 1. Stale Clients (> 30 days since last interaction)
   clientsStore.items.forEach(c => {
     const key = `client-stale-${c.id}`
@@ -129,13 +129,13 @@ const alerts = computed(() => {
   leadsStore.items.forEach(lead => {
     const key = `lead-stale-${lead.id}`
     if (isSnoozed(key)) return
-    if (!['won', 'lost', 'onboarding'].includes(lead.status) && lead.followUpDate && lead.followUpDate < today) {
+    if (lead.followUpDate <= today) { //!['won', 'lost', 'onboarding'].includes(lead.status) && lead.followUpDate && 
       list.push({
         id: key,
         type: 'lead',
         targetId: lead.id,
         title: `Lead follow-up: ${lead.title}`,
-        description: `Follow-up was scheduled for ${dayjs(lead.followUpDate).format('MMM D')}. Check-in with ${lead.clientName}.`,
+        description: `Follow-up was scheduled for ${dayjs(lead.followUpDate).format('MMM D')} | ${lead.notes ? lead.notes : "Check-in with " + lead.clientName + "."}`,
         actionText: 'Postpone 3d',
         action: () => {
           const nextDate = dayjs().add(3, 'day').format('YYYY-MM-DD')
@@ -165,7 +165,7 @@ watch(alerts, (newAlerts) => {
       notifiedAlerts.value.push(alert.id)
     }
   })
-  
+
   // Clean up IDs that are no longer active alerts so they can notify again in future if they re-occur
   const currentIds = newAlerts.map(a => a.id)
   notifiedAlerts.value = notifiedAlerts.value.filter(id => currentIds.includes(id))
@@ -179,15 +179,15 @@ watch(alerts, (newAlerts) => {
       <BellRing class="w-4 h-4 text-pri-interruptive" />
       <h3 class="overline text-ink-2">Strategic Briefing Alerts</h3>
     </div>
-    
+
     <div class="grid grid-cols-1 gap-3">
-      <div v-for="alert in alerts" :key="alert.id"
-        @click="goToItem(alert)"
+      <div v-for="alert in alerts" :key="alert.id" @click="goToItem(alert)"
+        title="Click to view details"
         class="card p-4 flex items-start justify-between gap-4 border border-line bg-surface hover:border-line-2 transition-all duration-300 cursor-pointer">
-        
+
         <div class="space-y-1">
           <div class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full shrink-0" 
+            <span class="w-1.5 h-1.5 rounded-full shrink-0"
               :class="alert.type === 'invoice' ? 'bg-pri-critical' : alert.type === 'client' ? 'bg-pri-critical' : 'bg-pri-interruptive'">
             </span>
             <span class="text-xs uppercase tracking-wider text-ink-3 font-semibold">{{ alert.type }}</span>
@@ -197,12 +197,25 @@ watch(alerts, (newAlerts) => {
         </div>
 
         <div @click.stop class="flex items-center gap-2 shrink-0 self-center">
-          <button @click="alert.action" class="btn-ghost !text-xs !py-1 px-2.5 bg-canvas hover:bg-line/40 rounded-lg flex items-center gap-1 text-ink font-medium">
-            <Check class="w-3.5 h-3.5" /> {{ alert.actionText }}
-          </button>
-          <button @click="snoozeAlert(alert.id)" class="btn-ghost !p-1.5 hover:bg-canvas text-ink-3 hover:text-ink rounded-lg" title="Snooze for 7 days">
-            <EyeOff class="w-3.5 h-3.5" />
-          </button>
+          <div class="relative group">
+            <button @click="alert.action"
+              class="btn-ghost !text-xs !py-1 px-2.5 bg-canvas hover:bg-line/40 rounded-lg flex items-center gap-1 text-ink font-medium">
+              <Check class="w-3.5 h-3.5" /> {{ alert.actionText }}
+            </button>
+            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-ink text-canvas text-[10px] px-2.5 py-1.5 rounded-lg font-medium shadow-lg whitespace-nowrap z-50">
+              Resolve: {{ alert.actionText }}
+            </div>
+          </div>
+
+          <div class="relative group">
+            <button @click="snoozeAlert(alert.id)"
+              class="btn-ghost !p-1.5 hover:bg-canvas text-ink-3 hover:text-ink rounded-lg">
+              <EyeOff class="w-3.5 h-3.5" />
+            </button>
+            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-ink text-canvas text-[10px] px-2.5 py-1.5 rounded-lg font-medium shadow-lg whitespace-nowrap z-50">
+              Snooze for 7 days
+            </div>
+          </div>
         </div>
       </div>
     </div>

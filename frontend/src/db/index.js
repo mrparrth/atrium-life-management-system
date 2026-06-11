@@ -65,6 +65,31 @@ db.version(7).stores({
   work_resources: "id, clientId, type, title, createdAt",
 });
 
+// v8 - Work Notes separation
+db.version(8).stores({
+  work_notes: "id, clientId, title, createdAt, updatedAt, lastViewedAt",
+}).upgrade(async (tx) => {
+  const notesTable = tx.table("notes");
+  const workNotesTable = tx.table("work_notes");
+  const notes = await notesTable.toArray();
+  const workNotes = notes.filter(n => n.clientId || (n.tags && n.tags.includes('work')));
+  if (workNotes.length > 0) {
+    const workNotesToInsert = workNotes.map(n => ({
+      id: n.id,
+      clientId: n.clientId || "",
+      title: n.title,
+      body: n.body,
+      tags: n.tags || [],
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      lastViewedAt: n.lastViewedAt
+    }));
+    await workNotesTable.bulkAdd(workNotesToInsert);
+    const workNoteIds = workNotes.map(n => n.id);
+    await notesTable.bulkDelete(workNoteIds);
+  }
+});
+
 export function newId() {
   return nanoid(12);
 }

@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkInvoicesStore } from '@/stores/workInvoices'
-import { useNotesStore } from '@/stores/notes'
+import { useWorkNotesStore } from '@/stores/workNotes'
 import { useWorkMeetingsStore } from '@/stores/workMeetings'
 import { useUIStore } from '@/stores/ui'
 import WorkItemCard from '@/components/work/WorkItemCard.vue'
@@ -26,7 +26,7 @@ const router = useRouter()
 const clientsStore = useWorkClientsStore()
 const itemsStore = useWorkItemsStore()
 const invoicesStore = useWorkInvoicesStore()
-const notesStore = useNotesStore()
+const notesStore = useWorkNotesStore()
 const meetingsStore = useWorkMeetingsStore()
 const ui = useUIStore()
 

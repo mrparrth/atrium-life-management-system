@@ -5,7 +5,7 @@ import { useWorkMeetingsStore } from '@/stores/workMeetings'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkResourcesStore } from '@/stores/workResources'
-import { useNotesStore } from '@/stores/notes'
+import { useWorkNotesStore } from '@/stores/workNotes'
 import { useUIStore } from '@/stores/ui'
 import { FileText, Video } from 'lucide-vue-next'
 import dayjs from 'dayjs'
@@ -37,7 +37,7 @@ const meetingsStore = useWorkMeetingsStore()
 const clientsStore = useWorkClientsStore()
 const itemsStore = useWorkItemsStore()
 const resourcesStore = useWorkResourcesStore()
-const notesStore = useNotesStore()
+const notesStore = useWorkNotesStore()
 const ui = useUIStore()
 
 // All upcoming and recently completed meetings in next 3 days, sorted by status (Live -> Upcoming -> Completed)

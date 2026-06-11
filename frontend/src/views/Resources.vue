@@ -6,16 +6,31 @@ import { useBookmarksStore } from '@/stores/bookmarks'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { NotebookPen, Bookmark } from 'lucide-vue-next'
+import { NotebookPen, Bookmark, Plus, FolderOpen } from 'lucide-vue-next'
 
 const notes = useNotesStore()
 const bookmarks = useBookmarksStore()
-const unlinkedNotes = computed(() => notes.items.filter(n => !n.projectId && !n.taskId && !n.clientId && (!n.tags || !n.tags.includes('work'))))
+const unlinkedNotes = computed(() => notes.items.filter(n => !n.projectId && !n.taskId))
 </script>
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="resources-view">
-    <PageHeader overline="PARA · Resources" title="Resources" sub="Reference material for future selves." />
+    <PageHeader overline="PARA · Resources" title="Resources" sub="Reference material for future selves.">
+      <template #right>
+        <RouterLink to="/notes?new=true" class="btn-primary">
+          <Plus class="w-4 h-4" /> New note <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
+        </RouterLink>
+        <RouterLink to="/bookmarks?new=collection" class="btn-secondary">
+          <FolderOpen class="w-4 h-4" /> New collection <span
+            class="kbd ml-1.5 font-sans select-none bg-elevated border-line text-ink-2">⌘2</span>
+        </RouterLink>
+        <RouterLink to="/bookmarks?new=bookmark" class="btn-tertiary">
+          <Plus class="w-4 h-4" /> Add bookmark <span
+            class="kbd ml-1.5 font-sans select-none bg-elevated border-line text-ink-2">⌘3</span>
+        </RouterLink>
+      </template>
+    </PageHeader>
 
     <SectionHeader overline="Notes" :title="`${unlinkedNotes.length} unlinked`" hint="Notes living independently." />
     <div v-if="unlinkedNotes.length" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
@@ -29,7 +44,7 @@ const unlinkedNotes = computed(() => notes.items.filter(n => !n.projectId && !n.
       </RouterLink>
     </div>
     <EmptyState v-else title="No standalone notes" hint="All notes are linked to something." />
-
+    <div class="mt-4"></div>
     <SectionHeader overline="Bookmarks" :title="`${bookmarks.items.length} saved`" hint="Pages worth returning to." />
     <div v-if="bookmarks.items.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <a v-for="b in bookmarks.items" :key="b.id" :href="b.url" target="_blank"

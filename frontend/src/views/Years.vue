@@ -108,7 +108,7 @@ async function removeYear(y) {
 <template>
   <div class="px-8 md:px-12 py-10 max-w-5xl mx-auto" data-testid="years-view">
     <PageHeader overline="Horizon" title="Years" sub="A long, soft view of where the years are pointing.">
-      <template #right><button class="btn-primary" @click="showNew = true" data-testid="new-year-btn"><Plus class="w-4 h-4" /> New year</button></template>
+      <template #right><button class="btn-primary" @click="showNew = true" data-testid="new-year-btn"><Plus class="w-4 h-4" /> New year <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span></button></template>
     </PageHeader>
 
     <div v-if="years.items.length" class="space-y-5">

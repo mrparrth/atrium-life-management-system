@@ -133,10 +133,10 @@ onKeyStroke('Escape', (e) => {
       sub="Pages worth returning to - grouped into collections, or kept loose.">
       <template #right>
         <button class="btn-secondary" @click="showNewPage = true" data-testid="new-page-btn">
-          <FolderOpen class="w-4 h-4" /> New collection
+          <FolderOpen class="w-4 h-4" /> New collection <span class="kbd ml-1.5 font-sans select-none bg-elevated border-line text-ink-2">⌘2</span>
         </button>
         <button class="btn-primary" @click="showNewBm = true" data-testid="new-bookmark-btn">
-          <Plus class="w-4 h-4" /> Add bookmark
+          <Plus class="w-4 h-4" /> Add bookmark <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>

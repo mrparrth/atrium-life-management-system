@@ -206,7 +206,7 @@ onKeyStroke('Escape', (e) => {
             <Trash2 class="w-4 h-4" />
           </button>
           <button class="btn-primary" @click="showNewBm = true" data-testid="page-add-bookmark">
-            <Plus class="w-4 h-4" /> Add bookmark
+            <Plus class="w-4 h-4" /> Add bookmark <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
           </button>
         </div>
       </header>

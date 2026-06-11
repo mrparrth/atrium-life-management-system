@@ -104,7 +104,7 @@ async function onDrop(targetId) {
     <PageHeader overline="Horizon" title="Next steps" sub="A quiet space for local checklists and notes.">
       <template #right>
         <button class="btn-primary text-sm" @click="showNewSectionModal = true" data-testid="ns-add-section-btn">
-          <Plus class="w-4 h-4" /> Add section
+          <Plus class="w-4 h-4" /> Add section <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>

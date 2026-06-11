@@ -75,7 +75,7 @@ onKeyStroke('Escape', (e) => {
     <PageHeader overline="PARA · Projects" title="Projects" sub="Things with a finish line.">
       <template #right>
         <button class="btn-primary" @click="showNew = true" data-testid="new-project-btn">
-          <Plus class="w-4 h-4" /> New project
+          <Plus class="w-4 h-4" /> New project <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>

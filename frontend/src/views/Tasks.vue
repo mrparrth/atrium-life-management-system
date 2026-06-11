@@ -41,7 +41,7 @@ const groups = computed(() => {
     <PageHeader overline="All tasks" title="Tasks" sub="Grouped quietly by the meaning they carry.">
       <template #right>
         <button class="btn-primary" @click="ui.openQuickCapture" data-testid="tasks-capture-btn">
-          <Plus class="w-4 h-4" /> Capture
+          <Plus class="w-4 h-4" /> Capture <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>

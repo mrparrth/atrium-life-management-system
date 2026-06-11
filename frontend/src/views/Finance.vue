@@ -35,7 +35,29 @@ const editingCf = ref(null)
 function openCfForm(p = null) { editingCf.value = p; showCfForm.value = true }
 function closeCfForm() { showCfForm.value = false; editingCf.value = null }
 
-import { onMounted, watch } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
+
+const tabsList = ['overview', 'networth', 'cashflow', 'budgets', 'categories']
+
+function handleKeydown(e) {
+  if (e.altKey && e.code && e.code.startsWith('Digit')) {
+    const num = e.code.replace('Digit', '')
+    const idx = parseInt(num) - 1
+    if (tabsList[idx]) {
+      e.preventDefault()
+      tab.value = tabsList[idx]
+    }
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+    if (tab.value === 'overview' || tab.value === 'cashflow') {
+      const logMonthBtn = document.querySelector('[data-testid="overview-log-cf"], [data-testid="cf-add-btn"]')
+      if (logMonthBtn) {
+        e.preventDefault()
+        logMonthBtn.click()
+      }
+    }
+  }
+}
 
 function handleQuery() {
   if (route.query.tab) tab.value = route.query.tab
@@ -51,7 +73,14 @@ function handleQuery() {
   }
 }
 
-onMounted(handleQuery)
+onMounted(() => {
+  handleQuery()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 watch(() => route.query, handleQuery)
 
 async function deleteNw(log) {
@@ -235,12 +264,17 @@ const comparisonMetrics = computed(() => {
   <div class="px-8 md:px-12 py-10 max-w-6xl mx-auto" data-testid="finance-view">
     <PageHeader overline="Memory · Finance" title="Money, gently tracked"
       sub="Date-stamped net-worth snapshots and month-by-month cash flow." />
-    <div class="flex flex-wrap gap-1 bg-elevated rounded-2xl p-1 border border-line text-sm w-fit mb-10"
-      data-testid="finance-tabs">
-      <button
-        v-for="t in [{ k: 'overview', l: 'Overview' }, { k: 'networth', l: 'Net worth' }, { k: 'cashflow', l: 'Cash flow' }, { k: 'budgets', l: 'Budgets' }, { k: 'categories', l: 'Categories' }]"
-        :key="t.k" :data-testid="`tab-${t.k}`" class="px-4 py-2 rounded-xl transition-colors duration-200"
-        :class="tab === t.k ? 'bg-surface text-ink' : 'text-ink-2 hover:text-ink'" @click="tab = t.k">{{ t.l }}</button>
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-10">
+      <div class="flex flex-wrap gap-1 bg-elevated rounded-2xl p-1 border border-line text-sm w-fit"
+        data-testid="finance-tabs">
+        <button
+          v-for="t in [{ k: 'overview', l: 'Overview' }, { k: 'networth', l: 'Net worth' }, { k: 'cashflow', l: 'Cash flow' }, { k: 'budgets', l: 'Budgets' }, { k: 'categories', l: 'Categories' }]"
+          :key="t.k" :data-testid="`tab-${t.k}`" class="px-4 py-2 rounded-xl transition-colors duration-200"
+          :class="tab === t.k ? 'bg-surface text-ink' : 'text-ink-2 hover:text-ink'" @click="tab = t.k">{{ t.l }}</button>
+      </div>
+      <div class="text-xs text-ink-3 select-none">
+        Tip: Use <span class="kbd">⌥1</span> to <span class="kbd">⌥5</span> to switch tabs
+      </div>
     </div>
 
     <!-- OVERVIEW -->
@@ -256,7 +290,7 @@ const comparisonMetrics = computed(() => {
             <Sparkline :data="sparkData" :height="64" color="rgb(90 115 83)" />
           </div>
           <button class="btn-primary mt-5" @click="openNwForm()" data-testid="overview-log-nw">
-            <Plus class="w-4 h-4" /> Log net worth
+            <Plus class="w-4 h-4" /> Log net worth <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
           </button>
         </div>
 
@@ -285,7 +319,7 @@ const comparisonMetrics = computed(() => {
             <Sparkline :data="cashflowSpark" :height="48" color="rgb(158 132 87)" />
           </div>
           <button class="btn-primary mt-5" @click="openCfForm()" data-testid="overview-log-cf">
-            <Plus class="w-4 h-4" /> Log a month
+            <Plus class="w-4 h-4" /> Log a month <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘2</span>
           </button>
         </div>
       </div>
@@ -492,7 +526,7 @@ const comparisonMetrics = computed(() => {
               v-if="finance.networthLogs.length !== 1">s</span></div>
         </div>
         <button class="btn-primary" @click="openNwForm()" data-testid="nw-add-btn">
-          <Plus class="w-4 h-4" /> Log net worth
+          <Plus class="w-4 h-4" /> Log net worth <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </div>
 
@@ -541,7 +575,7 @@ const comparisonMetrics = computed(() => {
               v-if="finance.cashflowPeriods.length !== 1">s</span></div>
         </div>
         <button class="btn-primary" @click="openCfForm()" data-testid="cf-add-btn">
-          <Plus class="w-4 h-4" /> Log a month
+          <Plus class="w-4 h-4" /> Log a month <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </div>
 

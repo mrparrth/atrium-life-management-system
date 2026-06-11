@@ -64,7 +64,7 @@ onKeyStroke('Escape', (e) => {
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="notes-view">
     <PageHeader overline="Memory" title="Notes" sub="Loose thoughts and longer reflections.">
       <template #right><button class="btn-primary" @click="showNew = true" data-testid="new-note-btn">
-          <Plus class="w-4 h-4" /> New note
+          <Plus class="w-4 h-4" /> New note <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button></template>
     </PageHeader>
 
