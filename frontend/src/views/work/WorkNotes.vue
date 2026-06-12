@@ -28,6 +28,12 @@ const showMarkdownHelp = ref(false)
 const clientFilter = ref('')
 const showBackburner = ref(false)
 
+const activeClients = computed(() => {
+  return clientsStore.items.filter(c => {
+    return c.status !== 'inactive' || c.id === editClientId.value
+  })
+})
+
 // Prebuilt note templates
 const NOTE_TEMPLATES = {
   meeting: {
@@ -340,7 +346,7 @@ const renderedMarkdown = computed(() => {
               <span class="text-[10px] uppercase font-semibold text-ink-3 w-16">Client</span>
               <select v-model="editClientId" class="bg-surface border rounded px-2 py-1 flex-1 focus:outline-none">
                 <option value="">None (Standalone)</option>
-                <option v-for="c in clientsStore.items" :key="c.id" :value="c.id">{{ c.name }}</option>
+                <option v-for="c in activeClients" :key="c.id" :value="c.id">{{ c.name }}</option>
               </select>
             </div>
           </div>

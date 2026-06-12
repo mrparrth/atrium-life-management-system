@@ -16,9 +16,10 @@ const ui = useUIStore()
 const focusedFields = ref({})
 
 const clientOptions = computed(() => {
+  const activeClients = clientsStore.items.filter(c => c.status !== 'inactive')
   return [
     { key: '', label: 'Global Resource' },
-    ...clientsStore.items.map(c => ({ key: c.id, label: c.name }))
+    ...activeClients.map(c => ({ key: c.id, label: c.name }))
   ]
 })
 

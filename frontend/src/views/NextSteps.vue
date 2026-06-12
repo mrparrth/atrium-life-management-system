@@ -4,7 +4,7 @@ import { useNextStepsStore } from '@/stores/nextSteps'
 import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, Trash2, Check, ListChecks, Edit3, GripVertical, X, Sparkles } from 'lucide-vue-next'
+import { Plus, Trash2, ListChecks, Edit3, GripVertical, X, Sparkles } from 'lucide-vue-next'
 
 const nextSteps = useNextStepsStore()
 const ui = useUIStore()
@@ -158,18 +158,18 @@ async function onDrop(targetId) {
           <div 
             v-for="it in sec.items" 
             :key="it.id"
-            class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-elevated/40 transition-colors group/item"
-            :class="{ 'opacity-60': it.done }"
+            class="flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg hover:bg-elevated/40 transition-colors group/item"
+            :class="{ 'opacity-55': it.done }"
             :data-testid="`ns-item-${it.id}`"
           >
-            <button
-              @click="nextSteps.toggleItem(sec.id, it.id)"
-              class="w-4.5 h-4.5 rounded-md border-2 transition-all duration-300 flex items-center justify-center shrink-0"
-              :class="it.done ? 'bg-ink border-ink' : 'border-line-2 hover:border-ink-2'"
+            <input
+              type="checkbox"
+              :checked="it.done"
+              @change="nextSteps.toggleItem(sec.id, it.id)"
+              class="ns-checkbox shrink-0"
+              :id="`ns-item-cb-${it.id}`"
               :data-testid="`ns-item-toggle-${it.id}`"
-            >
-              <Check v-if="it.done" class="w-2.5 h-2.5 text-canvas" stroke-width="3.5" />
-            </button>
+            />
 
             <div class="flex-1 min-w-0">
               <template v-if="editingItemId === it.id && editingItemSectionId === sec.id">
@@ -183,11 +183,12 @@ async function onDrop(targetId) {
                 />
               </template>
               <template v-else>
-                <span 
-                  @dblclick="startRenameItem(sec.id, it)"
-                  class="text-sm cursor-text break-words block"
+                <label 
+                  :for="`ns-item-cb-${it.id}`"
+                  @dblclick.prevent="startRenameItem(sec.id, it)"
+                  class="text-sm cursor-pointer break-words block select-none"
                   :class="{ 'line-through text-ink-3': it.done }"
-                >{{ it.title }}</span>
+                >{{ it.title }}</label>
               </template>
             </div>
 
@@ -265,3 +266,51 @@ async function onDrop(targetId) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.ns-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.0625rem;  /* 17px — slightly larger than before for easier clicking */
+  height: 1.0625rem;
+  border-radius: 0.3rem;
+  border: 2px solid var(--color-line-2, #888);
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+  flex-shrink: 0;
+}
+
+.ns-checkbox:hover {
+  border-color: var(--color-ink-2, #555);
+}
+
+.ns-checkbox:checked {
+  background: var(--color-ink, #1a1a1a);
+  border-color: var(--color-ink, #1a1a1a);
+}
+
+.ns-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* SVG checkmark encoded inline */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='2,6 5,9 10,3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 70%;
+}
+
+.ns-checkbox:active {
+  transform: scale(0.88);
+}
+
+.ns-checkbox:focus-visible {
+  outline: 2px solid var(--color-pri-strategic, #6366f1);
+  outline-offset: 2px;
+}
+</style>

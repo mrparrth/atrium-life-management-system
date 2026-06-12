@@ -6,15 +6,18 @@ import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkInvoicesStore } from '@/stores/workInvoices'
 import { useWorkNotesStore } from '@/stores/workNotes'
 import { useWorkMeetingsStore } from '@/stores/workMeetings'
+import { useWorkResourcesStore } from '@/stores/workResources'
 import { useUIStore } from '@/stores/ui'
 import WorkItemCard from '@/components/work/WorkItemCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { createClientDriveFolder } from '@/services/drive'
+import { createClientDriveFolder, createClientDriveFolderInParent, extractFolderIdFromUrl } from '@/services/drive'
+import ClientPopup from '@/components/work/ClientPopup.vue'
 
 import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
   Calendar, Settings, Sparkles, Plus, Clock, MessageSquare,
-  HardDrive, ExternalLink, Trash2
+  HardDrive, ExternalLink, Trash2, Star, Link as LinkIcon, Key,
+  Eye, EyeOff, Copy
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -28,9 +31,11 @@ const itemsStore = useWorkItemsStore()
 const invoicesStore = useWorkInvoicesStore()
 const notesStore = useWorkNotesStore()
 const meetingsStore = useWorkMeetingsStore()
+const resourcesStore = useWorkResourcesStore()
 const ui = useUIStore()
 
-const activeTab = ref('overview') // overview, work, notes, invoices
+const activeTab = ref('overview') // overview, work, notes, invoices, reference, credentials
+const TABS = ['overview', 'work', 'notes', 'invoices', 'reference', 'credentials']
 const showAddNoteModal = ref(false)
 const newNoteTitle = ref('')
 
@@ -63,6 +68,14 @@ const clientMeetings = computed(() => {
   return meetingsStore.items.filter(m => m.clientId === props.id)
 })
 
+const clientReferences = computed(() => {
+  return resourcesStore.items.filter(r => r.clientId === props.id && r.type === 'url')
+})
+
+const clientCredentials = computed(() => {
+  return resourcesStore.items.filter(r => r.clientId === props.id && r.type === 'credentials')
+})
+
 // Statistics
 const totalTrackedHours = computed(() => {
   return clientItems.value.reduce((sum, item) => sum + (item.actualHours || 0), 0)
@@ -78,58 +91,15 @@ const totalChargedAmount = computed(() => {
   return clientItems.value.reduce((sum, item) => sum + (item.charged || 0), 0)
 })
 
-// Preferences Edit Form
-const isEditingPrefs = ref(false)
-const focusedFields = ref({})
-const editForm = ref({
-  name: '',
-  companyName: '',
-  email: '',
-  phone: '',
-  address: '',
-  timezone: '',
-  preferredCommunication: '',
-  technicalStack: '',
-  pricingSensitivity: '',
-  relationshipNotes: '',
-  clientSource: '',
-  upchargePercentage: 0,
-  techSavvy: false,
-  tagsString: '',
-  status: ''
+const getClientRating = computed(() => {
+  const ratedItems = clientItems.value.filter(item => item.rating && item.rating > 0)
+  if (ratedItems.length === 0) return 0
+  const totalRating = ratedItems.reduce((sum, item) => sum + item.rating, 0)
+  return Number((totalRating / ratedItems.length).toFixed(1))
 })
 
-
-const predefinedTagOptions = [
-  'tech-savvy', 'slow-communication', 'slow-payer',
-  'high-priority', 'scope-creeper', 'friendly',
-  'demanding', 'agency', 'startup', 'clear-brief'
-]
-
-const timezoneOptions = [
-  { value: 'Pacific/Honolulu', label: '(GMT-10.0) Hawaii Time (HST)' },
-  { value: 'America/Anchorage', label: '(GMT-9.0) Alaska Time (AKST)' },
-  { value: 'America/Los_Angeles', label: '(GMT-8.0) US Pacific Time (PST)' },
-  { value: 'America/Denver', label: '(GMT-7.0) US Mountain Time (MST)' },
-  { value: 'America/Phoenix', label: '(GMT-7.0) US Mountain Time (MST, No DST)' },
-  { value: 'America/Chicago', label: '(GMT-6.0) US Central Time (CST)' },
-  { value: 'America/New_York', label: '(GMT-5.0) US Eastern Time (EST)' },
-  { value: 'America/Sao_Paulo', label: '(GMT-3.0) Brazil Time (BRT)' },
-  { value: 'UTC', label: '(GMT+0.0) UTC/GMT' },
-  { value: 'Europe/London', label: '(GMT+0.0) London Time (GMT/BST)' },
-  { value: 'Europe/Paris', label: '(GMT+1.0) Central European Time (CET)' },
-  { value: 'Europe/Athens', label: '(GMT+2.0) Eastern European Time (EET)' },
-  { value: 'Europe/Moscow', label: '(GMT+3.0) Moscow Time (MSK)' },
-  { value: 'Asia/Dubai', label: '(GMT+4.0) Gulf Standard Time (GST)' },
-  { value: 'Asia/Kolkata', label: '(GMT+5.5) India Standard Time (IST)' },
-  { value: 'Asia/Jakarta', label: '(GMT+7.0) Western Indonesia Time (WIB)' },
-  { value: 'Asia/Singapore', label: '(GMT+8.0) Singapore Time (SGT)' },
-  { value: 'Asia/Hong_Kong', label: '(GMT+8.0) Hong Kong Time (HKT)' },
-  { value: 'Asia/Tokyo', label: '(GMT+9.0) Japan Standard Time (JST)' },
-  { value: 'Asia/Seoul', label: '(GMT+9.0) Korea Standard Time (KST)' },
-  { value: 'Australia/Sydney', label: '(GMT+10.0) Australia Eastern Time (AEST)' },
-  { value: 'Pacific/Auckland', label: '(GMT+12.0) New Zealand Time (NZST)' }
-]
+// Preferences Edit Form
+const isEditingPrefs = ref(false)
 
 function getClientLocalTime(tzName) {
   if (!tzName) return ''
@@ -145,87 +115,31 @@ function getClientLocalTime(tzName) {
   }
 }
 
-function togglePredefinedTagInEdit(tag) {
-  let currentTags = editForm.value.tagsString
-    ? editForm.value.tagsString.split(',').map(t => t.trim()).filter(Boolean)
-    : []
-  if (currentTags.includes(tag)) {
-    currentTags = currentTags.filter(t => t !== tag)
-  } else {
-    currentTags.push(tag)
-  }
-  editForm.value.tagsString = currentTags.join(', ')
-}
-
 function startEditPrefs() {
-  if (!client.value) return
-  editForm.value = {
-    name: client.value.name || '',
-    companyName: client.value.companyName || '',
-    email: client.value.email || '',
-    phone: client.value.phone || '',
-    address: client.value.address || '',
-    timezone: client.value.timezone || '',
-    preferredCommunication: client.value.preferredCommunication || 'Slack',
-    technicalStack: client.value.technicalStack || '',
-    pricingSensitivity: client.value.pricingSensitivity || 'Medium',
-    relationshipNotes: client.value.relationshipNotes || '',
-    clientSource: client.value.clientSource || '',
-    upchargePercentage: client.value.upchargePercentage || 0,
-    techSavvy: !!client.value.techSavvy,
-    tagsString: client.value.tags ? client.value.tags.join(', ') : '',
-    status: client.value.status || 'normal'
-  }
   isEditingPrefs.value = true
 }
 
-async function savePrefs() {
-  const parsedTags = editForm.value.tagsString
-    ? editForm.value.tagsString.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
-    : []
-
-  await clientsStore.update(props.id, {
-    name: editForm.value.name.trim(),
-    companyName: editForm.value.companyName.trim(),
-    email: editForm.value.email.trim(),
-    phone: editForm.value.phone.trim(),
-    address: editForm.value.address.trim(),
-    timezone: editForm.value.timezone,
-    preferredCommunication: editForm.value.preferredCommunication,
-    technicalStack: editForm.value.technicalStack.trim(),
-    pricingSensitivity: editForm.value.pricingSensitivity,
-    relationshipNotes: editForm.value.relationshipNotes.trim(),
-    clientSource: editForm.value.clientSource,
-    upchargePercentage: Number(editForm.value.upchargePercentage) || 0,
-    techSavvy: editForm.value.techSavvy,
-    tags: parsedTags,
-    status: editForm.value.status
-  })
-  isEditingPrefs.value = false
-  ui.showToast('Workspace profile saved', 'success')
-}
-
-async function deleteClient() {
-  const approved = await ui.confirm({
-    title: 'Delete Client Workspace',
-    message: `Are you sure you want to permanently delete "${client.value.name}"? This action will erase all preferences and settings for this workspace and cannot be undone.`,
-    confirmText: 'Delete Workspace',
-    isDestructive: true
-  })
-  if (approved) {
-    await clientsStore.remove(props.id)
-    isEditingPrefs.value = false
-    ui.showToast('Client workspace deleted', 'success')
+function handleClientSaved(updated) {
+  if (updated && updated.deleted) {
     router.push('/work/clients')
   }
 }
 
 async function triggerCreateDriveFolder() {
   if (!client.value) return
-  const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
   ui.showToast('Connecting to Google Drive...', 'info')
   try {
-    const folderId = await createClientDriveFolder(client.value.name, rootDir)
+    const parentFolderUrl = localStorage.getItem('atrium.work.drive_folder_url') || ''
+    const parentFolderId = extractFolderIdFromUrl(parentFolderUrl)
+    let folderId = ''
+
+    if (parentFolderId) {
+      folderId = await createClientDriveFolderInParent(client.value.name, parentFolderId)
+    } else {
+      const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
+      folderId = await createClientDriveFolder(client.value.name, rootDir)
+    }
+
     await clientsStore.update(props.id, {
       driveFolderId: folderId
     })
@@ -283,7 +197,17 @@ async function addNewTask() {
 }
 
 function handleClientKeydown(e) {
-  if (isEditingPrefs.value || showAddNoteModal.value) return
+  if (isEditingPrefs.value || showAddNoteModal.value || showAddResourceModal.value) return
+
+  // Alt+1-6 → switch tabs (use e.code for macOS compatibility — e.key gives ¡™£ etc.)
+  if (e.altKey && !e.metaKey && !e.ctrlKey && e.code?.startsWith('Digit')) {
+    const idx = parseInt(e.code.replace('Digit', '')) - 1
+    if (idx >= 0 && idx < TABS.length) {
+      e.preventDefault()
+      activeTab.value = TABS[idx]
+      return
+    }
+  }
 
   if ((e.metaKey || e.ctrlKey) && e.key === '1') {
     e.preventDefault()
@@ -297,12 +221,90 @@ function handleClientKeydown(e) {
   }
 }
 
+const revealedPasswords = ref({})
+
+const showAddResourceModal = ref(false)
+const resourceType = ref('url')
+const resourceTitle = ref('')
+const resourceUrl = ref('')
+const resourceUsername = ref('')
+const resourcePassword = ref('')
+const resourceNotes = ref('')
+
+function openAddResourceModal(typeVal) {
+  resourceType.value = typeVal
+  resourceTitle.value = ''
+  resourceUrl.value = ''
+  resourceUsername.value = ''
+  resourcePassword.value = ''
+  resourceNotes.value = ''
+  showAddResourceModal.value = true
+}
+
+async function submitNewResource() {
+  if (!resourceTitle.value.trim()) return
+  
+  await resourcesStore.add({
+    clientId: props.id,
+    type: resourceType.value,
+    title: resourceTitle.value.trim(),
+    url: resourceUrl.value.trim(),
+    username: resourceUsername.value.trim(),
+    password: resourcePassword.value.trim(),
+    notes: resourceNotes.value.trim()
+  })
+  
+  showAddResourceModal.value = false
+  ui.showToast(`${resourceType.value === 'url' ? 'Reference' : 'Credential'} resource added`, 'success')
+}
+
+async function deleteResource(id) {
+  ui.confirm('Are you sure you want to delete this resource?').then(approved => {
+    if (approved) {
+      resourcesStore.remove(id)
+      ui.showToast('Resource deleted', 'success')
+    }
+  })
+}
+
+function togglePassword(id) {
+  revealedPasswords.value[id] = !revealedPasswords.value[id]
+}
+
+function copyToClipboard(text, msg = 'Copied') {
+  navigator.clipboard.writeText(text)
+  ui.showToast(msg, 'success')
+}
+
+function deleteClient() {
+  ui.confirm(`Are you sure you want to delete client "${client.value?.name}"? All associated data will remain but the workspace profile will be removed.`).then(async approved => {
+    if (approved) {
+      await clientsStore.remove(props.id)
+      ui.showToast('Client deleted', 'success')
+      router.push('/work/clients')
+    }
+  })
+}
+
+const nowMs = ref(Date.now())
+let clockInterval = null
+
+const clientLocalTimeText = computed(() => {
+  const _ = nowMs.value
+  if (!client.value || !client.value.timezone) return ''
+  return getClientLocalTime(client.value.timezone)
+})
+
 onMounted(() => {
   window.addEventListener('keydown', handleClientKeydown)
+  clockInterval = setInterval(() => {
+    nowMs.value = Date.now()
+  }, 10000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleClientKeydown)
+  if (clockInterval) clearInterval(clockInterval)
 })
 </script>
 
@@ -319,10 +321,28 @@ onUnmounted(() => {
       <div class="flex items-start justify-between gap-6 flex-wrap">
         <div>
           <span class="overline text-ink-3">Workspace Dashboard</span>
-          <h1 class="font-serif text-3xl font-bold text-ink mt-1">{{ client.name }}</h1>
+          <h1 class="font-serif text-3xl font-bold text-ink mt-1 flex items-center gap-2">
+            {{ client.name }}
+            <span v-if="getClientRating"
+              class="text-xs font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-0.5 shrink-0"
+              title="Operational Score (Calculated from completed tasks ratio)"
+            >
+              <Star class="w-3.5 h-3.5 fill-current" /> {{ getClientRating }}
+            </span>
+            <span v-if="clientLocalTimeText"
+              class="text-xs font-semibold px-1.5 py-0.5 rounded bg-canvas border border-line text-ink-2 flex items-center gap-1 shrink-0"
+              title="Client's local time"
+            >
+              <Clock class="w-3.5 h-3.5 text-ink-3" /> {{ clientLocalTimeText }} Local
+            </span>
+          </h1>
         </div>
 
         <div class="flex gap-2">
+          <button @click="deleteClient"
+            class="btn-ghost !text-pri-critical hover:bg-pri-critical-bg font-semibold flex items-center gap-1.5">
+            <Trash2 class="w-4 h-4" /> Delete Client
+          </button>
           <button @click="startEditPrefs" class="btn-secondary">
             <User class="w-4 h-4" /> Edit Profile <span class="kbd ml-1.5 font-sans select-none">⌘1</span>
           </button>
@@ -365,12 +385,17 @@ onUnmounted(() => {
     </div>
 
     <!-- TAB NAVIGATION -->
-    <div class="border-b border-line flex gap-6 text-sm font-medium">
-      <button v-for="tab in ['overview', 'work', 'notes', 'invoices']" :key="tab" @click="activeTab = tab"
-        class="pb-3 capitalize transition-all border-b-2"
-        :class="activeTab === tab ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
-        {{ tab }}
-      </button>
+    <div class="border-b border-line flex items-center justify-between flex-wrap gap-2">
+      <div class="flex gap-6 text-sm font-medium flex-wrap">
+        <button v-for="(tab, i) in TABS" :key="tab" @click="activeTab = tab"
+          class="pb-3 capitalize transition-all border-b-2 flex items-center gap-1.5"
+          :class="activeTab === tab ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
+          {{ tab }}
+        </button>
+      </div>
+      <span class="text-[10px] text-ink-3 pb-3 select-none italic">Press <kbd
+          class="kbd !text-[9px] !px-1 !py-0">⌥1</kbd>–<kbd class="kbd !text-[9px] !px-1 !py-0">⌥6</kbd> to switch
+        tabs</span>
     </div>
 
     <!-- OVERVIEW TAB -->
@@ -411,21 +436,8 @@ onUnmounted(() => {
               <p class="font-medium text-ink">{{ client.preferredCommunication || 'Not specified' }}</p>
             </div>
             <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Technical Stack</span>
-              <p class="font-medium text-ink">
-                {{ client.technicalStack || 'Not specified' }}
-                <span v-if="client.techSavvy"
-                  class="ml-1 text-[10px] bg-pri-strategic-bg text-pri-strategic px-1.5 py-0.5 rounded border border-pri-strategic-bd/50 font-normal">Tech-savvy</span>
-              </p>
-            </div>
-            <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Pricing Sensitivity & Upcharges</span>
-              <p class="font-medium text-ink">
-                {{ client.pricingSensitivity || 'Not specified' }}
-                <span v-if="client.upchargePercentage > 0"
-                  class="ml-1 text-[10px] bg-pri-critical-bg text-pri-critical px-1.5 py-0.5 rounded border border-pri-critical-bd/50 font-normal">+{{
-                    client.upchargePercentage }}% Upcharge</span>
-              </p>
+              <span class="text-xs uppercase tracking-overline text-ink-3">Pricing Sensitivity</span>
+              <p class="font-medium text-ink">{{ client.pricingSensitivity || 'Not specified' }}</p>
             </div>
             <div class="space-y-1">
               <span class="text-xs uppercase tracking-overline text-ink-3">Acquisition Source</span>
@@ -445,8 +457,8 @@ onUnmounted(() => {
 
           <div class="pt-4 border-t border-line space-y-2">
             <span class="text-xs uppercase tracking-overline text-ink-3 block">Relationship Details</span>
-            <p class="text-sm text-ink-2 leading-relaxed whitespace-pre-line">{{ client.relationshipNotes || `No notes
-              added yet.` }}</p>
+            <p class="text-sm text-ink-2 leading-relaxed whitespace-pre-line">
+              {{ client.relationshipNotes || `No notes added yet.` }}</p>
           </div>
         </div>
 
@@ -606,184 +618,128 @@ onUnmounted(() => {
         hint="Generate a direct invoice or retainer log to track receivables." />
     </div>
 
-    <!-- PREFERENCES EDIT DIALOG -->
-    <div v-if="isEditingPrefs" @keydown.window.esc="isEditingPrefs = false"
-      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="isEditingPrefs = false"></div>
-      <div
-        class="relative w-full max-w-3xl card p-8 shadow-xl bg-surface z-50 animate-rise-in max-h-[85vh] overflow-y-auto space-y-6">
-        <div>
-          <div class="overline">Workspace Profile</div>
-          <h2 class="font-serif text-2xl mt-1">Edit Client Profile</h2>
-        </div>
+    <!-- REFERENCE TAB -->
+    <div v-else-if="activeTab === 'reference'" class="space-y-6">
+      <div class="flex items-center justify-between">
+        <h3 class="font-serif text-lg font-semibold text-ink">Reference Links & Folders</h3>
+        <button @click="openAddResourceModal('url')" class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
+          <Plus class="w-3.5 h-3.5" /> Add Link
+        </button>
+      </div>
 
-        <div class="space-y-6">
-          <!-- [ Basic Information ] -->
-          <div class="space-y-3">
-            <h3
-              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
-              Basic Information ]</h3>
-            <div class="grid grid-cols-2 gap-4 items-start">
-              <div class="v-field-group">
-                <input v-model="editForm.name" placeholder=" " class="v-field-input" required />
-                <label class="v-field-label">Client Contact Name *</label>
-              </div>
-              <div class="space-y-1">
-                <div class="v-field-group">
-                  <select v-model="editForm.timezone" @focus="focusedFields.timezone = true"
-                    @blur="focusedFields.timezone = false" class="v-field-select">
-                    <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
-                      {{ tz.label }}
-                    </option>
-                  </select>
-                  <span class="v-field-arrow">▼</span>
-                  <label
-                    :class="['v-field-label', (editForm.timezone || focusedFields.timezone) ? 'v-field-label--floating' : '', focusedFields.timezone ? 'v-field-label--floating-focused' : '']">Timezone</label>
-                </div>
-                <div v-if="getClientLocalTime(editForm.timezone)"
-                  class="text-[10px] text-pri-strategic font-semibold pl-3.5">
-                  Their Local Time: {{ getClientLocalTime(editForm.timezone) }}
-                </div>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4 items-start">
-              <div class="v-field-group">
-                <input v-model="editForm.companyName" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Company / Workspace Name</label>
-              </div>
-              <div class="v-field-group">
-                <select v-model="editForm.status" @focus="focusedFields.status = true"
-                  @blur="focusedFields.status = false" class="v-field-select font-semibold">
-                  <option v-for="(val, key) in clientsStore.STATUS_MAP" :key="key" :value="key">
-                    {{ val.label }}
-                  </option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (editForm.status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Client
-                  Status</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- [ Contact ] -->
-          <div class="space-y-3">
-            <h3
-              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
-              Contact ]</h3>
-            <div class="grid grid-cols-3 gap-4 items-start">
-              <div class="v-field-group">
-                <input v-model="editForm.email" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Email</label>
-              </div>
-              <div class="v-field-group">
-                <input v-model="editForm.phone" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Phone</label>
-              </div>
-              <div class="v-field-group">
-                <select v-model="editForm.preferredCommunication" @focus="focusedFields.comm = true"
-                  @blur="focusedFields.comm = false" class="v-field-select">
-                  <option value="Slack">Slack</option>
-                  <option value="Email">Email</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Teams">Microsoft Teams</option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (editForm.preferredCommunication || focusedFields.comm) ? 'v-field-label--floating' : '', focusedFields.comm ? 'v-field-label--floating-focused' : '']">Preferred
-                  Communication</label>
-              </div>
-            </div>
-            <div class="v-field-group">
-              <input v-model="editForm.address" placeholder=" " class="v-field-input" />
-              <label class="v-field-label">Billing Address</label>
-            </div>
-          </div>
-
-          <!-- [ Business Context ] -->
-          <div class="space-y-3">
-            <h3
-              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
-              Business Context & Technical Details ]</h3>
-            <div class="grid grid-cols-2 gap-4 items-start">
-              <div class="v-field-group">
-                <select v-model="editForm.clientSource" @focus="focusedFields.source = true"
-                  @blur="focusedFields.source = false" class="v-field-select">
-                  <option value="Upwork">Upwork</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Cold Email">Cold Email</option>
-                  <option value="LinkedIn">LinkedIn</option>
-                  <option value="Twitter/X">Twitter/X</option>
-                  <option value="Other">Other</option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (editForm.clientSource || focusedFields.source) ? 'v-field-label--floating' : '', focusedFields.source ? 'v-field-label--floating-focused' : '']">Acquisition
-                  Source</label>
-              </div>
-              <div class="v-field-group">
-                <select v-model="editForm.pricingSensitivity" @focus="focusedFields.sensitivity = true"
-                  @blur="focusedFields.sensitivity = false" class="v-field-select">
-                  <option value="Low">Low (Value-driven)</option>
-                  <option value="Medium">Medium (Budget-aware)</option>
-                  <option value="High">High (Cost-focused)</option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (editForm.pricingSensitivity || focusedFields.sensitivity) ? 'v-field-label--floating' : '', focusedFields.sensitivity ? 'v-field-label--floating-focused' : '']">Pricing
-                  Sensitivity</label>
-              </div>
+      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div v-for="res in clientReferences" :key="res.id"
+          class="card p-5 border bg-surface flex flex-col justify-between hover:border-line-2 transition-all duration-300">
+          <div class="space-y-2">
+            <div class="flex justify-between items-start">
+              <span
+                class="text-[9px] uppercase tracking-wider font-bold text-ink-3 bg-canvas border px-2 py-0.5 rounded">
+                Reference
+              </span>
+              <button @click="deleteResource(res.id)" class="text-ink-3 hover:text-pri-critical p-1">
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 items-start">
-              <div class="v-field-group">
-                <input v-model="editForm.technicalStack" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Technical Stack</label>
-              </div>
-              <div class="v-field-group">
-                <input type="number" v-model="editForm.upchargePercentage" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Upcharge %</label>
-              </div>
-            </div>
+            <h4 class="font-serif text-base text-ink font-semibold flex items-center gap-1.5">
+              <LinkIcon class="w-4 h-4 text-ink-3 shrink-0" />
+              {{ res.title }}
+            </h4>
 
-            <div class="v-field-group">
-              <input v-model="editForm.tagsString" placeholder=" " class="v-field-input" />
-              <label class="v-field-label">Client Tags (comma separated)</label>
-            </div>
+            <p v-if="res.notes" class="text-xs text-ink-2 leading-relaxed">{{ res.notes }}</p>
 
-            <div class="pt-1">
-              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-2 font-semibold">Standard Tags
-                Quick Add</label>
-              <div class="flex flex-wrap gap-1.5">
-                <button v-for="tag in predefinedTagOptions" :key="tag" @click="togglePredefinedTagInEdit(tag)"
-                  type="button" class="text-[10px] px-2 py-1 rounded-lg border transition-all" :class="editForm.tagsString.split(',').map(t => t.trim()).includes(tag)
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold'
-                    : 'bg-canvas text-ink-3 border-line hover:text-ink hover:border-line-2'">
-                  {{ tag }}
-                </button>
-              </div>
+            <div v-if="res.url" class="pt-2">
+              <a :href="res.url" target="_blank"
+                class="text-xs font-mono text-pri-strategic hover:underline inline-flex items-center gap-1 truncate max-w-full">
+                {{ res.url }}
+                <ExternalLink class="w-3 h-3" />
+              </a>
             </div>
-
-            <div class="v-field-group">
-              <textarea v-model="editForm.relationshipNotes" placeholder=" "
-                class="v-field-input min-h-[80px] resize-none"></textarea>
-              <label class="v-field-label">Relationship Context & Notes</label>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex justify-between items-center pt-2">
-          <button @click="deleteClient"
-            class="btn-ghost !text-pri-critical hover:bg-pri-critical-bg font-semibold flex items-center gap-1">
-            <Trash2 class="w-3.5 h-3.5" /> Delete Client
-          </button>
-          <div class="flex gap-3">
-            <button @click="isEditingPrefs = false" class="btn-ghost">Cancel</button>
-            <button @click="savePrefs" class="btn-primary">Save Changes</button>
           </div>
         </div>
       </div>
+      <EmptyState v-else title="No reference links"
+        hint="Link references by clicking 'Add Link' above." />
     </div>
+
+    <!-- CREDENTIALS TAB -->
+    <div v-else-if="activeTab === 'credentials'" class="space-y-6">
+      <div class="flex items-center justify-between">
+        <h3 class="font-serif text-lg font-semibold text-ink">Credentials Vault</h3>
+        <button @click="openAddResourceModal('credentials')" class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
+          <Plus class="w-3.5 h-3.5" /> Add Credential
+        </button>
+      </div>
+
+      <div v-if="clientCredentials.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div v-for="res in clientCredentials" :key="res.id"
+          class="card p-5 border bg-surface flex flex-col justify-between hover:border-line-2 transition-all duration-300">
+          <div class="space-y-2">
+            <div class="flex justify-between items-start">
+              <span
+                class="text-[9px] uppercase tracking-wider font-bold text-ink-3 bg-canvas border px-2 py-0.5 rounded">
+                Account/Key
+              </span>
+              <button @click="deleteResource(res.id)" class="text-ink-3 hover:text-pri-critical p-1">
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <h4 class="font-serif text-base text-ink font-semibold flex items-center gap-1.5">
+              <Key class="w-4 h-4 text-ink-3 shrink-0" />
+              {{ res.title }}
+            </h4>
+
+            <p v-if="res.notes" class="text-xs text-ink-2 leading-relaxed">{{ res.notes }}</p>
+
+            <div class="space-y-2 pt-2 text-xs font-mono bg-canvas/40 p-3 rounded-xl border border-line">
+              <div v-if="res.url" class="pb-1.5 mb-1.5 border-b border-line/40 flex justify-between items-center">
+                <span class="text-ink-3 text-[10px]">URL</span>
+                <a :href="res.url" target="_blank"
+                  class="text-pri-strategic hover:underline inline-flex items-center gap-1 truncate max-w-[200px]">
+                  {{ res.url }}
+                  <ExternalLink class="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-ink-3 text-[10px]">USER</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-ink font-semibold">{{ res.username }}</span>
+                  <button @click="copyToClipboard(res.username)" class="text-ink-3 hover:text-ink">
+                    <Copy class="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+              <div class="flex justify-between items-center border-t border-line/40 pt-1.5">
+                <span class="text-ink-3 text-[10px]">PASS</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-ink font-semibold">
+                    {{ revealedPasswords[res.id] ? res.password : '••••••••' }}
+                  </span>
+                  <button @click="togglePassword(res.id)" class="text-ink-3 hover:text-ink">
+                    <EyeOff v-if="revealedPasswords[res.id]" class="w-3.5 h-3.5" />
+                    <Eye v-else class="w-3.5 h-3.5" />
+                  </button>
+                  <button @click="copyToClipboard(res.password)" class="text-ink-3 hover:text-ink">
+                    <Copy class="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <EmptyState v-else title="No credentials stored"
+        hint="Securely log access details by clicking 'Add Credential' above." />
+    </div>
+
+    <!-- EDIT CLIENT POPUP -->
+    <ClientPopup
+      v-if="isEditingPrefs"
+      :client="client"
+      @close="isEditingPrefs = false"
+      @saved="handleClientSaved"
+    />
 
     <!-- ADD NOTE MODAL -->
     <div v-if="showAddNoteModal" @keydown.window.esc="showAddNoteModal = false"
@@ -806,6 +762,57 @@ onUnmounted(() => {
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddNoteModal = false" class="btn-ghost">Cancel</button>
           <button @click="submitNewNote" class="btn-primary">Create Document</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD RESOURCE MODAL -->
+    <div v-if="showAddResourceModal" @keydown.window.esc="showAddResourceModal = false"
+      class="fixed inset-0 z-40 flex items-center justify-center px-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddResourceModal = false"></div>
+      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
+        <div>
+          <div class="overline">New Vault Resource</div>
+          <h2 class="font-serif text-2xl mt-1">
+            {{ resourceType === 'url' ? 'Add Reference Link' : 'Add Credential' }}
+          </h2>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Title -->
+          <div class="v-field-group">
+            <input type="text" v-model="resourceTitle" placeholder=" " class="v-field-input text-sm" id="resource-title" />
+            <label for="resource-title" class="v-field-label text-xs">Title/System Name</label>
+          </div>
+
+          <!-- URL -->
+          <div class="v-field-group">
+            <input type="text" v-model="resourceUrl" placeholder=" " class="v-field-input text-sm" id="resource-url" />
+            <label for="resource-url" class="v-field-label text-xs">URL/Folder Link</label>
+          </div>
+
+          <!-- Credential specific fields -->
+          <div v-if="resourceType === 'credentials'" class="grid grid-cols-2 gap-4">
+            <div class="v-field-group">
+              <input type="text" v-model="resourceUsername" placeholder=" " class="v-field-input text-sm" id="resource-username" />
+              <label for="resource-username" class="v-field-label text-xs">Username/Email</label>
+            </div>
+            <div class="v-field-group">
+              <input type="text" v-model="resourcePassword" placeholder=" " class="v-field-input font-mono text-sm" id="resource-password" />
+              <label for="resource-password" class="v-field-label text-xs">Password</label>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="v-field-group">
+            <textarea v-model="resourceNotes" placeholder=" " class="v-field-input min-h-[80px] resize-none text-sm" id="resource-notes"></textarea>
+            <label for="resource-notes" class="v-field-label text-xs">Description/Notes (optional)</label>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button @click="showAddResourceModal = false" class="btn-ghost">Cancel</button>
+          <button @click="submitNewResource" class="btn-primary">Add Resource</button>
         </div>
       </div>
     </div>

@@ -261,6 +261,41 @@ export async function createClientDriveFolder(clientName, rootPathConfig) {
   return clientFolderId;
 }
 
+/**
+ * Create (or find) a client subfolder inside an already-known parent folder ID.
+ * Use this when the user has pasted an existing Drive folder URL in Settings —
+ * the parent folder ID comes from that URL so we skip name-based root traversal.
+ * Uses the broader drive scope so we can write inside user-owned folders.
+ */
+export async function createClientDriveFolderInParent(clientName, parentFolderId) {
+  const scope = "https://www.googleapis.com/auth/drive";
+  const token = await ensureToken({ prompt: "", scope });
+
+  let clientFolderId = await findFolderByName(token, clientName, parentFolderId);
+  if (!clientFolderId) {
+    clientFolderId = await createFolder(token, clientName, parentFolderId);
+  }
+
+  return clientFolderId;
+}
+
+/**
+ * Extract a folder ID from a Google Drive folder URL.
+ * Supports:
+ *   https://drive.google.com/drive/folders/FOLDER_ID
+ *   https://drive.google.com/drive/u/0/folders/FOLDER_ID
+ * Or a bare folder ID string.
+ */
+export function extractFolderIdFromUrl(url) {
+  if (!url) return null;
+  const trimmed = url.trim();
+  const match = trimmed.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  // Treat bare alphanumeric string as a direct folder ID
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(trimmed)) return trimmed;
+  return null;
+}
+
 export async function autoBackup() {
   if (!isConnected()) return;
   const mode = localStorage.getItem("atrium.sync.mode") || "auto";

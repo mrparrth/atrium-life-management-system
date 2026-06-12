@@ -67,7 +67,7 @@ const focusItems = computed(() => {
   return itemsStore.items.filter(item => {
     if (itemsStore.isCompleted(item.status)) return false
     if (item.snoozedUntil && new Date(item.snoozedUntil) > new Date()) return false
-    return item.status === 'in_progress' || item.dueDate === todayStr || (item.important && item.urgent)
+    return item.status === 'in_progress' || !item.dueDate || item.dueDate === todayStr || (item.important && item.urgent)
   }).slice(0, 5)
 })
 
@@ -96,8 +96,9 @@ const selectedClientName = computed(() => {
 })
 const filteredClientsForDropdown = computed(() => {
   const q = clientSearchQuery.value.toLowerCase().trim()
-  if (!q) return clientsStore.items
-  return clientsStore.items.filter(c => c.name.toLowerCase().includes(q))
+  const activeClients = clientsStore.items.filter(c => c.status !== 'inactive')
+  if (!q) return activeClients
+  return activeClients.filter(c => c.name.toLowerCase().includes(q))
 })
 function selectClientFromDropdown(clientIdVal) {
   selectedClient.value = clientIdVal
@@ -115,11 +116,9 @@ async function addQuickWork() {
   await itemsStore.add({
     title: quickTitle.value.trim(),
     clientId: selectedClient.value,
-    important: true,
-    urgent: true,
     dueDate: todayStr,
     billingType: 'fixed',
-    status: 'critical'
+    status: 'in_progress'
   })
   quickTitle.value = ''
   selectedClient.value = ''
@@ -143,7 +142,8 @@ onMounted(async () => {
           <Calendar class="w-3.5 h-3.5" />
           <span>Sync Calendar</span>
           <RefreshCw class="w-3.5 h-3.5 text-ink-3" :class="{ 'animate-spin': syncingCalendar }" />
-          <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
+          <span
+            class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
             Sync Google Calendar
             <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
           </span>

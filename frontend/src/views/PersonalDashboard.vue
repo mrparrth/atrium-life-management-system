@@ -85,12 +85,10 @@ async function openDailyJournal() {
         <button class="btn-ghost" @click="openDailyJournal" data-testid="dash-journal-btn">
           <BookOpen class="w-4 h-4" /> Journal
         </button>
-        <button class="btn-secondary" @click="ui.openCommand" data-testid="dash-search-btn">
-          Search
-          <span class="ml-1 kbd">⌘K</span>
-        </button>
+
         <button class="btn-primary" @click="ui.openQuickCapture" data-testid="dash-capture-btn">
-          <Plus class="w-4 h-4" /> Capture <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
+          <Plus class="w-4 h-4" /> Capture <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
@@ -187,7 +185,7 @@ async function openDailyJournal() {
             :data-testid="`resurface-note-${n.id}`">
             <div class="flex items-center gap-2">
               <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
-                }}</span>
+              }}</span>
             </div>
             <div class="font-serif text-lg mt-1.5">{{ n.title }}</div>
             <p class="text-sm text-ink-2 mt-1 line-clamp-2">{{ n.body }}</p>
@@ -197,7 +195,7 @@ async function openDailyJournal() {
             :data-testid="`resurface-bookmark-${b.id}`">
             <div class="flex items-center gap-2">
               <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{ fromNow(b.lastViewedAt)
-                }}</span>
+              }}</span>
             </div>
             <div class="font-serif text-lg mt-1.5">{{ b.title }}</div>
             <p class="text-sm text-ink-2 mt-1 truncate">{{ b.url }}</p>
@@ -217,7 +215,7 @@ async function openDailyJournal() {
           <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
           <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
             fromNow(lastWeeklyReview.createdAt)
-            }}</p>
+          }}</p>
         </div>
         <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
       </div>

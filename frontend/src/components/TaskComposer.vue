@@ -20,6 +20,8 @@ const scheduledDate = ref(props.initialTask?.scheduledDate || '')
 const dueDate = ref(props.initialTask?.dueDate || '')
 const important = ref(props.initialTask?.important || false)
 const urgent = ref(props.initialTask?.urgent || false)
+const completedAt = ref(props.initialTask?.completedAt || '')
+const isDone = ref(props.initialTask?.status === 'done')
 const titleEl = ref(null)
 
 watch(titleEl, el => el?.focus())
@@ -35,6 +37,8 @@ async function save() {
   }
 
   if (props.initialTask) {
+    // Include completedAt if editing a done task
+    if (isDone.value) payload.completedAt = completedAt.value || null
     await tasks.update(props.initialTask.id, payload)
     ui.showToast('Task updated', 'success')
     emit('updated', props.initialTask.id)
@@ -78,6 +82,13 @@ async function save() {
         <input type="date" v-model="dueDate" class="input-block text-sm" data-testid="task-due-input" />
       </label>
     </div>
+
+    <!-- Closed Date — only visible when editing a completed task -->
+    <label v-if="isDone" class="block">
+      <span class="overline block mb-1 text-pri-strategic">Closed Date</span>
+      <input type="date" v-model="completedAt" class="input-block text-sm font-mono"
+        data-testid="task-closed-date-input" />
+    </label>
 
     <label class="block">
       <span class="overline block mb-1">Project</span>

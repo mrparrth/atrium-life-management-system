@@ -23,6 +23,7 @@ export const useTasksStore = defineStore('tasks', () => {
       urgent: !!payload.urgent,
       status: 'open',
       tags: payload.tags || [],
+      completedAt: payload.completedAt || null,
       createdAt: now(),
       updatedAt: now(),
       lastViewedAt: now(),
@@ -35,6 +36,13 @@ export const useTasksStore = defineStore('tasks', () => {
   async function update(id, patch) {
     const t = items.value.find(x => x.id === id)
     if (!t) return
+    // Auto-set completedAt when marking done, clear when reopening
+    if (patch.status === 'done' && t.status !== 'done' && !('completedAt' in patch)) {
+      patch = { ...patch, completedAt: new Date().toISOString().slice(0, 10) }
+    }
+    if (patch.status === 'open' && t.status === 'done' && !('completedAt' in patch)) {
+      patch = { ...patch, completedAt: null }
+    }
     Object.assign(t, patch, { updatedAt: now() })
     await db.tasks.put(plain(t))
   }

@@ -24,6 +24,7 @@ The workspace is organized as a monorepo split into standard client-server direc
 - **Status Pipeline**: Tasks are tracked via a direct status tag system (**Waiting for Feedback**, **On Hold**, **Ask for Next Milestone**, **Pending Closure**, **Critical**, and **In Progress**).
 - **Client Local Time Integration**: Work item cards dynamically compute and render target clients' active local times (e.g. `Client · 11:45 AM Local`) to coordinate healthy communication windows.
 - **Drive Link Integration**: One-click Google Drive directory attachments linked directly to specific task deliverables.
+- **Client Workspace Filtering**: Client association dropdowns throughout the app (tasks, resources, notes, invoices, etc.) only display active and "do not follow up" clients. Inactive clients are hidden from these selectors; if a client is not visible, navigate to their profile in the Client Directory and make them active (e.g. change status to normal, prospect, or important) first.
 
 ### 3. Sales Funnel & Opportunities Funnel
 - **Sales board**: Track potential opportunities across standard stages (Lead, Discovery, Proposal Sent, Negotiation, Won, Lost, Onboarding) defaulting to USD (`$`) indicators.

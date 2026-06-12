@@ -1,41 +1,25 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useUIStore } from '@/stores/ui'
-import { createClientDriveFolder } from '@/services/drive'
+import { useSettingsStore } from '@/stores/settings'
 import PageHeader from '@/components/PageHeader.vue'
-import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import ClientPopup from '@/components/work/ClientPopup.vue'
 import {
-  Plus, User, Heart, MessageSquare, Clock, ArrowRight,
-  ShieldAlert, Star, HardDrive, Search, LayoutGrid, List,
-  SlidersHorizontal, ArrowUpDown
+  Plus, User, MessageSquare, Star, Search, LayoutGrid, List,
+  SlidersHorizontal
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
 const router = useRouter()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
+const settings = useSettingsStore()
 
 const showAddModal = ref(false)
-const clientName = ref('')
-const clientCompanyName = ref('')
-const clientAddress = ref('')
-const clientEmail = ref('')
-const clientPhone = ref('')
-const clientTimezone = ref('America/Los_Angeles')
-const clientComm = ref('Slack')
-const clientSensitivity = ref('Medium')
-const clientSource = ref('Upwork')
-const clientTagsString = ref('')
-const clientTechSavvy = ref(false)
-const clientUpcharge = ref(0)
-const createDriveFolder = ref(false)
-const clientStatus = ref('normal')
-const focusedFields = ref({})
-
 
 const timezoneOptions = [
   { value: 'Pacific/Honolulu', label: '(GMT-10.0) HST · Honolulu' },
@@ -84,112 +68,6 @@ function getClientLocalTime(tzName) {
   }
 }
 
-const predefinedTagOptions = [
-  'tech-savvy', 'slow-communication', 'slow-payer',
-  'high-priority', 'scope-creeper', 'friendly',
-  'demanding', 'agency', 'startup', 'clear-brief'
-]
-
-const surchargeTagOptions = [
-  '10%', '20%', '30%', '40%', '50%', '75%', '100%'
-]
-
-function togglePredefinedTag(tag) {
-  let currentTags = clientTagsString.value
-    ? clientTagsString.value.split(',').map(t => t.trim()).filter(Boolean)
-    : []
-  if (currentTags.includes(tag)) {
-    currentTags = currentTags.filter(t => t !== tag)
-  } else {
-    if (tag.endsWith('%')) {
-      currentTags = currentTags.filter(t => !t.endsWith('%'))
-    }
-    currentTags.push(tag)
-  }
-  clientTagsString.value = currentTags.join(', ')
-}
-
-function addPredefinedTagFromDropdown(event) {
-  const tag = event.target.value
-  if (!tag) return
-  togglePredefinedTag(tag)
-  event.target.value = ''
-}
-
-async function createClient() {
-  if (!clientCompanyName.value.trim()) return
-
-  // Parse tags
-  const tags = clientTagsString.value
-    ? clientTagsString.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
-    : []
-
-  // Extract upcharge percentage from tags ending in %
-  let upcharge = 0
-  for (const tag of tags) {
-    if (tag.endsWith('%')) {
-      const val = parseInt(tag.slice(0, -1), 10)
-      if (!isNaN(val)) {
-        upcharge = val
-        break
-      }
-    }
-  }
-
-  // Check if Drive folder creation was selected
-  let folderId = ''
-  if (createDriveFolder.value) {
-    const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
-    ui.showToast('Connecting to Google Drive...', 'info')
-    try {
-      folderId = await createClientDriveFolder(clientName.value.trim(), rootDir)
-    } catch (e) {
-      ui.showToast(`Failed to create Drive folder: ${e.message}`, 'error')
-    }
-  }
-
-  const created = await clientsStore.add({
-    name: clientName.value.trim(),
-    companyName: clientCompanyName.value.trim(),
-    address: clientAddress.value.trim(),
-    email: clientEmail.value.trim(),
-    phone: clientPhone.value.trim(),
-    timezone: clientTimezone.value,
-    preferredCommunication: clientComm.value,
-    technicalStack: '',
-    pricingSensitivity: clientSensitivity.value,
-    relationshipNotes: '',
-    tags,
-    techSavvy: clientTechSavvy.value,
-    upchargePercentage: upcharge,
-    clientSource: clientSource.value.trim(),
-    driveFolderId: folderId,
-    status: clientStatus.value
-  })
-
-  clientName.value = ''
-  clientCompanyName.value = ''
-  clientAddress.value = ''
-  clientEmail.value = ''
-  clientPhone.value = ''
-  clientTagsString.value = ''
-  clientTechSavvy.value = false
-  clientUpcharge.value = 0
-  createDriveFolder.value = false
-  clientStatus.value = 'normal'
-  showAddModal.value = false
-  ui.showToast('Client workspace created', 'success')
-  if (created && created.id) {
-    router.push(`/work/clients/${created.id}`)
-  }
-}
-
-function autoGrowTextarea(event) {
-  const el = event.target
-  el.style.height = 'auto'
-  el.style.height = `${el.scrollHeight}px`
-}
-
 const itemsStore = useWorkItemsStore()
 
 function handleGlobalKeydown(e) {
@@ -201,6 +79,10 @@ function handleGlobalKeydown(e) {
 onMounted(async () => {
   await clientsStore.load()
   await itemsStore.load()
+  await settings.load()
+  viewMode.value = settings.get('clientsViewMode', 'grid')
+  sortBy.value = settings.get('clientsSortBy', 'updatedAt')
+  statusFilters.value = settings.get('clientsStatusFilters', ['important', 'normal', 'recently_active', 'prospect'])
   window.addEventListener('keydown', handleGlobalKeydown)
 })
 
@@ -221,10 +103,69 @@ function getClientTotalCharged(client) {
     .reduce((sum, item) => sum + (item.charged || 0), 0)
 }
 
+function getClientRating(client) {
+  const clientItems = itemsStore.items.filter(item => item.clientId === client.id)
+  const ratedItems = clientItems.filter(item => item.rating && item.rating > 0)
+  if (ratedItems.length === 0) return 0
+  const totalRating = ratedItems.reduce((sum, item) => sum + item.rating, 0)
+  return Number((totalRating / ratedItems.length).toFixed(1))
+}
+
+const COMPLETED_STATUSES = ['done', 'completed', 'complete', 'dropped']
+
+function getClientTaskCounts(client) {
+  const clientItems = itemsStore.items.filter(item => item.clientId === client.id)
+  const completed = clientItems.filter(item => COMPLETED_STATUSES.includes(item.status)).length
+  const active = clientItems.length - completed
+  return { active, completed, total: clientItems.length }
+}
+
 const searchQuery = ref('')
-const statusFilter = ref('all')
 const sortBy = ref('updatedAt')
-const viewMode = ref('grid') // 'grid' | 'list'
+const viewMode = ref('grid') // 'grid' | 'list' — loaded from DB on mount
+
+// Multi-select status filtering
+const statusFilters = ref(['important', 'normal', 'recently_active', 'prospect'])
+const showStatusFilterDropdown = ref(false)
+
+const isAllSelected = computed(() => {
+  return statusFilters.value.length === Object.keys(clientsStore.STATUS_MAP).length
+})
+
+function toggleAllStatuses() {
+  if (isAllSelected.value) {
+    statusFilters.value = []
+  } else {
+    statusFilters.value = Object.keys(clientsStore.STATUS_MAP)
+  }
+}
+
+function toggleStatusFilter(key) {
+  const idx = statusFilters.value.indexOf(key)
+  if (idx > -1) {
+    statusFilters.value.splice(idx, 1)
+  } else {
+    statusFilters.value.push(key)
+  }
+}
+
+const selectedStatusLabel = computed(() => {
+  const len = statusFilters.value.length
+  const total = Object.keys(clientsStore.STATUS_MAP).length
+  if (len === total) return 'All Statuses'
+  if (len === 0) return 'None Selected'
+  if (len === 1) return clientsStore.STATUS_MAP[statusFilters.value[0]]?.label || statusFilters.value[0]
+  return `${len} Selected`
+})
+
+// Settings Watchers
+watch(sortBy, async (newVal) => {
+  await settings.set('clientsSortBy', newVal)
+})
+
+watch(statusFilters, async (newVal) => {
+  await settings.set('clientsStatusFilters', newVal)
+}, { deep: true })
 
 const filteredClients = computed(() => {
   let list = [...clientsStore.items]
@@ -235,13 +176,11 @@ const filteredClients = computed(() => {
     list = list.filter(c => c.name.toLowerCase().includes(q) || (c.companyName && c.companyName.toLowerCase().includes(q)))
   }
 
-  // Apply status filter
-  if (statusFilter.value !== 'all') {
-    list = list.filter(c => {
-      const s = c.status === 'active' ? 'normal' : (c.status || 'normal')
-      return s === statusFilter.value
-    })
-  }
+  // Apply status filters
+  list = list.filter(c => {
+    const s = c.status === 'active' ? 'normal' : (c.status || 'normal')
+    return statusFilters.value.includes(s)
+  })
 
   // Apply sorting
   list.sort((a, b) => {
@@ -258,12 +197,33 @@ const filteredClients = computed(() => {
       return getClientTotalCharged(b) - getClientTotalCharged(a)
     }
     if (sortBy.value === 'rating_desc') {
-      return (b.rating || 0) - (a.rating || 0)
+      return getClientRating(b) - getClientRating(a)
     }
     return 0
   })
 
   return list
+})
+
+const handleKeyDown = (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+    e.preventDefault()
+    showAddModal.value = true
+  }
+}
+
+function handleClientSaved(created) {
+  if (created && created.id && !created.deleted) {
+    router.push(`/work/clients/${created.id}`)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -294,15 +254,40 @@ const filteredClients = computed(() => {
       <!-- Filters & Sorting Controls -->
       <div class="flex items-center gap-3 flex-wrap">
         <!-- Status Filter select -->
-        <div class="flex items-center gap-1.5">
-          <span class="text-xs text-ink-3 font-medium hidden sm:inline">Status:</span>
-          <select v-model="statusFilter"
-            class="bg-canvas border border-line rounded-xl px-3 py-1.5 text-xs text-ink-2 font-semibold focus:outline-none cursor-pointer">
-            <option value="all">All Statuses</option>
-            <option v-for="(val, key) in clientsStore.STATUS_MAP" :key="key" :value="key">
-              {{ val.label }}
-            </option>
-          </select>
+        <div class="flex items-center gap-1.5 relative">
+          <span class="text-xs text-ink-3 font-medium hidden sm:inline">Statuses:</span>
+          <button type="button" @click.stop="showStatusFilterDropdown = !showStatusFilterDropdown"
+            class="bg-canvas border border-line rounded-xl px-3 py-1.5 text-xs text-ink-2 font-semibold flex items-center gap-1.5 focus:outline-none hover:bg-canvas/60 transition-all cursor-pointer">
+            <span class="text-pri-strategic font-bold">
+              {{ selectedStatusLabel }}
+            </span>
+            <span class="text-[8px] text-ink-3">▼</span>
+          </button>
+
+          <!-- Dropdown Backdrop -->
+          <div v-if="showStatusFilterDropdown" class="fixed inset-0 z-40"
+            @click.stop="showStatusFilterDropdown = false">
+          </div>
+
+          <!-- Dropdown Content -->
+          <div v-if="showStatusFilterDropdown"
+            class="absolute right-0 top-full mt-1.5 w-56 bg-surface border border-line rounded-xl shadow-lg z-50 p-2 space-y-1 animate-fade-in">
+            <label
+              class="flex items-center gap-2 px-2 py-1.5 hover:bg-canvas/50 rounded-lg cursor-pointer text-xs font-semibold text-ink select-none">
+              <input type="checkbox" :checked="isAllSelected" @change="toggleAllStatuses"
+                class="rounded border-line text-pri-strategic focus:ring-pri-strategic/20 cursor-pointer" />
+              <span>All Statuses</span>
+            </label>
+            <hr class="border-line/45 my-1" />
+            <label v-for="(val, key) in clientsStore.STATUS_MAP" :key="key"
+              class="flex items-center gap-2 px-2 py-1.5 hover:bg-canvas/50 rounded-lg cursor-pointer text-xs text-ink-2 select-none">
+              <input type="checkbox" :checked="statusFilters.includes(key)" @change="toggleStatusFilter(key)"
+                class="rounded border-line text-pri-strategic focus:ring-pri-strategic/20 cursor-pointer" />
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0" :class="val.color">
+                {{ val.label }}
+              </span>
+            </label>
+          </div>
         </div>
 
         <!-- Sort By select -->
@@ -325,11 +310,13 @@ const filteredClients = computed(() => {
 
         <!-- View Mode Toggle -->
         <div class="flex items-center bg-canvas border border-line p-0.5 rounded-xl">
-          <button @click="viewMode = 'grid'" class="p-1.5 rounded-lg transition-all"
+          <button @click="viewMode = 'grid'; settings.set('clientsViewMode', 'grid')"
+            class="p-1.5 rounded-lg transition-all"
             :class="viewMode === 'grid' ? 'bg-surface shadow-sm text-pri-strategic' : 'text-ink-3 hover:text-ink'">
             <LayoutGrid class="w-4 h-4" />
           </button>
-          <button @click="viewMode = 'list'" class="p-1.5 rounded-lg transition-all"
+          <button @click="viewMode = 'list'; settings.set('clientsViewMode', 'list')"
+            class="p-1.5 rounded-lg transition-all"
             :class="viewMode === 'list' ? 'bg-surface shadow-sm text-pri-strategic' : 'text-ink-3 hover:text-ink'">
             <List class="w-4 h-4" />
           </button>
@@ -342,40 +329,31 @@ const filteredClients = computed(() => {
         <!-- Grid View -->
         <div v-if="viewMode === 'grid'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
           <div v-for="client in filteredClients" :key="client.id" @click="router.push(`/work/clients/${client.id}`)"
-            class="card p-5 border hover:border-line-2 cursor-pointer transition-all duration-300 flex flex-col justify-between group">
+            class="card p-4 border border-line/60 hover:border-line cursor-pointer transition-all duration-200 flex flex-col justify-between group hover:shadow-md hover:-translate-y-px"
+            :class="client.status === 'important' ? 'border-l-2 border-l-emerald-500/50' : ''">
             <div>
-              <div class="flex items-center justify-between gap-2 mb-2.5">
-                <span class="text-xs uppercase tracking-overline text-ink-3 flex items-center gap-1">
-                  <User class="w-3.5 h-3.5" /> {{ client.clientSource || '' }}
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <span class="text-[10px] uppercase tracking-overline text-ink-3 flex items-center gap-1">
+                  <User class="w-3 h-3 text-ink-2" /> {{ client.clientSource || '' }}
                 </span>
                 <div class="flex items-center gap-1.5">
-                  <span v-if="client.upchargePercentage > 0"
-                    class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-pri-critical-bg text-pri-critical border border-pri-critical-bd shrink-0">
-                    +{{ client.upchargePercentage }}% Upcharge
-                  </span>
-                  <span v-if="client.rating"
+                  <span v-if="getClientRating(client)"
                     class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-0.5 shrink-0">
-                    <Star class="w-2.5 h-2.5 fill-current" /> {{ client.rating }}
+                    <Star class="w-2.5 h-2.5 fill-current" /> {{ getClientRating(client) }}
                   </span>
                   <span class="text-[9px] uppercase tracking-overline font-bold px-2 py-0.5 rounded border shrink-0"
                     :class="clientsStore.getStatusStyle(client.status).color">
                     {{ clientsStore.getStatusStyle(client.status).label }}
                   </span>
-                  <span class="text-[9px] uppercase tracking-overline font-bold px-2 py-0.5 rounded border shrink-0"
-                    :class="getHealthStatus(client).class">
-                    {{ getHealthStatus(client).label }}
-                  </span>
                 </div>
               </div>
 
               <h3
-                class="font-serif text-lg font-semibold text-ink group-hover:text-ink transition-colors flex items-center justify-between gap-4">
-                <span class="flex items-center gap-1.5 flex-wrap">
+                class="font-serif text-base font-semibold text-ink group-hover:text-ink transition-colors flex items-center justify-between gap-3">
+                <span class="flex items-center gap-1.5 flex-wrap leading-snug">
                   {{ client.name }}
-                  <span v-if="client.techSavvy"
-                    class="text-[9px] bg-pri-strategic-bg text-pri-strategic px-1.5 py-0.5 rounded-full border border-pri-strategic-bd/50 font-sans font-normal">Tech-savvy</span>
                 </span>
-                <span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono text-sm shrink-0"
+                <span class="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-sm shrink-0"
                   title="Total Task Scope Charges">
                   ${{ getClientTotalCharged(client).toLocaleString() }}
                 </span>
@@ -393,14 +371,28 @@ const filteredClients = computed(() => {
               </div>
             </div>
 
-            <div class="mt-4 pt-3 border-t border-line/40 flex items-center justify-between text-xs text-ink-3">
-              <span class="flex items-center gap-1.5">
-                <MessageSquare class="w-3.5 h-3.5 text-ink-3 shrink-0" /> {{ client.preferredCommunication }} · {{
-                  client.timezone }}
+            <div class="mt-3 pt-2.5 border-t border-line/30 flex items-center justify-between gap-2">
+              <span class="flex items-center gap-1 text-ink-2 min-w-0">
+                <MessageSquare class="w-3 h-3 text-ink-2 shrink-0" />
+                <span class="text-[10px] text-ink-3 truncate">{{ client.timezone }}</span>
                 <span v-if="getClientLocalTime(client.timezone)"
-                  class="text-[10px] text-pri-strategic font-semibold ml-0.5">
+                  class="text-[10px] text-pri-strategic font-semibold shrink-0">
                   ({{ getClientLocalTime(client.timezone) }})
                 </span>
+              </span>
+              <!-- Task Counts -->
+              <span class="flex items-center gap-1 shrink-0">
+                <span v-if="getClientTaskCounts(client).active > 0"
+                  class="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded border bg-blue-500/8 text-blue-500/80 border-blue-500/15">
+                  <span class="w-1 h-1 rounded-full bg-blue-400/70 inline-block"></span>
+                  {{ getClientTaskCounts(client).active }} active
+                </span>
+                <span v-if="getClientTaskCounts(client).completed > 0"
+                  class="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded border bg-emerald-500/8 text-emerald-600/70 border-emerald-500/15">
+                  <span class="w-1 h-1 rounded-full bg-emerald-400/70 inline-block"></span>
+                  {{ getClientTaskCounts(client).completed }} done
+                </span>
+                <span v-if="getClientTaskCounts(client).total === 0" class="text-[9px] text-ink-3/60 italic">no tasks</span>
               </span>
             </div>
           </div>
@@ -415,6 +407,7 @@ const filteredClients = computed(() => {
                 <th class="p-4">Workspace / Company</th>
                 <th class="p-4">Status</th>
                 <th class="p-4">Health</th>
+                <th class="p-4">Tasks</th>
                 <th class="p-4">Source</th>
                 <th class="p-4 text-right">Scope Value</th>
               </tr>
@@ -425,9 +418,9 @@ const filteredClients = computed(() => {
                 <td class="p-4 font-semibold text-ink flex items-center gap-2">
                   <User class="w-3.5 h-3.5 text-ink-3" />
                   {{ client.name }}
-                  <span v-if="client.rating"
+                  <span v-if="getClientRating(client)"
                     class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-0.5 shrink-0 animate-fade-in">
-                    <Star class="w-2.5 h-2.5 fill-current" /> {{ client.rating }}
+                    <Star class="w-2.5 h-2.5 fill-current" /> {{ getClientRating(client) }}
                   </span>
                 </td>
                 <td class="p-4 text-ink-2 font-medium">{{ client.companyName || '-' }}</td>
@@ -443,6 +436,21 @@ const filteredClients = computed(() => {
                     {{ getHealthStatus(client).label }}
                   </span>
                 </td>
+                <td class="p-4">
+                  <span class="flex items-center gap-1.5">
+                    <span v-if="getClientTaskCounts(client).active > 0"
+                      class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border bg-blue-500/10 text-blue-600 border-blue-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>
+                      {{ getClientTaskCounts(client).active }}
+                    </span>
+                    <span v-if="getClientTaskCounts(client).completed > 0"
+                      class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                      {{ getClientTaskCounts(client).completed }}
+                    </span>
+                    <span v-if="getClientTaskCounts(client).total === 0" class="text-[9px] text-ink-3">—</span>
+                  </span>
+                </td>
                 <td class="p-4 text-ink-3 font-mono text-[10px]">{{ client.clientSource || '-' }}</td>
                 <td class="p-4 text-right text-ink font-semibold font-mono">${{
                   getClientTotalCharged(client).toLocaleString() }}</td>
@@ -456,182 +464,7 @@ const filteredClients = computed(() => {
         hint="Try adjusting your status filters, search query, or create a new client." />
     </section>
 
-    <!-- CREATE CLIENT MODAL -->
-    <div v-if="showAddModal" @keydown.window.esc="showAddModal = false"
-      class="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddModal = false"></div>
-      <div class="relative w-full max-w-3xl card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
-        <div>
-          <h2 class="font-serif text-2xl text-ink">Create Client Workspace</h2>
-          <p class="text-xs text-ink-3 mt-1">Set up a new client workspace, communication hubs, and operational
-            integrations.</p>
-        </div>
-
-        <div class="space-y-6">
-          <!-- [ Basic Information ] -->
-          <div class="space-y-3">
-            <h3
-              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
-              Basic Information ]</h3>
-            <div class="grid grid-cols-2 gap-4 items-start">
-              <div class="v-field-group">
-                <input v-model="clientName" placeholder=" " class="v-field-input" required />
-                <label class="v-field-label">Client Contact Name *</label>
-              </div>
-              <div class="space-y-1">
-                <div class="v-field-group">
-                  <select v-model="clientTimezone" @focus="focusedFields.timezone = true"
-                    @blur="focusedFields.timezone = false" class="v-field-select">
-                    <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
-                      {{ tz.label }}
-                    </option>
-                  </select>
-                  <span class="v-field-arrow">▼</span>
-                  <label
-                    :class="['v-field-label', (clientTimezone || focusedFields.timezone) ? 'v-field-label--floating' : '', focusedFields.timezone ? 'v-field-label--floating-focused' : '']">Timezone</label>
-                </div>
-                <div v-if="getClientLocalTime(clientTimezone)"
-                  class="text-[10px] text-pri-strategic font-semibold pl-3.5">
-                  {{ formatTimezoneShort(clientTimezone) }} · {{ getClientLocalTime(clientTimezone) }} local
-                </div>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4 items-start">
-              <div class="v-field-group">
-                <input v-model="clientCompanyName" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Company / Workspace Name</label>
-              </div>
-              <div class="v-field-group">
-                <select v-model="clientStatus" @focus="focusedFields.status = true" @blur="focusedFields.status = false"
-                  class="v-field-select font-semibold">
-                  <option v-for="(val, key) in clientsStore.STATUS_MAP" :key="key" :value="key">
-                    {{ val.label }}
-                  </option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (clientStatus || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Client
-                  Status</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- [ Contact ] -->
-          <div class="space-y-3">
-            <h3
-              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
-              Contact ]</h3>
-            <div class="grid grid-cols-3 gap-4 items-start">
-              <div class="v-field-group">
-                <input v-model="clientEmail" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Email</label>
-              </div>
-              <div class="v-field-group">
-                <input v-model="clientPhone" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Phone</label>
-              </div>
-              <div class="v-field-group">
-                <select v-model="clientComm" @focus="focusedFields.comm = true" @blur="focusedFields.comm = false"
-                  class="v-field-select">
-                  <option value="Slack">Slack</option>
-                  <option value="Email">Email</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Teams">Microsoft Teams</option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (clientComm || focusedFields.comm) ? 'v-field-label--floating' : '', focusedFields.comm ? 'v-field-label--floating-focused' : '']">Preferred
-                  Communication</label>
-              </div>
-            </div>
-            <div class="v-field-group">
-              <input v-model="clientAddress" placeholder=" " class="v-field-input" />
-              <label class="v-field-label">Billing Address</label>
-            </div>
-          </div>
-
-          <!-- [ Business Context ] -->
-          <div class="space-y-3">
-            <h3
-              class="text-xs uppercase tracking-overline text-pri-strategic font-semibold border-b border-line pb-1.5">[
-              Business Context ]</h3>
-            <div class="grid grid-cols-2 gap-4 items-start">
-              <div class="v-field-group">
-                <select v-model="clientSource" @focus="focusedFields.source = true" @blur="focusedFields.source = false"
-                  class="v-field-select">
-                  <option value="Upwork">Upwork</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Cold Email">Cold Email</option>
-                  <option value="LinkedIn">LinkedIn</option>
-                  <option value="Twitter/X">Twitter/X</option>
-                  <option value="Other">Other</option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (clientSource || focusedFields.source) ? 'v-field-label--floating' : '', focusedFields.source ? 'v-field-label--floating-focused' : '']">Acquisition
-                  Source</label>
-              </div>
-              <div class="v-field-group">
-                <select v-model="clientSensitivity" @focus="focusedFields.sensitivity = true"
-                  @blur="focusedFields.sensitivity = false" class="v-field-select">
-                  <option value="Low">Low (Value-driven)</option>
-                  <option value="Medium">Medium (Budget-aware)</option>
-                  <option value="High">High (Cost-focused)</option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (clientSensitivity || focusedFields.sensitivity) ? 'v-field-label--floating' : '', focusedFields.sensitivity ? 'v-field-label--floating-focused' : '']">Pricing
-                  Sensitivity</label>
-              </div>
-            </div>
-            <div class="v-field-group">
-              <input v-model="clientTagsString" placeholder=" " class="v-field-input" />
-              <label class="v-field-label">Client Tags (comma separated)</label>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 items-start pt-1">
-              <div class="v-field-group">
-                <select @change="addPredefinedTagFromDropdown" @focus="focusedFields.stdTags = true"
-                  @blur="focusedFields.stdTags = false" class="v-field-select text-xs cursor-pointer">
-                  <option value="">-- Add standard tag --</option>
-                  <option v-for="tag in predefinedTagOptions" :key="tag" :value="tag">{{ tag }}</option>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', focusedFields.stdTags ? 'v-field-label--floating text-pri-strategic' : 'v-field-label--floating']">Standard
-                  Tags</label>
-              </div>
-
-              <div>
-                <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Surcharge
-                  Suffix</label>
-                <div class="flex flex-wrap gap-1">
-                  <button v-for="tag in surchargeTagOptions" :key="tag" @click="togglePredefinedTag(`surcharge-${tag}`)"
-                    type="button" class="text-[10px] px-2 py-1 rounded-lg border transition-all" :class="clientTagsString.split(',').map(t => t.trim()).includes(tag)
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold'
-                      : 'bg-canvas text-ink-3 border-line hover:text-ink hover:border-line-2'">
-                    {{ tag }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-line gap-4">
-          <label class="flex items-center gap-2 text-xs font-semibold text-ink-2 cursor-pointer select-none">
-            <input type="checkbox" v-model="createDriveFolder"
-              class="rounded border-line text-pri-strategic focus:ring-pri-strategic" />
-            <span class="flex items-center gap-1.5">
-              <HardDrive class="w-3.5 h-3.5 text-ink-3" /> Create Google Drive folder
-            </span>
-          </label>
-          <div class="flex justify-end gap-3">
-            <button @click="showAddModal = false" class="btn-ghost">Cancel</button>
-            <button @click="createClient" class="btn-primary">Create Workspace</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- CREATE CLIENT POPUP -->
+    <ClientPopup v-if="showAddModal" @close="showAddModal = false" @saved="handleClientSaved" />
   </div>
 </template>

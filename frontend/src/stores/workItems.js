@@ -26,6 +26,7 @@ export const useWorkItemsStore = defineStore('workItems', () => {
       resurfaceDate: payload.resurfaceDate || null,
       snoozedUntil: payload.snoozedUntil || null,
       subtasks: payload.subtasks || [], // [{ id, title, done }]
+      closedDate: payload.closedDate || null,
       createdAt: now(),
       updatedAt: now()
     }
@@ -37,6 +38,14 @@ export const useWorkItemsStore = defineStore('workItems', () => {
   async function update(id, patch) {
     const item = items.value.find(x => x.id === id)
     if (!item) return
+    // Auto-set closedDate when transitioning to a completed status (unless explicitly provided)
+    if (patch.status && isCompleted(patch.status) && !isCompleted(item.status) && !('closedDate' in patch)) {
+      patch = { ...patch, closedDate: new Date().toISOString().slice(0, 10) }
+    }
+    // Clear closedDate when reopening
+    if (patch.status && !isCompleted(patch.status) && isCompleted(item.status) && !('closedDate' in patch)) {
+      patch = { ...patch, closedDate: null }
+    }
     Object.assign(item, patch, { updatedAt: now() })
     await db.work_items.put(plain(item))
   }

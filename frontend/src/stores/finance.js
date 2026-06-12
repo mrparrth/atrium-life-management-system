@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { db, newId, now, plain, ensureDefaultCategories } from '@/db'
+import { db, newId, now, plain, ensureDefaultCategories, DEFAULT_CATEGORIES } from '@/db'
 
 export const useFinanceStore = defineStore('finance', () => {
   const networthLogs = ref([])      // [{ id, date, entries:[{category,type,value}], note, createdAt, updatedAt }]
@@ -201,6 +201,14 @@ export const useFinanceStore = defineStore('finance', () => {
     categories.value = categories.value.filter(c => c.id !== id)
   }
 
+  async function resetCategories() {
+    await db.finance_categories.clear()
+    const ts = now()
+    const catsToInsert = DEFAULT_CATEGORIES.map((c) => ({ id: newId(), ...c, createdAt: ts }))
+    await db.finance_categories.bulkAdd(catsToInsert)
+    categories.value = catsToInsert.sort((a, b) => a.name.localeCompare(b.name))
+  }
+
   async function updateCategoryBudget(id, amount) {
     const c = categories.value.find(x => x.id === id)
     if (!c) return
@@ -217,6 +225,6 @@ export const useFinanceStore = defineStore('finance', () => {
     addNetworthLog, updateNetworthLog, removeNetworthLog,
     addCashflowPeriod, updateCashflowPeriod, removeCashflowPeriod,
     categoriesForScope, visibleCategoriesForScope, addCategory, renameCategory, toggleArchiveCategory, removeCategory,
-    updateCategoryBudget,
+    updateCategoryBudget, resetCategories,
   }
 })

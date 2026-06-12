@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useWorkClientsStore } from '@/stores/workClients'
@@ -20,17 +20,28 @@ const ui = useUIStore()
 const focusedFields = ref({})
 
 const showAddModal = ref(false)
+const addModalFirstInput = ref(null)
+
+watch(showAddModal, (val) => {
+  if (val) nextTick(() => addModalFirstInput.value?.focus())
+})
 const title = ref('')
 const clientName = ref('')
 const value = ref(0)
 const hours = ref(0)
 const probability = ref(50)
-const followUpDate = ref('')
+const followUpDate = ref(new Date().toISOString().slice(0, 10))
 const notes = ref('')
 const status = ref('lead')
 
 async function createLead() {
-  if (!title.value.trim() || !clientName.value.trim()) return
+  const missing = []
+  if (!title.value.trim()) missing.push('Opportunity Title')
+  if (!clientName.value.trim()) missing.push('Prospect Name')
+  if (missing.length) {
+    ui.showToast(`Please fill in: ${missing.join(', ')}`, 'warning')
+    return
+  }
 
   await leadsStore.add({
     title: title.value.trim(),
@@ -48,7 +59,7 @@ async function createLead() {
   value.value = 0
   hours.value = 0
   probability.value = 50
-  followUpDate.value = ''
+  followUpDate.value = new Date().toISOString().slice(0, 10)
   notes.value = ''
   showAddModal.value = false
   ui.showToast('Lead added to pipeline', 'success')
@@ -312,7 +323,7 @@ onUnmounted(() => {
         <div class="space-y-4 pt-2">
           <div class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <input v-model="title" placeholder=" " class="v-field-input" id="lead-title" required />
+              <input ref="addModalFirstInput" v-model="title" placeholder=" " class="v-field-input" id="lead-title" required />
               <label for="lead-title" class="v-field-label">Opportunity Title *</label>
             </div>
             <div class="v-field-group">

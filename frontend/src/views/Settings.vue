@@ -125,12 +125,14 @@ async function clearAll() {
 }
 
 const driveRootInput = ref(localStorage.getItem('atrium.work.drive_root') || '')
+const driveFolderUrlInput = ref(localStorage.getItem('atrium.work.drive_folder_url') || '')
 const defaultCurrencyInput = ref(localStorage.getItem('atrium.work.default_currency') || 'USD')
 const syncModeInput = ref(localStorage.getItem('atrium.sync.mode') || 'auto')
 const syncIntervalInput = ref(Number(localStorage.getItem('atrium.sync.interval')) || 60)
 
 function saveWorkSettings() {
   localStorage.setItem('atrium.work.drive_root', driveRootInput.value.trim())
+  localStorage.setItem('atrium.work.drive_folder_url', driveFolderUrlInput.value.trim())
   localStorage.setItem('atrium.work.default_currency', defaultCurrencyInput.value)
   localStorage.setItem('atrium.sync.mode', syncModeInput.value)
   localStorage.setItem('atrium.sync.interval', String(syncIntervalInput.value))
@@ -180,7 +182,7 @@ function saveWorkSettings() {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="v-input-group">
           <input v-model="driveRootInput" placeholder=" " id="drive-root-folder" />
-          <label for="drive-root-folder">Google Drive Root Folder</label>
+          <label for="drive-root-folder">Google Drive Root Folder (path)</label>
         </div>
         <div>
           <label class="overline block mb-1">Default Billing Currency</label>
@@ -191,6 +193,16 @@ function saveWorkSettings() {
           </select>
         </div>
       </div>
+      <!-- Drive folder URL — when set, client subfolders are created inside this existing folder -->
+      <div class="v-input-group">
+        <input v-model="driveFolderUrlInput" placeholder=" " id="drive-folder-url" />
+        <label for="drive-folder-url">Client Folders — Existing Drive Folder URL</label>
+      </div>
+      <p class="text-xs text-ink-3 -mt-2 leading-relaxed">
+        Paste a Google Drive folder URL (e.g. <code class="bg-elevated px-1 py-0.5 rounded">https://drive.google.com/drive/folders/…</code>).
+        When set, new client folders will be created <em>inside</em> this existing folder instead of
+        creating a new root folder each time. Leave blank to use the Root Folder path above.
+      </p>
       <div class="flex justify-end pt-2 border-t border-line/40">
         <button class="btn-primary" @click="saveWorkSettings">
           <Save class="w-4 h-4" /> Save Work Preferences

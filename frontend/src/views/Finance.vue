@@ -10,7 +10,7 @@ import NetworthLogForm from '@/components/NetworthLogForm.vue'
 import CashflowPeriodForm from '@/components/CashflowPeriodForm.vue'
 import DonutChart from '@/components/DonutChart.vue'
 import { inr, inrCompact } from '@/lib/money'
-import { Plus, Trash2, Edit3, Tag, X, ArrowDownToLine, ArrowUpFromLine, PiggyBank, Wallet, Archive, Percent } from 'lucide-vue-next'
+import { Plus, Trash2, Edit3, Tag, X, ArrowDownToLine, ArrowUpFromLine, PiggyBank, Wallet, Archive, Percent, RotateCcw } from 'lucide-vue-next'
 import { DEFAULT_CATEGORIES } from '@/db'
 
 import { useRoute, useRouter } from 'vue-router'
@@ -148,6 +148,16 @@ async function saveRenameCategory(c) {
 async function archiveCategoryFn(c) {
   await finance.toggleArchiveCategory(c.id)
   ui.showToast(c.archived ? 'Category archived' : 'Category restored', 'success')
+}
+
+async function resetCategoriesFn() {
+  const confirmed = await ui.confirm({
+    title: 'Reset Categories',
+    message: 'Are you sure you want to reset all categories to their default presets? Custom categories will be removed.'
+  })
+  if (!confirmed) return
+  await finance.resetCategories()
+  ui.showToast('Categories reset to presets', 'success')
 }
 
 // Category Budgets handling
@@ -634,7 +644,13 @@ const comparisonMetrics = computed(() => {
     <!-- CATEGORIES -->
     <template v-else-if="tab === 'categories'">
       <SectionHeader overline="Tags" title="Categories"
-        hint="Net worth categories (asset, liability) and cash flow categories (income, expense, investment) are managed separately." />
+        hint="Net worth categories (asset, liability) and cash flow categories (income, expense, investment) are managed separately.">
+        <template #right>
+          <button @click="resetCategoriesFn" class="inline-flex items-center justify-center gap-1.5 bg-pri-critical-bg text-pri-critical border border-pri-critical-bd rounded-xl px-3 py-1.5 text-xs font-medium hover:bg-pri-critical hover:text-canvas transition-all duration-300" data-testid="reset-categories-btn">
+            <RotateCcw class="w-3.5 h-3.5" /> Reset to presets
+          </button>
+        </template>
+      </SectionHeader>
       <form @submit.prevent="addCategoryFn" class="card p-5 mb-10 flex flex-wrap gap-3 items-end"
         data-testid="add-category-form">
         <label class="flex-1 min-w-[140px]">

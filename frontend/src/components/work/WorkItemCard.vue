@@ -6,7 +6,8 @@ import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
 import {
   Play, Pause, Clock, AlertCircle, Sparkles, ChevronRight,
-  Trash, Calendar, MoreVertical, CheckCircle2, Circle, BellOff, Star, HardDrive, Edit3
+  Trash, Calendar, MoreVertical, CheckCircle2, Circle, BellOff, Star, HardDrive, Edit3,
+  X, CheckCircle
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import Combobox from '@/components/Combobox.vue'
@@ -71,12 +72,24 @@ const ui = useUIStore()
 
 const showMenu = ref(false)
 const showEditModal = ref(false)
+const showStatusDropdown = ref(false)
 const focusedFields = ref({})
 
+function getStatusLabel(statusVal) {
+  for (const group of Object.values(statusGroups)) {
+    const found = group.find(item => item.key === statusVal)
+    if (found) return found.label
+  }
+  return statusVal
+}
+
 const clientOptions = computed(() => {
+  const activeClients = clientsStore.items.filter(c => {
+    return c.status !== 'inactive' || c.id === props.item.clientId
+  })
   return [
     { key: '', label: '' },
-    ...clientsStore.items.map(c => ({ key: c.id, label: c.name }))
+    ...activeClients.map(c => ({ key: c.id, label: c.name }))
   ]
 })
 
@@ -92,7 +105,9 @@ const editForm = ref({
   billingType: 'fixed',
   charged: 0,
   driveFolderId: '',
-  status: 'in_progress'
+  status: 'in_progress',
+  closedDate: '',
+  rating: null
 })
 
 function openEditModal() {
@@ -108,13 +123,17 @@ function openEditModal() {
     billingType: props.item.billingType || 'fixed',
     charged: props.item.charged || 0,
     driveFolderId: props.item.driveFolderId || '',
-    status: props.item.status || 'in_progress'
+    status: props.item.status || 'in_progress',
+    closedDate: props.item.closedDate || '',
+    rating: props.item.rating || null
   }
   showEditModal.value = true
   showMenu.value = false
 }
 
 async function saveEdit() {
+  const isCompleting = itemsStore.isCompleted(editForm.value.status) && !itemsStore.isCompleted(props.item.status)
+  const isReopening = !itemsStore.isCompleted(editForm.value.status) && itemsStore.isCompleted(props.item.status)
   await itemsStore.update(props.item.id, {
     title: editForm.value.title.trim(),
     description: editForm.value.description.trim(),
@@ -127,7 +146,10 @@ async function saveEdit() {
     billingType: editForm.value.billingType,
     charged: Number(editForm.value.charged) || 0,
     driveFolderId: editForm.value.driveFolderId.trim(),
-    status: editForm.value.status
+    status: editForm.value.status,
+    rating: editForm.value.rating || null,
+    // Only pass closedDate explicitly when editing an already-completed item (not on first transition)
+    ...(!isCompleting && !isReopening ? { closedDate: editForm.value.closedDate || null } : {})
   })
   showEditModal.value = false
   ui.showToast('Work item updated', 'success')
@@ -322,6 +344,12 @@ function handleEscKey(e) {
     if (showEditModal.value) showEditModal.value = false
     if (showRatingModal.value) showRatingModal.value = false
   }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    if (showEditModal.value) {
+      e.preventDefault()
+      saveEdit()
+    }
+  }
 }
 
 watch(() => route.query.id, (newId) => {
@@ -417,6 +445,12 @@ watch(showEditModal, (isOpen) => {
         <div class="flex items-center gap-4 text-[11px] text-ink-3 mt-2 flex-wrap">
           <span v-if="props.item.dueDate" class="flex items-center gap-1 text-ink-2 font-medium">
             <Calendar class="w-3.5 h-3.5" /> Due {{ dayjs(props.item.dueDate).format('MMM D') }}
+          </span>
+          <!-- Closed date badge for completed items -->
+          <span v-if="itemsStore.isCompleted(props.item.status)"
+            class="flex items-center gap-1 text-pri-strategic font-semibold">
+            <CheckCircle2 class="w-3.5 h-3.5" /> Closed {{ dayjs(props.item.closedDate ||
+              props.item.updatedAt).format('MMM D, YYYY') }}
           </span>
           <span class="flex items-center gap-1" :class="isOverran ? 'text-pri-critical font-medium' : ''">
             <Clock class="w-3.5 h-3.5" />
@@ -536,103 +570,211 @@ watch(showEditModal, (isOpen) => {
     <!-- Edit Details Modal -->
     <Teleport to="body">
       <div v-if="showEditModal" @keydown.window.esc="showEditModal = false"
-        class="fixed inset-0 z-50 flex items-start justify-center pt-12 pb-12 overflow-y-auto px-4">
+        class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-8">
         <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click.stop="showEditModal = false"></div>
-        <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 my-auto animate-rise-in space-y-6"
+        <div
+          class="relative w-full max-w-2xl card p-6 shadow-xl bg-surface z-50 animate-rise-in max-h-[90vh] flex flex-col"
           @click.stop>
-          <div>
-            <div class="overline">Modify Work Item</div>
-            <h2 class="font-serif text-2xl mt-1">Edit Details</h2>
+
+          <!-- Header (Compact OS look) -->
+          <div class="flex items-center justify-between pb-2.5 border-b border-line/30 shrink-0">
+            <div>
+              <span class="text-[9px] uppercase tracking-overline text-pri-strategic font-semibold">Workspace OS</span>
+              <h2 class="font-serif text-lg font-bold text-ink">Modify Scoped Item</h2>
+            </div>
+            <button class="btn-ghost !p-1 rounded-lg hover:bg-canvas/50" @click="showEditModal = false">
+              <X class="w-4 h-4 text-ink-3 hover:text-ink" />
+            </button>
           </div>
 
-          <div class="space-y-4 pt-2">
+          <!-- Body (Tight Spacing, Floating Dropdowns) -->
+          <div class="flex-1 overflow-y-visible py-4 space-y-3.5 pr-1">
+
+            <!-- Row 1: Title -->
             <div class="v-field-group">
-              <input v-model="editForm.title" placeholder=" " class="v-field-input" id="edit-item-title" required />
-              <label for="edit-item-title" class="v-field-label">Title *</label>
+              <input v-model="editForm.title" placeholder=" " class="v-field-input text-lg font-bold"
+                id="edit-item-title" required />
+              <label for="edit-item-title" class="v-field-label text-base font-semibold">Task Title *</label>
             </div>
 
+            <!-- Row 2: Client + Status -->
             <div class="grid grid-cols-2 gap-4">
               <Combobox :options="clientOptions" v-model="editForm.clientId" label="Client Association" is-field />
 
-              <div class="v-field-group">
-                <select v-model="editForm.status" @focus="focusedFields.status = true"
-                  @blur="focusedFields.status = false" class="v-field-select font-semibold">
-                  <optgroup label="To-do">
-                    <option value="waiting_feedback">Waiting For Feedback</option>
-                    <option value="on_hold">On Hold</option>
-                    <option value="ask_milestone">Ask For Next Milestone</option>
-                    <option value="pending_closure">Pending Closure</option>
-                  </optgroup>
-                  <optgroup label="In progress">
-                    <option value="critical">Critical</option>
-                    <option value="in_progress">In Progress</option>
-                  </optgroup>
-                  <optgroup label="Complete">
-                    <option value="complete">Complete</option>
-                    <option value="dropped">Dropped</option>
-                  </optgroup>
-                </select>
-                <span class="v-field-arrow">▼</span>
-                <label
-                  :class="['v-field-label', (editForm.status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Status</label>
+              <div class="v-field-group relative">
+                <button type="button" @click.stop="showStatusDropdown = !showStatusDropdown"
+                  class="w-full text-left text-sm bg-surface border border-line rounded-xl px-4 py-3 min-h-[48px] text-ink flex items-center justify-between focus:outline-none focus:border-pri-strategic transition-all cursor-pointer">
+                  <div class="flex items-center gap-2 font-semibold">
+                    <span class="w-2.5 h-2.5 rounded-full"
+                      :class="STATUS_MAP[editForm.status]?.dotColor || 'bg-ink-3'"></span>
+                    <span class="text-xs">{{ getStatusLabel(editForm.status) }}</span>
+                  </div>
+                  <span class="text-ink-3 text-[8px] pointer-events-none">▼</span>
+                </button>
+
+                <!-- Floating label -->
+                <label class="v-field-label v-field-label--floating v-field-label--floating-focused"
+                  style="background-color: rgb(var(--surface)); z-index: 10; padding: 0 4px;">Status</label>
+
+                <!-- Click catcher -->
+                <div v-if="showStatusDropdown" class="fixed inset-0 z-40" @click.stop="showStatusDropdown = false">
+                </div>
+
+                <!-- Custom Popover Menu -->
+                <div v-if="showStatusDropdown"
+                  class="absolute left-0 right-0 mt-1 rounded-xl bg-surface border border-line p-1 shadow-lg z-50 animate-rise-in font-sans max-h-60 overflow-y-auto">
+                  <div class="overline px-2.5 py-1 text-[9px] text-ink-3 tracking-wider font-bold">Select status</div>
+
+                  <!-- To-do Group -->
+                  <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1">To-do</div>
+                  <button v-for="st in statusGroups.to_do" :key="st.key" type="button"
+                    @click.stop="editForm.status = st.key; showStatusDropdown = false"
+                    class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
+                    <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
+                    {{ st.label }}
+                  </button>
+
+                  <!-- In Progress Group -->
+                  <div
+                    class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
+                    In progress</div>
+                  <button v-for="st in statusGroups.in_progress" :key="st.key" type="button"
+                    @click.stop="editForm.status = st.key; showStatusDropdown = false"
+                    class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
+                    <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
+                    {{ st.label }}
+                  </button>
+
+                  <!-- Complete Group -->
+                  <div
+                    class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
+                    Complete</div>
+                  <button v-for="st in statusGroups.complete" :key="st.key" type="button"
+                    @click.stop="editForm.status = st.key; showStatusDropdown = false"
+                    class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
+                    <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
+                    {{ st.label }}
+                  </button>
+                </div>
               </div>
             </div>
 
+            <!-- Row 3: Scope Description -->
+            <div class="v-field-group">
+              <textarea v-model="editForm.description" placeholder=" "
+                class="v-field-input h-14 py-2 resize-none font-sans text-xs leading-relaxed"
+                id="edit-item-desc"></textarea>
+              <label for="edit-item-desc" class="v-field-label text-xs">Scope Description</label>
+            </div>
+
+            <!-- Row 4: Due Date + Est Hours + Charged -->
             <div class="grid grid-cols-3 gap-4">
               <div class="v-field-group">
-                <input type="date" v-model="editForm.dueDate" placeholder=" " class="v-field-input text-ink-2 font-mono"
-                  id="edit-item-duedate" />
-                <label for="edit-item-duedate" class="v-field-label">Due Date</label>
+                <input type="date" v-model="editForm.dueDate" placeholder=" "
+                  class="v-field-input text-xs text-ink-2 font-mono" id="edit-item-duedate" />
+                <label for="edit-item-duedate" class="v-field-label text-xs">Due Date</label>
               </div>
+
               <div class="v-field-group">
                 <input type="number" v-model="editForm.estimatedHours" min="0" step="0.5" placeholder=" "
-                  class="v-field-input" id="edit-item-esthours" />
-                <label for="edit-item-esthours" class="v-field-label">Est. Hours</label>
+                  class="v-field-input text-xs" id="edit-item-esthours" />
+                <label for="edit-item-esthours" class="v-field-label text-xs">Est. Hours</label>
               </div>
+
               <div class="v-field-group">
-                <input type="number" v-model="editForm.actualHours" min="0" step="0.5" placeholder=" "
-                  class="v-field-input" id="edit-item-acthours" />
-                <label for="edit-item-acthours" class="v-field-label">Actual Tracked</label>
+                <input type="number" v-model="editForm.charged" min="0" step="1" placeholder=" "
+                  class="v-field-input text-xs" id="edit-item-charged" />
+                <label for="edit-item-charged" class="v-field-label text-xs">Charged ($)</label>
               </div>
             </div>
 
+            <!-- Row 5: Billing Type + Drive Folder URL -->
             <div class="grid grid-cols-2 gap-4">
               <div class="v-field-group">
                 <select v-model="editForm.billingType" @focus="focusedFields.billingType = true"
-                  @blur="focusedFields.billingType = false" class="v-field-select">
+                  @blur="focusedFields.billingType = false" class="v-field-select text-xs">
                   <option value="fixed">Fixed-price milestone</option>
                   <option value="hourly">Hourly Contract</option>
                   <option value="none">Non-billable (admin)</option>
                 </select>
                 <span class="v-field-arrow">▼</span>
                 <label
-                  :class="['v-field-label', (editForm.billingType || focusedFields.billingType) ? 'v-field-label--floating' : '', focusedFields.billingType ? 'v-field-label--floating-focused' : '']">Billing
+                  :class="['v-field-label text-xs', (editForm.billingType || focusedFields.billingType) ? 'v-field-label--floating' : '', focusedFields.billingType ? 'v-field-label--floating-focused' : '']">Billing
                   Setup</label>
               </div>
+
               <div class="v-field-group">
-                <input type="number" v-model="editForm.charged" min="0" step="1" placeholder=" " class="v-field-input"
-                  id="edit-item-charged" />
-                <label for="edit-item-charged" class="v-field-label">Charged ($)</label>
+                <input v-model="editForm.driveFolderId" placeholder=" "
+                  class="v-field-input text-xs font-mono text-ink-3" id="edit-item-drive" />
+                <label for="edit-item-drive" class="v-field-label text-xs text-ink-3">Drive Folder ID/URL</label>
               </div>
             </div>
 
-            <div class="v-field-group">
-              <input v-model="editForm.driveFolderId" placeholder=" " class="v-field-input font-mono"
-                id="edit-item-drive" />
-              <label for="edit-item-drive" class="v-field-label">Google Drive Folder ID/URL</label>
+            <!-- Separator Line -->
+            <hr class="border-line/30 my-4" />
+
+            <!-- Completion & Outcome -->
+            <div class="space-y-3">
+              <h3 class="text-[10px] uppercase tracking-wider font-bold text-ink-3">Completion & Outcome</h3>
+
+              <div class="grid grid-cols-3 gap-4 items-center">
+                <!-- Closed Date -->
+                <div class="v-field-group">
+                  <input type="date" v-model="editForm.closedDate" placeholder=" "
+                    :disabled="!itemsStore.isCompleted(editForm.status)" class="v-field-input font-mono text-xs"
+                    :class="itemsStore.isCompleted(editForm.status) ? 'text-pri-strategic' : 'opacity-50 cursor-not-allowed'"
+                    id="edit-item-closeddate" />
+                  <label for="edit-item-closeddate" class="v-field-label v-field-label--floating text-xs"
+                    :style="itemsStore.isCompleted(editForm.status) ? 'color: var(--color-pri-strategic)' : ''">Closed
+                    Date</label>
+                </div>
+
+                <!-- Rating -->
+                <div class="v-field-group relative"
+                  :class="itemsStore.isCompleted(editForm.status) ? '' : 'opacity-50 pointer-events-none'">
+                  <div @focusin="focusedFields.rating = true" @focusout="focusedFields.rating = false"
+                    class="w-full bg-surface border border-line rounded-xl px-4 py-2 min-h-[48px] flex items-center justify-center gap-1.5 transition-all"
+                    :class="[
+                      focusedFields.rating ? 'border-pri-strategic shadow-[0_0_0_2px_rgba(var(--pri-strategic),0.1)]' : '',
+                      itemsStore.isCompleted(editForm.status) ? 'cursor-pointer' : 'cursor-not-allowed'
+                    ]">
+                    <button v-for="star in 5" :key="star" type="button" @click="editForm.rating = star"
+                      :disabled="!itemsStore.isCompleted(editForm.status)"
+                      class="p-0.5 hover:scale-110 transition-all focus:outline-none"
+                      :class="itemsStore.isCompleted(editForm.status) ? 'cursor-pointer' : 'cursor-not-allowed'">
+                      <Star class="w-4 h-4"
+                        :class="star <= (editForm.rating || 0) ? 'text-amber-500 fill-amber-500' : 'text-ink-3'" />
+                    </button>
+                  </div>
+                  <label class="v-field-label v-field-label--floating text-xs"
+                    :class="focusedFields.rating ? 'v-field-label--floating-focused' : ''"
+                    :style="itemsStore.isCompleted(editForm.status) ? 'color: var(--color-pri-strategic)' : ''">
+                    Task Feedback Rating
+                  </label>
+                </div>
+
+                <!-- Tracked Hours -->
+                <div class="v-field-group">
+                  <input type="number" v-model="editForm.actualHours" min="0" step="0.5" placeholder=" "
+                    class="v-field-input font-mono text-xs" id="edit-item-actualhours" />
+                  <label for="edit-item-actualhours" class="v-field-label v-field-label--floating text-xs">Tracked
+                    Hours</label>
+                </div>
+              </div>
             </div>
 
-            <div class="v-field-group">
-              <textarea v-model="editForm.description" placeholder=" " class="v-field-input min-h-[80px] resize-none"
-                id="edit-item-desc"></textarea>
-              <label for="edit-item-desc" class="v-field-label">Additional description (optional)</label>
-            </div>
           </div>
 
-          <div class="flex justify-end gap-3 pt-2">
-            <button @click.stop="showEditModal = false" class="btn-ghost">Cancel</button>
-            <button @click.stop="saveEdit" class="btn-primary">Save Changes</button>
+          <!-- Sticky Footer for Actions -->
+          <div class="pt-3 border-t border-line/30 flex justify-end gap-3 bg-surface z-10 shrink-0">
+            <button @click.stop="showEditModal = false" class="btn-ghost !text-xs !py-1.5 px-3">Cancel</button>
+            <button @click.stop="saveEdit" class="btn-primary !text-xs !py-1.5 px-4 flex items-center gap-1.5">
+              <CheckCircle2 class="w-3.5 h-3.5" />
+              <span>Save Changes</span>
+              <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            </button>
           </div>
+
         </div>
       </div>
     </Teleport>

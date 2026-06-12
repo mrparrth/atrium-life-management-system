@@ -28,8 +28,9 @@ function toggleDropdown(meetingId) {
 
 const filteredClients = computed(() => {
   const q = clientSearchQuery.value.toLowerCase().trim()
-  if (!q) return clientsStore.items
-  return clientsStore.items.filter(c => c.name.toLowerCase().includes(q))
+  const activeClients = clientsStore.items.filter(c => c.status !== 'inactive')
+  if (!q) return activeClients
+  return activeClients.filter(c => c.name.toLowerCase().includes(q))
 })
 
 const router = useRouter()

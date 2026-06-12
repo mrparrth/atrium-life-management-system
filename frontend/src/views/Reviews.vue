@@ -1,5 +1,19 @@
 <script setup>
 import { ref, computed } from 'vue'
+
+// Auto-resize directive: grows textarea to fit its content
+const vAutoResize = {
+  mounted(el) {
+    el.style.overflow = 'hidden'
+    const resize = () => { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' }
+    el.addEventListener('input', resize)
+    resize()
+  },
+  updated(el) {
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }
+}
 import { useReviewsStore } from '@/stores/reviews'
 import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
@@ -89,19 +103,19 @@ async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?'
         <h2 class="font-serif text-3xl mt-1 mb-6">A quiet look back</h2>
         <div class="space-y-5">
           <label class="block"><span class="overline block mb-1">Wins</span>
-            <textarea v-model="form.wins" rows="2" class="input-block resize-none" placeholder="Small or large."
+            <textarea v-auto-resize v-model="form.wins" rows="1" class="input-block" placeholder="Small or large."
               data-testid="review-wins"></textarea>
           </label>
           <label class="block"><span class="overline block mb-1">Challenges</span>
-            <textarea v-model="form.challenges" rows="2" class="input-block resize-none" placeholder="What was hard?"
+            <textarea v-auto-resize v-model="form.challenges" rows="1" class="input-block" placeholder="What was hard?"
               data-testid="review-challenges"></textarea>
           </label>
           <label class="block"><span class="overline block mb-1">Gratitude</span>
-            <textarea v-model="form.gratitude" rows="2" class="input-block resize-none" placeholder="What lifted you?"
+            <textarea v-auto-resize v-model="form.gratitude" rows="1" class="input-block" placeholder="What lifted you?"
               data-testid="review-gratitude"></textarea>
           </label>
           <label class="block"><span class="overline block mb-1">Next focus</span>
-            <textarea v-model="form.nextFocus" rows="2" class="input-block resize-none"
+            <textarea v-auto-resize v-model="form.nextFocus" rows="1" class="input-block"
               placeholder="A gentle direction." data-testid="review-next"></textarea>
           </label>
         </div>

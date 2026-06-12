@@ -14,6 +14,12 @@ const invoicesStore = useWorkInvoicesStore()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
 
+const activeClients = computed(() => {
+  return clientsStore.items.filter(c => {
+    return c.status !== 'inactive' || c.id === clientId.value || (previewInvoice.value && c.id === previewInvoice.value.clientId)
+  })
+})
+
 const showAddModal = ref(false)
 const showPrintPreview = ref(false)
 const previewInvoice = ref(null)
@@ -753,7 +759,7 @@ onUnmounted(() => {
             <span class="text-[9px] uppercase tracking-wider text-[#1b8a4a] font-bold block">Billed To (Client's Details)</span>
             <select v-model="clientId" class="w-full text-xs font-semibold bg-white border border-emerald-100 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 mb-2">
               <option value="">Select Client Workspace...</option>
-              <option v-for="c in clientsStore.items" :key="c.id" :value="c.id">{{ c.name }}</option>
+              <option v-for="c in activeClients" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
             
             <div v-if="clientId && !isExternal">
@@ -1002,7 +1008,7 @@ onUnmounted(() => {
                 <span class="text-[9px] uppercase tracking-wider text-[#1b8a4a] font-bold">Billed To</span>
                 <div class="flex gap-2">
                   <select v-if="isEditingInvoiceDoc" v-model="previewInvoice.clientId" @change="saveDocField(previewInvoice)" class="text-[10px] font-semibold bg-white border border-emerald-100 rounded px-1.5 py-0.5 focus:outline-none print:hidden">
-                    <option v-for="c in clientsStore.items" :key="c.id" :value="c.id">{{ c.name }}</option>
+                    <option v-for="c in activeClients" :key="c.id" :value="c.id">{{ c.name }}</option>
                   </select>
                   <button v-if="isEditingInvoiceDoc && !isEditingClientProfile && previewInvoice.clientId" @click="isEditingClientProfile = true" class="text-[#1b8a4a] hover:text-emerald-800 text-[10px] flex items-center gap-0.5 font-semibold print:hidden">
                     <Edit3 class="w-2.5 h-2.5" /> Edit
