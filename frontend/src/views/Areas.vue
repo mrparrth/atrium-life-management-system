@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useAreasStore } from '@/stores/areas'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
@@ -36,6 +36,15 @@ async function removeArea(a) {
   if (!await ui.confirm({ message: `Delete area "${a.name}"? Linked projects will remain.`, title: 'Delete Area' })) return
   await areas.remove(a.id)
 }
+
+const newNameInput = ref(null)
+watch(showNew, (open) => {
+  if (open) {
+    nextTick(() => {
+      newNameInput.value?.focus()
+    })
+  }
+})
 </script>
 
 <template>
@@ -69,26 +78,34 @@ async function removeArea(a) {
     </div>
     <EmptyState v-else title="No areas yet" hint="Areas are the parts of life worth maintaining." />
 
-    <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNew = false"></div>
-      <form @submit.prevent="create" class="relative w-full max-w-md card p-8 animate-rise-in">
+    <div v-if="showNew" @keydown.window.esc="showNew = false" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNew = false"></div>
+      <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create" class="relative w-full max-w-md card p-8 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">New area</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A part of life to tend</h2>
-        <input v-model="newName" placeholder="Area name…" class="input-soft text-lg font-serif mb-3" required
-          data-testid="new-area-name" />
-        <textarea v-model="newDesc" placeholder="Why it matters…" rows="2" class="input-soft resize-none mb-5" />
+        <div class="v-field-group mb-4">
+          <input ref="newNameInput" v-model="newName" placeholder=" " class="v-field-input text-base font-semibold" id="new-area-name" required
+            data-testid="new-area-name" />
+          <label for="new-area-name" class="v-field-label text-sm">Area Name *</label>
+        </div>
+        <div class="v-field-group mb-6">
+          <textarea v-model="newDesc" placeholder=" " rows="2" class="v-field-input py-3 resize-none font-sans text-xs leading-relaxed" id="new-area-desc" />
+          <label for="new-area-desc" class="v-field-label text-sm">Why it matters (optional)</label>
+        </div>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showNew = false">Cancel</button>
-          <button type="submit" class="btn-primary" data-testid="new-area-save">Create</button>
+          <button type="submit" class="btn-primary" data-testid="new-area-save">
+            Create <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </form>
     </div>
 
     <!-- Area Details Modal -->
-    <div v-if="selectedArea" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4" data-testid="area-detail-modal">
+    <div v-if="selectedArea" @keydown.window.esc="selectedArea = null" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4" data-testid="area-detail-modal">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="selectedArea = null"></div>
       <div class="relative w-full max-w-md card p-8 animate-rise-in shadow-2xl">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="selectedArea = null">

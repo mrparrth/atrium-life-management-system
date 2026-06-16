@@ -6,6 +6,7 @@ export const useFinanceStore = defineStore('finance', () => {
   const networthLogs = ref([])      // [{ id, date, entries:[{category,type,value}], note, createdAt, updatedAt }]
   const cashflowPeriods = ref([])   // [{ id, month: 'YYYY-MM', entries:[{category,type,value}], note, createdAt, updatedAt }]
   const categories = ref([])        // [{ id, scope:'asset'|'liability'|'income'|'expense'|'investment', name }]
+  const subscriptions = ref([])     // [{ id, name, cost, currency, billingPeriod, nextRenewal, category, status, createdAt, updatedAt }]
 
   async function load() {
     await ensureDefaultCategories()
@@ -24,6 +25,10 @@ export const useFinanceStore = defineStore('finance', () => {
     }
     if (migrated) cats = await db.finance_categories.toArray()
     categories.value = cats.sort((a, b) => a.name.localeCompare(b.name))
+
+    if (db.finance_subscriptions) {
+      subscriptions.value = await db.finance_subscriptions.toArray()
+    }
   }
 
   // ───── Net worth helpers
@@ -72,7 +77,7 @@ export const useFinanceStore = defineStore('finance', () => {
   async function addNetworthLog(payload) {
     const log = {
       id: newId(),
-      date: payload.date || new Date().toISOString().slice(0, 10),
+      date: payload.date || new Date().toISOString().slice(0, 7),
       entries: (payload.entries || []).filter(e => +e.value !== 0).map(e => ({ category: e.category, type: e.type, value: +e.value })),
       note: payload.note || '',
       createdAt: now(), updatedAt: now(),
@@ -202,22 +207,96 @@ export const useFinanceStore = defineStore('finance', () => {
   }
 
   async function resetCategories() {
-    await db.finance_categories.clear()
+    const currentCats = await db.finance_categories.toArray()
     const ts = now()
-    const catsToInsert = DEFAULT_CATEGORIES.map((c) => ({ id: newId(), ...c, createdAt: ts }))
-    await db.finance_categories.bulkAdd(catsToInsert)
+
+    const catsToInsert = DEFAULT_CATEGORIES.map((preset) => {
+      const existing = currentCats.find(
+        (x) => x.name === preset.name && x.scope === preset.scope
+      )
+      if (existing) {
+        return {
+          ...existing,
+          group: preset.group, // Revert group to preset definition
+          archived: false      // Unarchive preset categories
+        }
+      } else {
+        return {
+          id: newId(),
+          scope: preset.scope,
+          name: preset.name,
+          group: preset.group,
+          archived: false,
+          defaultValue: 0,
+          budgets: {},
+          createdAt: ts
+        }
+      }
+    })
+
+    await db.finance_categories.clear()
+    await db.finance_categories.bulkAdd(plain(catsToInsert))
     categories.value = catsToInsert.sort((a, b) => a.name.localeCompare(b.name))
   }
 
-  async function updateCategoryBudget(id, amount) {
+  async function updateCategoryBudget(id, year, amount) {
     const c = categories.value.find(x => x.id === id)
     if (!c) return
-    c.yearlyBudget = amount ? +amount : 0
+    if (!c.budgets) c.budgets = {}
+    c.budgets[year] = amount ? +amount : 0
+    if (String(year) === String(new Date().getFullYear())) {
+      c.yearlyBudget = c.budgets[year]
+    }
     await db.finance_categories.put(plain(c))
   }
 
+  async function updateCategoryGroup(id, group) {
+    const c = categories.value.find(x => x.id === id)
+    if (!c) return false
+    c.group = (group || '').trim() || 'One-Off'
+    await db.finance_categories.put(plain(c))
+    return true
+  }
+
+  async function updateCategoryDefaultValue(id, value) {
+    const c = categories.value.find(x => x.id === id)
+    if (!c) return false
+    c.defaultValue = value ? +value : 0
+    await db.finance_categories.put(plain(c))
+    return true
+  }
+
+  async function addSubscription(payload) {
+    const item = {
+      id: newId(),
+      name: payload.name || 'New Subscription',
+      cost: payload.cost ? +payload.cost : 0,
+      currency: payload.currency || 'INR',
+      billingPeriod: payload.billingPeriod || 'monthly',
+      nextRenewal: payload.nextRenewal || new Date().toISOString().slice(0, 10),
+      category: payload.category || '',
+      status: payload.status || 'active',
+      createdAt: now(),
+      updatedAt: now()
+    }
+    await db.finance_subscriptions.add(plain(item))
+    subscriptions.value.push(item)
+    return item
+  }
+
+  async function updateSubscription(id, patch) {
+    const sub = subscriptions.value.find(x => x.id === id); if (!sub) return
+    Object.assign(sub, patch, { updatedAt: now() })
+    await db.finance_subscriptions.put(plain(sub))
+  }
+
+  async function removeSubscription(id) {
+    await db.finance_subscriptions.delete(id)
+    subscriptions.value = subscriptions.value.filter(x => x.id !== id)
+  }
+
   return {
-    networthLogs, cashflowPeriods, categories,
+    networthLogs, cashflowPeriods, categories, subscriptions,
     latestNetworth, currentNetWorth, networthSeries, allocation,
     latestCashflow, cashflowSeries, expenseBreakdownLatest,
     logTotal, logAssets, logLiabilities, periodTotals,
@@ -225,6 +304,7 @@ export const useFinanceStore = defineStore('finance', () => {
     addNetworthLog, updateNetworthLog, removeNetworthLog,
     addCashflowPeriod, updateCashflowPeriod, removeCashflowPeriod,
     categoriesForScope, visibleCategoriesForScope, addCategory, renameCategory, toggleArchiveCategory, removeCategory,
-    updateCategoryBudget, resetCategories,
+    updateCategoryBudget, resetCategories, updateCategoryGroup, updateCategoryDefaultValue,
+    addSubscription, updateSubscription, removeSubscription,
   }
 })

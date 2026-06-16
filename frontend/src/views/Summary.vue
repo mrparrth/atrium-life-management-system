@@ -54,7 +54,7 @@ const selectedYear = computed(() => {
 // ───── Horizon Analytics
 const goalsForYear = computed(() => {
   if (!selectedYear.value) return []
-  return goals.items.filter(g => g.yearId === selectedYear.value.id)
+  return goals.items.filter(g => g.yearId === selectedYear.value.id || (g.yearIds && g.yearIds.includes(selectedYear.value.id)))
 })
 
 const projectsForYear = computed(() => {
@@ -169,7 +169,7 @@ const chartData = computed(() => {
 
   if (opt === 'net_worth') {
     return finance.networthSeries
-      .map(s => ({ label: formatLogDate(s.date), value: s.value }))
+      .map(s => ({ label: formatMonth(s.date), value: s.value }))
   }
 
   if (opt === 'total_investments') {
@@ -182,7 +182,7 @@ const chartData = computed(() => {
     return [...finance.networthLogs].reverse().map(log => {
       const entry = (log.entries || []).find(e => e.category === cat)
       return {
-        label: formatLogDate(log.date),
+        label: formatMonth(log.date),
         value: entry ? +entry.value : 0
       }
     })
@@ -212,7 +212,7 @@ const yoyProgression = computed(() => {
     const yStr = String(y.year)
 
     // Goals & Projects
-    const yearGoals = goals.items.filter(g => g.yearId === y.id)
+    const yearGoals = goals.items.filter(g => g.yearId === y.id || (g.yearIds && g.yearIds.includes(y.id)))
     const gids = new Set(yearGoals.map(g => g.id))
     const yearProjects = projects.items.filter(p => gids.has(p.goalId))
     const completedProj = yearProjects.filter(p => p.status === 'completed').length
@@ -230,7 +230,7 @@ const yoyProgression = computed(() => {
       endingNetWorth = finance.logTotal(nwLogsThisYear[0])
     } else {
       // Carry over from previous logs if none logged in this year
-      const precedingLogs = finance.networthLogs.filter(log => log.date < `${yStr}-01-01`)
+      const precedingLogs = finance.networthLogs.filter(log => log.date < `${yStr}-01`)
       if (precedingLogs.length) {
         endingNetWorth = finance.logTotal(precedingLogs[0])
       }
@@ -356,13 +356,13 @@ const yoyChartSeries = computed(() => {
     const colors = { asset: '#5A7353', liability: '#A94A4A', income: '#4A8BA9', expense: '#C48A5E', investment: '#8F77B0' }
     const labels = { asset: 'Total Assets', liability: 'Total Liabilities', income: 'Total Income', expense: 'Total Expense', investment: 'Total Investment' }
 
-    return ['asset', 'liability', 'income', 'expense', 'investment'].map(scope => {
+    return ['asset', 'liability', 'income', 'investment', 'expense'].map(scope => {
       const data = sortedYears.map(y => {
         const yStr = String(y.year)
         let total = 0
         if (scope === 'asset' || scope === 'liability') {
           const nwLogsThisYear = finance.networthLogs.filter(log => log.date.startsWith(`${yStr}-`))
-          let log = nwLogsThisYear.length ? nwLogsThisYear[0] : finance.networthLogs.filter(l => l.date < `${yStr}-01-01`)[0]
+          let log = nwLogsThisYear.length ? nwLogsThisYear[0] : finance.networthLogs.filter(l => l.date < `${yStr}-01`)[0]
           if (log) {
             (log.entries || []).filter(e => e.type === scope).forEach(e => total += +e.value)
           }
@@ -397,7 +397,7 @@ const yoyChartSeries = computed(() => {
     let total = 0
     if (scopeFilter === 'asset' || scopeFilter === 'liability') {
       const nwLogsThisYear = finance.networthLogs.filter(log => log.date.startsWith(`${yStr}-`))
-      let log = nwLogsThisYear.length ? nwLogsThisYear[0] : finance.networthLogs.filter(l => l.date < `${yStr}-01-01`)[0]
+      let log = nwLogsThisYear.length ? nwLogsThisYear[0] : finance.networthLogs.filter(l => l.date < `${yStr}-01`)[0]
       if (log) {
         (log.entries || []).filter(e => e.type === scopeFilter).forEach(e => {
           let include = false
@@ -433,11 +433,6 @@ function formatMonth(m) {
   return d.toLocaleString('en-IN', { month: 'short', year: 'numeric' })
 }
 
-function formatLogDate(dStr) {
-  if (!dStr) return ''
-  const d = new Date(dStr)
-  return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-}
 </script>
 
 <template>
@@ -558,14 +553,14 @@ function formatLogDate(dStr) {
                   </div>
                 </div>
                 <div>
-                  <span class="overline text-[10px]">Total Expenses</span>
-                  <div class="font-serif text-2xl text-pri-critical mt-0.5">{{ inr(yearlyFinanceSummary.totalExpense) }}
-                  </div>
-                </div>
-                <div>
                   <span class="overline text-[10px]">Total Invested</span>
                   <div class="font-serif text-2xl text-pri-interruptive mt-0.5">{{
                     inr(yearlyFinanceSummary.totalInvestment) }}</div>
+                </div>
+                <div>
+                  <span class="overline text-[10px]">Total Expenses</span>
+                  <div class="font-serif text-2xl text-pri-critical mt-0.5">{{ inr(yearlyFinanceSummary.totalExpense) }}
+                  </div>
                 </div>
                 <div class="pt-2 border-t border-line">
                   <span class="overline text-[10px]">Avg. Monthly Savings Rate</span>
@@ -578,10 +573,10 @@ function formatLogDate(dStr) {
               <div class="pt-4 border-t border-line text-[11px] text-ink-3 space-y-1 font-mono">
                 <div class="flex justify-between"><span>Avg. Income</span><span>{{
                   inrCompact(yearlyFinanceSummary.avgIncome) }}/mo</span></div>
-                <div class="flex justify-between"><span>Avg. Expense</span><span>{{
-                  inrCompact(yearlyFinanceSummary.avgExpense) }}/mo</span></div>
                 <div class="flex justify-between"><span>Avg. Invested</span><span>{{
                   inrCompact(yearlyFinanceSummary.avgInvested) }}/mo</span></div>
+                <div class="flex justify-between"><span>Avg. Expense</span><span>{{
+                  inrCompact(yearlyFinanceSummary.avgExpense) }}/mo</span></div>
               </div>
             </div>
             <div v-else class="card p-6 text-center text-ink-3 italic font-serif text-sm">

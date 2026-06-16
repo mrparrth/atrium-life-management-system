@@ -113,8 +113,9 @@ function handleRouteNote() {
 
 onMounted(async () => {
   if (route.query.new === 'true') {
-    router.replace({ query: { ...route.query, new: undefined } })
-    await createNewNote()
+    const prefillTitle = route.query.prefillTitle ? String(route.query.prefillTitle) : ''
+    router.replace({ query: { ...route.query, new: undefined, prefillTitle: undefined } })
+    await createNewNote(null, prefillTitle)
   } else {
     handleRouteNote()
   }
@@ -128,8 +129,9 @@ watch(() => filteredNotes.value.length, () => {
 
 watch(() => route.query.new, async (newVal) => {
   if (newVal === 'true') {
-    router.replace({ query: { ...route.query, new: undefined } })
-    await createNewNote()
+    const prefillTitle = route.query.prefillTitle ? String(route.query.prefillTitle) : ''
+    router.replace({ query: { ...route.query, new: undefined, prefillTitle: undefined } })
+    await createNewNote(null, prefillTitle)
   }
 })
 
@@ -153,8 +155,8 @@ function selectNote(id) {
   }
 }
 
-async function createNewNote(templateKey = null) {
-  let titleVal = 'Untitled Note'
+async function createNewNote(templateKey = null, prefillTitle = '') {
+  let titleVal = prefillTitle || 'Untitled Note'
   let bodyVal = ''
 
   if (templateKey && NOTE_TEMPLATES[templateKey]) {

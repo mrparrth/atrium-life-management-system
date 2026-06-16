@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
@@ -190,7 +190,8 @@ async function addNewTask() {
     clientId: props.id,
     important: false,
     urgent: false,
-    status: 'open'
+    status: 'open',
+    dueDate: dayjs().format('YYYY-MM-DD')
   })
   newTaskTitle.value = ''
   ui.showToast('Work item added to scope', 'success')
@@ -305,6 +306,25 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleClientKeydown)
   if (clockInterval) clearInterval(clockInterval)
+})
+
+const addNoteFirstInput = ref(null)
+const addResourceFirstInput = ref(null)
+
+watch(showAddNoteModal, (open) => {
+  if (open) {
+    nextTick(() => {
+      addNoteFirstInput.value?.focus()
+    })
+  }
+})
+
+watch(showAddResourceModal, (open) => {
+  if (open) {
+    nextTick(() => {
+      addResourceFirstInput.value?.focus()
+    })
+  }
 })
 </script>
 
@@ -743,9 +763,10 @@ onUnmounted(() => {
 
     <!-- ADD NOTE MODAL -->
     <div v-if="showAddNoteModal" @keydown.window.esc="showAddNoteModal = false"
-      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddNoteModal = false"></div>
-      <div class="relative w-full max-w-md card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
+      class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showAddNoteModal = false"></div>
+      <div class="relative w-full max-w-md card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
+        @keydown.meta.enter.prevent="submitNewNote" @keydown.ctrl.enter.prevent="submitNewNote">
         <div>
           <div class="overline">New Document</div>
           <h2 class="font-serif text-2xl mt-1">Create document</h2>
@@ -754,23 +775,26 @@ onUnmounted(() => {
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-semibold text-ink-2 mb-1">Document Title</label>
-            <input v-model="newNoteTitle" placeholder="e.g. Project onboarding or Kickoff notes"
+            <input ref="addNoteFirstInput" v-model="newNoteTitle" placeholder="e.g. Project onboarding or Kickoff notes"
               class="input-block text-sm focus:ring-1 focus:ring-emerald-500" @keyup.enter="submitNewNote" />
           </div>
         </div>
 
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddNoteModal = false" class="btn-ghost">Cancel</button>
-          <button @click="submitNewNote" class="btn-primary">Create Document</button>
+          <button @click="submitNewNote" class="btn-primary">
+            Create Document <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </div>
     </div>
 
     <!-- ADD RESOURCE MODAL -->
     <div v-if="showAddResourceModal" @keydown.window.esc="showAddResourceModal = false"
-      class="fixed inset-0 z-40 flex items-center justify-center px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddResourceModal = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
+      class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showAddResourceModal = false"></div>
+      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
+        @keydown.meta.enter.prevent="submitNewResource" @keydown.ctrl.enter.prevent="submitNewResource">
         <div>
           <div class="overline">New Vault Resource</div>
           <h2 class="font-serif text-2xl mt-1">
@@ -781,7 +805,7 @@ onUnmounted(() => {
         <div class="space-y-4">
           <!-- Title -->
           <div class="v-field-group">
-            <input type="text" v-model="resourceTitle" placeholder=" " class="v-field-input text-sm" id="resource-title" />
+            <input ref="addResourceFirstInput" type="text" v-model="resourceTitle" placeholder=" " class="v-field-input text-sm" id="resource-title" />
             <label for="resource-title" class="v-field-label text-xs">Title/System Name</label>
           </div>
 
@@ -812,7 +836,9 @@ onUnmounted(() => {
 
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddResourceModal = false" class="btn-ghost">Cancel</button>
-          <button @click="submitNewResource" class="btn-primary">Add Resource</button>
+          <button @click="submitNewResource" class="btn-primary">
+            Add Resource <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </div>
     </div>

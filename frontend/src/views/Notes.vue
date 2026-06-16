@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useNotesStore } from '@/stores/notes'
 import PageHeader from '@/components/PageHeader.vue'
@@ -58,6 +58,16 @@ onKeyStroke('Escape', (e) => {
     closeNewNote()
   }
 })
+
+const newTitleInput = ref(null)
+
+watch(showNew, (open) => {
+  if (open) {
+    nextTick(() => {
+      newTitleInput.value?.focus()
+    })
+  }
+})
 </script>
 
 <template>
@@ -87,18 +97,24 @@ onKeyStroke('Escape', (e) => {
     </div>
     <EmptyState v-else title="No notes" hint="Begin writing what you'd otherwise forget." />
 
-    <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="closeNewNote"></div>
-      <form @submit.prevent="create" class="relative w-full max-w-xl card p-8 animate-rise-in">
+    <div v-if="showNew" @keydown.window.esc="closeNewNote" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="closeNewNote"></div>
+      <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create" class="relative w-full max-w-xl card p-8 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeNewNote">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">New note</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A page of your own</h2>
-        <input v-model="newTitle" placeholder="Title…" class="input-soft text-lg font-serif mb-3" required
-          data-testid="new-note-title" />
-        <textarea v-model="newBody" placeholder="Write freely. Markdown welcome." rows="6"
-          class="input-soft resize-none mb-1.5" data-testid="new-note-body" />
+        
+        <div class="v-field-group mb-4">
+          <input ref="newTitleInput" v-model="newTitle" placeholder=" " class="v-field-input text-base font-semibold" id="new-note-title" required data-testid="new-note-title" />
+          <label for="new-note-title" class="v-field-label text-sm">Title *</label>
+        </div>
+
+        <div class="v-field-group mb-3">
+          <textarea v-model="newBody" placeholder=" " rows="6" class="v-field-input py-3 resize-none font-sans text-xs leading-relaxed" id="new-note-body" data-testid="new-note-body" />
+          <label for="new-note-body" class="v-field-label text-sm">Write freely. Markdown welcome.</label>
+        </div>
         <div class="flex justify-between items-center mb-5">
           <button type="button" @click="showHelp = true" class="text-[11px] text-ink-3 hover:text-ink flex items-center gap-1 transition-colors">
             <HelpCircle class="w-3.5 h-3.5" /> Markdown Guide
@@ -107,7 +123,9 @@ onKeyStroke('Escape', (e) => {
         </div>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="closeNewNote">Cancel</button>
-          <button type="submit" class="btn-primary" data-testid="new-note-save">Save</button>
+          <button type="submit" class="btn-primary" data-testid="new-note-save">
+            Save <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </form>
     </div>

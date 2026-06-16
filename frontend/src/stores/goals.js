@@ -6,7 +6,19 @@ export const useGoalsStore = defineStore('goals', () => {
   const items = ref([])
   async function load() { items.value = await db.goals.orderBy('createdAt').reverse().toArray() }
   async function add(payload) {
-    const g = { id: newId(), title: payload.title?.trim() || 'Untitled goal', description: payload.description || '', yearId: payload.yearId || null, status: 'active', createdAt: now(), updatedAt: now() }
+    const g = {
+      id: newId(),
+      title: payload.title?.trim() || 'Untitled goal',
+      description: payload.description || '',
+      yearId: payload.yearId || null,
+      yearIds: payload.yearIds || (payload.yearId ? [payload.yearId] : []),
+      useNumeric: payload.useNumeric || false,
+      targetNumber: Number(payload.targetNumber) || 0,
+      achievedNumber: Number(payload.achievedNumber) || 0,
+      status: 'active',
+      createdAt: now(),
+      updatedAt: now()
+    }
     await db.goals.add(g); items.value.unshift(g); return g
   }
   async function update(id, patch) {

@@ -147,7 +147,7 @@ function handleKeydown(e) {
 
 function handleQuickCaptureClick() {
   if (ui.mode === 'work') {
-    router.push('/work/notes?new=true')
+    router.push('/work/items?new=true')
   } else {
     ui.openQuickCapture()
   }
@@ -214,9 +214,16 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
     </button>
 
     <button @click="handleQuickCaptureClick"
-      class="mx-4 mb-4 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-ink text-canvas hover:opacity-90 transition-opacity duration-300 text-sm font-medium"
+      class="mx-4 mb-4 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-ink text-canvas hover:opacity-90 transition-opacity duration-300 text-sm font-medium"
       data-testid="quick-capture-trigger">
-      <Plus class="w-3.5 h-3.5" /> {{ ui.mode === 'work' ? 'New note' : 'Quick capture' }}
+      <span class="flex items-center gap-2">
+        <Plus class="w-3.5 h-3.5" />
+        {{ ui.mode === 'work' ? 'New task' : 'Quick capture' }}
+      </span>
+      <span class="flex items-center gap-1">
+        <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas">⌘</span>
+        <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas">N</span>
+      </span>
     </button>
 
     <nav class="flex-1 overflow-y-auto px-3 pb-4 space-y-6">

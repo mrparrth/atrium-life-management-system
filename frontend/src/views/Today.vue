@@ -24,8 +24,8 @@ const today = computed(() => dayjs().format('dddd, MMMM D'))
         </button>
       </template>
     </PageHeader>
-    <div v-if="list.length" class="space-y-3">
-      <TaskCard v-for="t in list" :key="t.id" :task="t" />
+    <div v-if="list.length" class="space-y-2">
+      <TaskCard v-for="t in list" :key="t.id" :task="t" :single-line="true" />
     </div>
     <EmptyState v-else title="An open day" hint="Nothing scheduled. Let it be - or capture something gentle." />
   </div>

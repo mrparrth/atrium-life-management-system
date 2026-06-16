@@ -1,12 +1,15 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
-import { inr } from '@/lib/money'
+import { inr, inrShort } from '@/lib/money'
 import { X, ChevronDown, ChevronRight } from 'lucide-vue-next'
 import { onKeyStroke } from '@vueuse/core'
 
-const props = defineProps({ initial: { type: Object, default: null } })
+const props = defineProps({
+  initial: { type: Object, default: null },
+  isCopy: { type: Boolean, default: false }
+})
 const emit = defineEmits(['close', 'saved'])
 
 const finance = useFinanceStore()
@@ -17,19 +20,55 @@ const note = ref(props.initial?.note || '')
 
 // ── Values ─────────────────────────────────────────────────────
 const valuesMap = ref({})
+const displayValues = ref({})
 function makeKey(type, category) { return `${type}::${category}` }
 
 function initValues() {
   const map = {}
-  for (const scope of ['income', 'investment', 'expense'])
-    for (const cat of finance.visibleCategoriesForScope(scope, props.initial))
-      map[makeKey(scope, cat.name)] = 0
-  if (props.initial?.entries)
-    for (const e of props.initial.entries) map[makeKey(e.type, e.category)] = +e.value
+  const dispMap = {}
+  for (const scope of ['income', 'investment', 'expense']) {
+    for (const cat of finance.visibleCategoriesForScope(scope, props.initial)) {
+      const key = makeKey(scope, cat.name)
+      const def = cat.defaultValue ? +cat.defaultValue : 0
+      map[key] = def
+      dispMap[key] = def === 0 ? '0' : inrShort(def)
+    }
+  }
+  if (props.initial?.entries) {
+    for (const e of props.initial.entries) {
+      const key = makeKey(e.type, e.category)
+      map[key] = +e.value
+      dispMap[key] = inrShort(e.value)
+    }
+  }
   valuesMap.value = map
+  displayValues.value = dispMap
 }
 initValues()
 watch(() => finance.categories.length, initValues)
+
+function onFocus(scope, catName, event) {
+  const key = makeKey(scope, catName)
+  const val = valuesMap.value[key]
+  displayValues.value[key] = val === 0 ? '' : val.toString()
+  nextTick(() => {
+    event?.target?.select()
+  })
+}
+
+function onInput(scope, catName, textValue) {
+  const key = makeKey(scope, catName)
+  displayValues.value[key] = textValue
+  const cleaned = scope === 'investment' ? textValue.replace(/[^0-9.-]/g, '') : textValue.replace(/[^0-9.]/g, '')
+  const num = parseFloat(cleaned)
+  valuesMap.value[key] = isNaN(num) ? 0 : num
+}
+
+function onBlur(scope, catName) {
+  const key = makeKey(scope, catName)
+  const val = valuesMap.value[key]
+  displayValues.value[key] = val === 0 ? '0' : inrShort(val)
+}
 
 // ── Totals ──────────────────────────────────────────────────────
 const totals = computed(() => {
@@ -45,13 +84,34 @@ const totals = computed(() => {
 // ── Grouped categories ──────────────────────────────────────────
 function groupedCategories(scope) {
   const cats = finance.visibleCategoriesForScope(scope, props.initial)
-  const groups = {}
+  const groupsMap = {}
   for (const c of cats) {
     const g = c.group || 'Other'
-    if (!groups[g]) groups[g] = []
-    groups[g].push(c)
+    if (!groupsMap[g]) groupsMap[g] = []
+    groupsMap[g].push(c)
   }
-  return groups
+
+  const order = {
+    income: ['Active', 'Passive', 'One-Off'],
+    investment: ['Equity', 'Debt', 'Debt/Other', 'Bullion', 'Real Estate', 'Illiquid'],
+    expense: ['Need', 'Want', 'Business']
+  }
+
+  const scopeOrder = order[scope] || []
+
+  const sortedGroupNames = Object.keys(groupsMap).sort((a, b) => {
+    const idxA = scopeOrder.indexOf(a)
+    const idxB = scopeOrder.indexOf(b)
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB
+    if (idxA !== -1) return -1
+    if (idxB !== -1) return 1
+    return a.localeCompare(b)
+  })
+
+  return sortedGroupNames.map(name => ({
+    name,
+    cats: groupsMap[name]
+  }))
 }
 
 function groupTotal(scope, cats) {
@@ -62,16 +122,16 @@ function groupTotal(scope, cats) {
 const collapsed = ref({})
 function initCollapsed() {
   for (const scope of ['income', 'investment', 'expense'])
-    for (const [gName] of Object.entries(groupedCategories(scope)))
-      collapsed.value[`${scope}::${gName}`] = false
+    for (const group of groupedCategories(scope))
+      collapsed.value[`${scope}::${group.name}`] = false
 }
 initCollapsed()
 
 watch(valuesMap, () => {
   for (const scope of ['income', 'investment', 'expense'])
-    for (const [gName, cats] of Object.entries(groupedCategories(scope))) {
-      const key = `${scope}::${gName}`
-      if (groupTotal(scope, cats) > 0 && collapsed.value[key]) collapsed.value[key] = false
+    for (const group of groupedCategories(scope)) {
+      const key = `${scope}::${group.name}`
+      if (groupTotal(scope, group.cats) !== 0 && collapsed.value[key]) collapsed.value[key] = false
     }
 }, { deep: true })
 
@@ -87,7 +147,19 @@ async function save() {
     entries.push({ type, category, value: num })
   }
   if (!entries.length) { ui.showToast('Add at least one value', 'error'); return }
-  if (props.initial) {
+
+  const exists = finance.cashflowPeriods.some(p => p.month === month.value && (!props.initial || props.isCopy || p.id !== props.initial.id))
+  if (exists) {
+    const monthFormatted = formatMonth(month.value)
+    if (!await ui.confirm({
+      title: 'Duplicate Month',
+      message: `A cashflow log for ${monthFormatted} already exists. Do you want to save anyway and create a duplicate entry?`
+    })) {
+      return
+    }
+  }
+
+  if (props.initial && !props.isCopy) {
     await finance.updateCashflowPeriod(props.initial.id, { month: month.value, entries, note: note.value })
     ui.showToast('Updated', 'success')
   } else {
@@ -97,8 +169,15 @@ async function save() {
   emit('saved'); emit('close')
 }
 
+function formatMonth(m) {
+  if (!m) return ''
+  const [y, mo] = m.split('-')
+  const d = new Date(+y, +mo - 1, 1)
+  return d.toLocaleString('en-IN', { month: 'short', year: 'numeric' })
+}
+
 async function closeForm() {
-  const hasValues = Object.values(valuesMap.value).some(v => +v > 0)
+  const hasValues = Object.values(valuesMap.value).some(v => +v !== 0)
   if (hasValues || note.value.trim()) {
     if (!await ui.confirm({ title: 'Discard draft?', message: 'You have unsaved changes. Discard them?' })) return
   }
@@ -106,6 +185,26 @@ async function closeForm() {
 }
 
 onKeyStroke('Escape', (e) => { e.preventDefault(); closeForm() })
+
+function handleFormKeydown(e) {
+  if (e.key === 'Enter') {
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault()
+      save()
+    } else {
+      if (e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
+        e.preventDefault()
+        if (e.target.classList.contains('cf-input')) {
+          const inputs = Array.from(document.querySelectorAll('.cf-input'))
+          const idx = inputs.indexOf(e.target)
+          if (idx !== -1 && idx < inputs.length - 1) {
+            inputs[idx + 1].focus()
+          }
+        }
+      }
+    }
+  }
+}
 
 function label(name) {
   return (name || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -122,22 +221,26 @@ const scopeMeta = {
   <div class="fixed inset-0 z-50 flex items-center justify-center px-4" data-testid="cashflow-form">
     <div class="fixed inset-0 bg-ink/50 backdrop-blur-md" @click="closeForm"></div>
 
-    <form @submit.prevent="save"
-      class="cf-modal relative w-full max-w-4xl animate-rise-in flex flex-col overflow-hidden"
+    <form @submit.prevent="save" @keydown="handleFormKeydown"
+      class="cf-modal relative w-full max-w-5xl animate-rise-in flex flex-col overflow-hidden"
       style="max-height: max(90vh, 820px)">
 
       <!-- ══ HEADER ════════════════════════════════════════════════ -->
       <div class="cf-header shrink-0">
 
         <!-- Month + close -->
-        <div class="flex items-start justify-between px-7 pt-6 pb-5">
+        <div class="flex items-center justify-between px-7 pt-6 pb-5">
           <div>
-            <p class="cf-overline mb-1.5">{{ initial ? 'Editing' : 'Log a month' }}</p>
-            <input type="month" v-model="month" class="cf-month-input" data-testid="cf-month" required />
+            <h2 class="font-serif text-2xl text-ink font-semibold tracking-tight">
+              {{ (initial && !isCopy) ? "Edit Month's Cashflow" : "Log a Month's Cashflow" }}
+            </h2>
           </div>
-          <button type="button" class="cf-close-btn" @click="closeForm">
-            <X class="w-4 h-4" />
-          </button>
+          <div class="flex items-center gap-3">
+            <input type="month" v-model="month" class="cf-month-input" data-testid="cf-month" required />
+            <button type="button" class="cf-close-btn" @click="closeForm">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <!-- Summary strip -->
@@ -146,21 +249,21 @@ const scopeMeta = {
           <div class="cf-summary-cell">
             <span class="cf-summary-label">Income</span>
             <span class="cf-summary-value text-pri-strategic">
-              {{ totals.income > 0 ? inr(totals.income) : '—' }}
+              {{ totals.income !== 0 ? inr(totals.income) : '—' }}
             </span>
           </div>
           <!-- Investment -->
           <div class="cf-summary-cell">
             <span class="cf-summary-label">Invested</span>
             <span class="cf-summary-value text-pri-interruptive">
-              {{ totals.investment > 0 ? inr(totals.investment) : '—' }}
+              {{ totals.investment !== 0 ? inr(totals.investment) : '—' }}
             </span>
           </div>
           <!-- Expense -->
           <div class="cf-summary-cell">
             <span class="cf-summary-label">Expenses</span>
             <span class="cf-summary-value text-pri-critical">
-              {{ totals.expense > 0 ? inr(totals.expense) : '—' }}
+              {{ totals.expense !== 0 ? inr(totals.expense) : '—' }}
             </span>
           </div>
           <!-- Net — emphasized -->
@@ -176,53 +279,65 @@ const scopeMeta = {
 
       <!-- ══ BODY ═════════════════════════════════════════════════ -->
       <div class="cf-body overflow-y-auto flex-1">
+        <div class="cf-body-grid">
+          <div v-for="scope in ['income', 'investment', 'expense']" :key="scope" class="cf-column">
 
-        <div v-for="scope in ['income', 'investment', 'expense']" :key="scope" class="cf-section">
-
-          <!-- Section header — strong anchor -->
-          <div class="cf-section-header">
-            <div class="flex items-center gap-2.5">
-              <span class="cf-section-dot" :class="scopeMeta[scope].dot"></span>
-              <span class="cf-section-title" :class="scopeMeta[scope].textClass">
-                {{ scopeMeta[scope].label }}
-              </span>
-            </div>
-            <span class="cf-section-total" :class="totals[scope] > 0 ? scopeMeta[scope].textClass : 'text-ink-3/40'">
-              {{ totals[scope] > 0 ? inr(totals[scope]) : '—' }}
-            </span>
-          </div>
-
-          <!-- Groups -->
-          <div v-for="(cats, gName) in groupedCategories(scope)" :key="gName" class="cf-group">
-
-            <!-- Group toggle -->
-            <button type="button" class="cf-group-header"
-              :class="collapsed[`${scope}::${gName}`] ? 'cf-group-collapsed' : 'cf-group-expanded'"
-              @click="toggleGroup(`${scope}::${gName}`)">
-              <span class="flex items-center gap-2">
-                <component :is="collapsed[`${scope}::${gName}`] ? ChevronRight : ChevronDown" class="cf-chevron"
-                  :class="collapsed[`${scope}::${gName}`] ? 'text-ink-3' : scopeMeta[scope].textClass" />
-                <span class="cf-group-name" :class="collapsed[`${scope}::${gName}`] ? 'text-ink-3' : 'text-ink-2'">
-                  {{ gName }}
+            <!-- Section header — column title -->
+            <div class="cf-column-header">
+              <div class="flex items-center gap-2">
+                <span class="cf-section-dot" :class="scopeMeta[scope].dot"></span>
+                <span class="cf-section-title" :class="scopeMeta[scope].textClass">
+                  {{ scopeMeta[scope].label }}
                 </span>
+              </div>
+              <span class="cf-section-total" :class="totals[scope] !== 0 ? scopeMeta[scope].textClass : 'text-ink-3/40'">
+                {{ totals[scope] !== 0 ? inr(totals[scope]) : '—' }}
               </span>
-              <span class="cf-group-total"
-                :class="groupTotal(scope, cats) > 0 ? scopeMeta[scope].textClass : 'text-ink-3/30'">
-                {{ groupTotal(scope, cats) > 0 ? inr(groupTotal(scope, cats)) : '—' }}
-              </span>
-            </button>
-
-            <!-- Rows — 3-col grid, no box borders -->
-            <div v-show="!collapsed[`${scope}::${gName}`]" class="cf-rows-grid">
-              <label v-for="(c, idx) in cats" :key="c.id" class="cf-row"
-                :class="idx % 3 !== 2 ? 'cf-row-divider' : ''" :data-testid="`cf-input-${scope}-${c.name}`">
-                <span class="cf-row-label">{{ label(c.name) }}</span>
-                <input type="number" min="0" step="any" v-model="valuesMap[makeKey(scope, c.name)]" class="cf-input"
-                  :class="(+valuesMap[makeKey(scope, c.name)] || 0) > 0 ? 'cf-input-filled' : 'cf-input-empty'"
-                  placeholder="—" @focus="$event.target.select()" />
-              </label>
             </div>
+
+            <!-- Groups stacked vertically inside the column -->
+            <div class="flex flex-col">
+              <div v-for="group in groupedCategories(scope)" :key="group.name" class="cf-group">
+
+                <!-- Group toggle -->
+                <button type="button" class="cf-group-header"
+                  :class="collapsed[`${scope}::${group.name}`] ? 'cf-group-collapsed' : 'cf-group-expanded'"
+                  @click="toggleGroup(`${scope}::${group.name}`)">
+                  <span class="flex items-center gap-2">
+                    <component :is="collapsed[`${scope}::${group.name}`] ? ChevronRight : ChevronDown"
+                      class="cf-chevron"
+                      :class="collapsed[`${scope}::${group.name}`] ? 'text-ink-3' : scopeMeta[scope].textClass" />
+                    <span class="cf-group-name"
+                      :class="collapsed[`${scope}::${group.name}`] ? 'text-ink-3' : 'text-ink'">
+                      {{ group.name }}
+                    </span>
+                  </span>
+                  <span class="cf-group-total"
+                    :class="groupTotal(scope, group.cats) !== 0 ? scopeMeta[scope].textClass + ' font-bold' : 'text-ink-3/30'">
+                    {{ groupTotal(scope, group.cats) !== 0 ? inr(groupTotal(scope, group.cats)) : '—' }}
+                  </span>
+                </button>
+
+                <!-- Rows — single-column stacked list -->
+                <div v-show="!collapsed[`${scope}::${group.name}`]" class="cf-rows-list">
+                  <label v-for="c in group.cats" :key="c.id" class="cf-row-single" :class="`cf-row-hover-${scope}`"
+                    :data-testid="`cf-input-${scope}-${c.name}`">
+                    <span class="cf-row-label">{{ label(c.name) }}</span>
+                    <input type="text" :value="displayValues[makeKey(scope, c.name)]"
+                      @focus="onFocus(scope, c.name, $event)" @input="onInput(scope, c.name, $event.target.value)"
+                      @blur="onBlur(scope, c.name)" class="cf-input"
+                      :class="(+valuesMap[makeKey(scope, c.name)] || 0) !== 0 ? 'cf-input-filled' : 'cf-input-empty'"
+                      placeholder="0" />
+                  </label>
+                </div>
+              </div>
+            </div>
+
           </div>
+        </div>
+        <!-- Notes Row -->
+        <div class="px-7 pb-6 pt-2 border-t border-line/40">
+          <input v-model="note" class="cf-note-input-line" placeholder="Add a note for this month…" data-testid="cf-note" />
         </div>
       </div>
 
@@ -236,11 +351,13 @@ const scopeMeta = {
               {{ totals.savingsRate.toFixed(0) }}%
             </span>
           </div>
-          <input v-model="note" class="cf-note-input min-w-0 flex-1" placeholder="Add a note…" data-testid="cf-note" />
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button type="button" class="btn-ghost text-sm" @click="closeForm">Cancel</button>
-          <button type="submit" class="btn-primary text-sm" data-testid="cf-save">Save month</button>
+          <button type="submit" class="btn-primary text-sm flex items-center gap-1.5" data-testid="cf-save">
+            {{ (initial && !isCopy) ? 'Save changes' : 'Save month' }}
+            <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </div>
     </form>
@@ -263,21 +380,22 @@ const scopeMeta = {
 }
 
 .cf-month-input {
-  font-family: var(--font-serif, Georgia, serif);
-  font-size: 1.375rem;
-  font-weight: 600;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.875rem;
+  font-weight: 500;
   color: rgb(var(--ink));
-  background: transparent;
-  border: none;
+  background: rgb(var(--elevated) / 0.5);
+  border: 1px solid rgb(var(--line));
+  border-radius: 0.75rem;
+  padding: 0.375rem 0.75rem;
   outline: none;
   cursor: pointer;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  transition: color 0.15s;
+  transition: all 0.15s;
 }
 
 .cf-month-input:hover {
-  color: rgb(var(--ink-2));
+  background: rgb(var(--elevated));
+  border-color: rgb(var(--line-2));
 }
 
 .cf-close-btn {
@@ -339,29 +457,51 @@ const scopeMeta = {
 
 /* ── Body ──────────────────────────────────────────────────────── */
 .cf-body {
-  background: rgb(var(--canvas) / 0.25);
+  background: rgb(var(--canvas) / 0.1);
 }
 
-.cf-section {
-  border-bottom: 1px solid rgb(var(--line) / 0.3);
+.cf-body-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 0.5rem 1.75rem;
 }
 
-.cf-section:last-child {
-  border-bottom: none;
+@media (max-width: 768px) {
+  .cf-body-grid {
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+    padding: 1.25rem 1.25rem;
+  }
 }
 
-/* Section header — strong visual anchor */
-.cf-section-header {
+.cf-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cf-column:not(:last-child) {
+  border-right: 1px solid rgb(var(--line) / 0.35);
+  padding-right: 1.75rem;
+}
+
+@media (max-width: 768px) {
+  .cf-column:not(:last-child) {
+    border-right: none;
+    border-bottom: 1px solid rgb(var(--line) / 0.35);
+    padding-right: 0;
+    padding-bottom: 1.75rem;
+  }
+}
+
+/* Column header — top visual anchor */
+.cf-column-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.75rem 0.5rem;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: rgb(var(--surface) / 0.98);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgb(var(--line) / 0.35);
+  padding: 0.5rem 0.25rem 0.75rem;
+  border-bottom: 2px solid rgb(var(--line) / 0.9);
+  margin-bottom: 0.25rem;
 }
 
 .cf-section-dot {
@@ -388,35 +528,41 @@ const scopeMeta = {
 }
 
 /* ── Group ─────────────────────────────────────────────────────── */
-.cf-group {}
+.cf-group {
+  display: flex;
+  flex-direction: column;
+}
 
 .cf-group-header {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1.75rem 0.5rem 1.25rem;
+  padding: 0.5rem 0.5rem;
   text-align: left;
   border: none;
   cursor: pointer;
-  transition: background 0.12s;
+  background: transparent;
+  transition: all 0.15s ease;
+  border-radius: 6px;
 }
 
 .cf-group-expanded {
-  background: rgb(var(--surface) / 0.5);
-  border-bottom: 1px solid rgb(var(--line) / 0.35);
+  border-bottom: 1.5px solid rgb(var(--line) / 0.85);
+  background: rgb(var(--elevated) / 0.15);
+  border-radius: 6px 6px 0 0;
 }
 
 .cf-group-collapsed {
-  background: transparent;
+  border-bottom: 1px solid rgb(var(--line) / 0.25);
 }
 
 .cf-group-collapsed:hover {
-  background: rgb(var(--surface) / 0.6);
+  background: rgb(var(--elevated) / 0.3);
 }
 
 .cf-group-expanded:hover {
-  background: rgb(var(--surface) / 0.8);
+  background: rgb(var(--elevated) / 0.35);
 }
 
 .cf-chevron {
@@ -427,10 +573,10 @@ const scopeMeta = {
 }
 
 .cf-group-name {
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.1em;
   transition: color 0.15s;
 }
 
@@ -443,43 +589,71 @@ const scopeMeta = {
   transition: color 0.2s;
 }
 
-/* ── Rows — ledger style, no grid borders ──────────────────────── */
-.cf-rows-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+/* ── Rows — stacked single-column layout ──────────────────────── */
+.cf-rows-list {
+  display: flex;
+  flex-direction: column;
   padding: 0.125rem 0;
 }
 
-.cf-row {
+.cf-row-single {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 1.25rem;
+  padding: 0.1rem 0.5rem;
   cursor: text;
-  transition: background 0.12s ease;
+  transition: background 0.15s ease, border-left-color 0.15s ease;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid rgb(var(--line) / 0.12);
 }
 
-.cf-row:hover {
-  background: rgb(var(--elevated));
+.cf-row-single:last-child {
+  border-bottom: none;
 }
 
-.cf-row:hover .cf-row-label {
+/* ── Themed hover & focus-within states ── */
+.cf-row-hover-income:hover {
+  background: rgb(var(--pri-strategic) / 0.04);
+  border-left-color: rgb(var(--pri-strategic));
+}
+
+.cf-row-hover-income:focus-within {
+  background: rgb(var(--pri-strategic) / 0.06);
+  border-left-color: rgb(var(--pri-strategic));
+}
+
+.cf-row-hover-investment:hover {
+  background: rgb(var(--pri-interruptive) / 0.04);
+  border-left-color: rgb(var(--pri-interruptive));
+}
+
+.cf-row-hover-investment:focus-within {
+  background: rgb(var(--pri-interruptive) / 0.06);
+  border-left-color: rgb(var(--pri-interruptive));
+}
+
+.cf-row-hover-expense:hover {
+  background: rgb(var(--pri-critical) / 0.04);
+  border-left-color: rgb(var(--pri-critical));
+}
+
+.cf-row-hover-expense:focus-within {
+  background: rgb(var(--pri-critical) / 0.06);
+  border-left-color: rgb(var(--pri-critical));
+}
+
+.cf-row-single:hover .cf-row-label {
   color: rgb(var(--ink));
 }
 
-.cf-row:focus-within {
+.cf-row-single:focus-within {
   background: rgb(var(--surface));
-}
-
-/* Ghost column divider — near invisible */
-.cf-row-divider {
-  border-right: 1px solid rgb(var(--line) / 0.12);
 }
 
 .cf-row-label {
   flex: 1;
-  font-size: 0.75rem;
-  color: rgb(var(--ink-2));
+  font-size: 0.78rem;
+  color: rgb(var(--ink));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -487,7 +661,7 @@ const scopeMeta = {
   transition: color 0.12s ease;
 }
 
-.cf-row:focus-within .cf-row-label {
+.cf-row-single:focus-within .cf-row-label {
   color: rgb(var(--ink));
 }
 
@@ -521,7 +695,6 @@ const scopeMeta = {
 
 .cf-input-filled {
   color: rgb(var(--ink));
-  font-weight: 600;
 }
 
 .cf-input-empty {
@@ -531,7 +704,6 @@ const scopeMeta = {
 .cf-input:focus {
   border-bottom-color: rgb(var(--ink-2));
   color: rgb(var(--ink));
-  font-weight: 600;
 }
 
 .cf-input::placeholder {
@@ -558,22 +730,24 @@ const scopeMeta = {
   color: rgb(var(--ink-3));
 }
 
-.cf-note-input {
-  font-size: 0.75rem;
-  color: rgb(var(--ink-2));
+.cf-note-input-line {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.875rem;
+  color: rgb(var(--ink));
   background: transparent;
   border: none;
-  border-bottom: 1px solid transparent;
+  border-bottom: 1px solid rgb(var(--line));
   outline: none;
-  padding: 0.25rem 0;
-  transition: border-color 0.15s;
+  padding: 0.5rem 0;
+  transition: border-color 0.2s;
+  width: 100%;
 }
 
-.cf-note-input:focus {
-  border-bottom-color: rgb(var(--line));
+.cf-note-input-line:focus {
+  border-bottom-color: rgb(var(--line-2));
 }
 
-.cf-note-input::placeholder {
-  color: rgb(var(--ink-3) / 0.4);
+.cf-note-input-line::placeholder {
+  color: rgb(var(--ink-3) / 0.7);
 }
 </style>

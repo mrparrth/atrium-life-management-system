@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useNextStepsStore } from '@/stores/nextSteps'
 import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
@@ -11,6 +11,15 @@ const ui = useUIStore()
 
 const newSectionTitle = ref('')
 const showNewSectionModal = ref(false)
+const newSectionInput = ref(null)
+
+watch(showNewSectionModal, (open) => {
+  if (open) {
+    nextTick(() => {
+      newSectionInput.value?.focus()
+    })
+  }
+})
 
 const editingSectionId = ref(null)
 const editSectionTitle = ref('')
@@ -244,23 +253,29 @@ async function onDrop(targetId) {
     <EmptyState v-else title="Checklist is empty" hint="Create a new section above to start organizing." />
 
     <!-- Create Section Dialog Modal -->
-    <div v-if="showNewSectionModal" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4" data-testid="new-section-modal">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNewSectionModal = false"></div>
-      <form @submit.prevent="createSection" class="relative w-full max-w-md card p-6 shadow-2xl shadow-black/20 animate-rise-in">
+    <div v-if="showNewSectionModal" @keydown.window.esc="showNewSectionModal = false" class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="new-section-modal">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNewSectionModal = false"></div>
+      <form @submit.prevent="createSection" @keydown.meta.enter.prevent="createSection" @keydown.ctrl.enter.prevent="createSection" class="relative w-full max-w-md card p-6 shadow-2xl shadow-black/20 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewSectionModal = false"><X class="w-4 h-4" /></button>
         <div class="overline">Horizon</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">Create a next steps section</h2>
-        <input 
-          v-model="newSectionTitle" 
-          placeholder="Section name (e.g. Work, Vacation, Weekend)..." 
-          class="input-soft text-lg font-serif mb-5 w-full" 
-          required 
-          autofocus
-          data-testid="new-section-title-input" 
-        />
+        <div class="v-field-group mb-5">
+          <input 
+            ref="newSectionInput"
+            v-model="newSectionTitle" 
+            placeholder=" " 
+            class="v-field-input text-lg font-bold font-sans" 
+            id="new-section-title"
+            required 
+            data-testid="new-section-title-input" 
+          />
+          <label for="new-section-title" class="v-field-label text-base font-semibold">Section Name *</label>
+        </div>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showNewSectionModal = false">Cancel</button>
-          <button type="submit" class="btn-primary" data-testid="new-section-save-btn">Create section</button>
+          <button type="submit" class="btn-primary" data-testid="new-section-save-btn">
+            Create section <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </form>
     </div>

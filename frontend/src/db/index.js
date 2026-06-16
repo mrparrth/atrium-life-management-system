@@ -92,6 +92,16 @@ db.version(8)
     }
   });
 
+// v9 - Finance Subscriptions tracking
+db.version(9).stores({
+  finance_subscriptions: "id, name, status, billingPeriod, nextRenewal, category",
+});
+
+// v10 - Compound index for finance_categories scope+name queries
+db.version(10).stores({
+  finance_categories: "id, scope, name, createdAt, [scope+name]",
+});
+
 export function newId() {
   return nanoid(12);
 }
@@ -106,11 +116,14 @@ export function plain(obj) {
 export const DEFAULT_CATEGORIES = [
   // assets
   { scope: "asset", name: "cash", group: "Liquid" },
-  { scope: "asset", name: "savings", group: "Liquid" },
-  { scope: "asset", name: "fixed_deposits", group: "Fixed" },
-  { scope: "asset", name: "investments", group: "Liquid" },
-  { scope: "asset", name: "real_estate", group: "Fixed" },
-  { scope: "asset", name: "jewellery", group: "Fixed" },
+  { scope: "asset", name: "stocks", group: "Semi Liquid" },
+  { scope: "asset", name: "mutual_funds", group: "Semi Liquid" },
+  { scope: "asset", name: "us_stocks", group: "Semi Liquid" },
+  { scope: "asset", name: "bonds", group: "Semi Liquid" },
+  { scope: "asset", name: "fixed_deposits", group: "Semi Liquid" },
+  { scope: "asset", name: "real_estate", group: "Illiquid" },
+  { scope: "asset", name: "gold", group: "Illiquid" },
+  { scope: "asset", name: "others", group: "Illiquid" },
   // liabilities
   { scope: "liability", name: "credit_card", group: "Short-term" },
   { scope: "liability", name: "home_loan", group: "Long-term" },
@@ -126,9 +139,11 @@ export const DEFAULT_CATEGORIES = [
   // investments (recurring contributions)
   { scope: "investment", name: "mutual_fund", group: "Equity" },
   { scope: "investment", name: "stocks", group: "Equity" },
-  { scope: "investment", name: "fixed_deposits", group: "Illiquid" },
-  { scope: "investment", name: "real_estate", group: "Illiquid" },
-  { scope: "investment", name: "jewellery", group: "Illiquid" },
+  { scope: "investment", name: "us_stocks", group: "Equity" },
+  { scope: "investment", name: "fixed_deposits", group: "Debt/Other" },
+  { scope: "investment", name: "real_estate", group: "Debt/Other" },
+  { scope: "investment", name: "gold", group: "Debt/Other" },
+  { scope: "investment", name: "others_(p2p,bonds_etc)", group: "Debt/Other" },
   // expenses
   { scope: "expense", name: "rent", group: "Need" },
   { scope: "expense", name: "food_and_groceries", group: "Need" },
@@ -143,7 +158,7 @@ export const DEFAULT_CATEGORIES = [
   { scope: "expense", name: "travel", group: "Want" },
   { scope: "expense", name: "personal", group: "Want" },
   { scope: "expense", name: "wearables", group: "Want" },
-  { scope: "expense", name: "subscriptions", group: "Want" },
+  { scope: "expense", name: "subscriptions_and_entertainment", group: "Want" },
   { scope: "expense", name: "one-off", group: "Want" },
   { scope: "expense", name: "education", group: "Business" },
   { scope: "expense", name: "paid_help", group: "Business" },
@@ -153,9 +168,10 @@ export const DEFAULT_CATEGORIES = [
 // Ensures category catalogue exists; safe to call on every load.
 export async function ensureDefaultCategories() {
   const count = await db.finance_categories.count();
-  if (count > 0) return;
-  const ts = now();
-  await db.finance_categories.bulkAdd(DEFAULT_CATEGORIES.map((c) => ({ id: newId(), ...c, createdAt: ts })));
+  if (count === 0) {
+    const ts = now();
+    await db.finance_categories.bulkAdd(DEFAULT_CATEGORIES.map((c) => ({ id: newId(), ...c, archived: false, createdAt: ts })));
+  }
 }
 
 // Seed helper - only runs once if DB is empty

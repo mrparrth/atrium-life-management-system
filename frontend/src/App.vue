@@ -70,7 +70,10 @@ onMounted(async () => {
   setInterval(() => autoBackup(), 60000) // check every minute, actual backup respects interval setting
 
   window.addEventListener('keydown', (e) => {
+    const isClientDetail = route.path && route.path.includes('/work/clients/')
+
     if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+      if (isClientDetail) return
       const forecastNext = document.querySelector('.forecasting-next-btn')
       if (forecastNext) {
         e.preventDefault()
@@ -84,6 +87,7 @@ onMounted(async () => {
       }
     }
     if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+      if (isClientDetail) return
       const forecastPrev = document.querySelector('.forecasting-prev-btn')
       if (forecastPrev) {
         e.preventDefault()
@@ -122,7 +126,7 @@ onMounted(async () => {
       e.preventDefault();
       ui.closeCommand();
       if (ui.mode === 'work') {
-        router.push('/work/notes?new=true')
+        router.push('/work/items?new=true')
       } else {
         ui.openQuickCapture()
       }
@@ -218,7 +222,7 @@ watch(() => ui.mode, (newMode) => {
     <QuickCapture v-if="ui.quickCaptureOpen" />
 
     <!-- TASK EDIT MODAL -->
-    <div v-if="ui.taskEditOpen" class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4" data-testid="task-edit-overlay">
+    <div v-if="ui.taskEditOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" data-testid="task-edit-overlay">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="ui.closeTaskEdit"></div>
       <div class="relative w-full max-w-xl card p-8 shadow-xl shadow-black/10 animate-rise-in">
         <button class="absolute top-4 right-4 btn-ghost !p-1.5" @click="ui.closeTaskEdit" data-testid="task-edit-close">

@@ -17,6 +17,10 @@ const props = defineProps({
   client: {
     type: Object,
     default: null
+  },
+  prefillName: {
+    type: String,
+    default: ''
   }
 })
 
@@ -114,7 +118,7 @@ function initForm() {
       : ''
     createDriveFolder.value = false
   } else {
-    name.value = ''
+    name.value = props.prefillName || ''
     companyName.value = ''
     address.value = ''
     email.value = ''
@@ -434,7 +438,7 @@ onUnmounted(() => {
                 <input v-model="customDriveUrlOrId" placeholder=" " class="v-field-input pr-10 text-xs" />
                 <label class="v-field-label text-xs">Drive Folder URL or ID</label>
                 <button v-if="customDriveUrlOrId.trim()" type="button" @click="openDriveFolder"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 btn-ghost !p-2 text-pri-strategic hover:text-pri-strategic-hover flex items-center justify-center cursor-pointer"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 btn-ghost !p-2 text-pri-strategic hover:text-pri-strategic-hover flex items-center justify-center cursor-pointer bg-stone-100"
                   title="Open folder in browser">
                   <ExternalLink class="w-3.5 h-3.5" />
                 </button>

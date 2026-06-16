@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useUIStore } from '@/stores/ui'
@@ -20,6 +20,23 @@ const ui = useUIStore()
 const settings = useSettingsStore()
 
 const showAddModal = ref(false)
+
+const route = useRoute()
+const prefillName = ref('')
+
+watch(() => route.query.new, (newVal) => {
+  if (newVal === 'true') {
+    prefillName.value = route.query.prefillName ? String(route.query.prefillName) : ''
+    showAddModal.value = true
+    router.replace({ query: { ...route.query, new: undefined, prefillName: undefined } })
+  }
+}, { immediate: true })
+
+watch(showAddModal, (isOpen) => {
+  if (!isOpen) {
+    prefillName.value = ''
+  }
+})
 
 const timezoneOptions = [
   { value: 'Pacific/Honolulu', label: '(GMT-10.0) HST · Honolulu' },
@@ -465,6 +482,6 @@ onUnmounted(() => {
     </section>
 
     <!-- CREATE CLIENT POPUP -->
-    <ClientPopup v-if="showAddModal" @close="showAddModal = false" @saved="handleClientSaved" />
+    <ClientPopup v-if="showAddModal" :prefillName="prefillName" @close="showAddModal = false" @saved="handleClientSaved" />
   </div>
 </template>

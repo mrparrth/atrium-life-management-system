@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBookmarksStore } from '@/stores/bookmarks'
 import { useUIStore } from '@/stores/ui'
@@ -157,6 +157,25 @@ onKeyStroke('Escape', (e) => {
     editing.value = false
   }
 })
+
+const newBmUrlInput = ref(null)
+const editBmUrlInput = ref(null)
+
+watch(showNewBm, (open) => {
+  if (open) {
+    nextTick(() => {
+      newBmUrlInput.value?.focus()
+    })
+  }
+})
+
+watch(showEditBm, (open) => {
+  if (open) {
+    nextTick(() => {
+      editBmUrlInput.value?.focus()
+    })
+  }
+})
 </script>
 
 <template>
@@ -290,15 +309,15 @@ onKeyStroke('Escape', (e) => {
     <EmptyState v-else title="Empty collection" hint="Add a bookmark to begin." />
 
     <!-- New bookmark modal -->
-    <div v-if="showNewBm" class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNewBm = false"></div>
-      <form @submit.prevent="createBookmark" class="relative w-full max-w-md card p-8 animate-rise-in">
+    <div v-if="showNewBm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNewBm = false"></div>
+      <form @submit.prevent="createBookmark" @keydown.meta.enter.prevent="createBookmark" @keydown.ctrl.enter.prevent="createBookmark" class="relative w-full max-w-md card p-8 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewBm = false">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">Add to {{ page.title }}</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A new link in this collection</h2>
-        <input v-model="newBm.url" type="url" placeholder="https://…" class="input-soft mb-3" required
+        <input ref="newBmUrlInput" v-model="newBm.url" type="url" placeholder="https://…" class="input-soft mb-3" required
           data-testid="page-new-bm-url" />
         <input v-model="newBm.title" placeholder="Title (optional)" class="input-soft mb-3"
           data-testid="page-new-bm-title" />
@@ -307,22 +326,24 @@ onKeyStroke('Escape', (e) => {
           class="input-soft resize-none mb-5"></textarea>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showNewBm = false">Cancel</button>
-          <button type="submit" class="btn-primary" data-testid="page-new-bm-save">Save</button>
+          <button type="submit" class="btn-primary" data-testid="page-new-bm-save">
+            Save <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </form>
     </div>
 
     <!-- Edit bookmark modal -->
-    <div v-if="showEditBm" class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4"
+    <div v-if="showEditBm" class="fixed inset-0 z-50 flex items-center justify-center p-4"
       data-testid="edit-bookmark-modal">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="closeEditBookmark"></div>
-      <form @submit.prevent="saveBookmarkEdit" class="relative w-full max-w-md card p-8 animate-rise-in">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="closeEditBookmark"></div>
+      <form @submit.prevent="saveBookmarkEdit" @keydown.meta.enter.prevent="saveBookmarkEdit" @keydown.ctrl.enter.prevent="saveBookmarkEdit" class="relative w-full max-w-md card p-8 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeEditBookmark">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">Edit bookmark</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">Update bookmark</h2>
-        <input v-model="editBmForm.url" type="url" placeholder="https://…" class="input-soft mb-3" required
+        <input ref="editBmUrlInput" v-model="editBmForm.url" type="url" placeholder="https://…" class="input-soft mb-3" required
           data-testid="edit-bookmark-url" />
         <input v-model="editBmForm.title" placeholder="Title (optional)" class="input-soft mb-3"
           data-testid="edit-bookmark-title" />
@@ -338,7 +359,9 @@ onKeyStroke('Escape', (e) => {
           class="input-soft resize-none mb-5" data-testid="edit-bookmark-description"></textarea>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="closeEditBookmark">Cancel</button>
-          <button type="submit" class="btn-primary" data-testid="edit-bookmark-save">Save</button>
+          <button type="submit" class="btn-primary" data-testid="edit-bookmark-save">
+            Save <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </form>
     </div>

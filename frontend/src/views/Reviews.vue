@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 
 // Auto-resize directive: grows textarea to fit its content
 const vAutoResize = {
@@ -40,6 +40,15 @@ async function save() {
   await reviews.add(form.value); ui.showToast('Reflection saved', 'success'); showNew.value = false
 }
 async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?', title: 'Delete Reflection' })) await reviews.remove(id) }
+
+const newWinsInput = ref(null)
+watch(showNew, (open) => {
+  if (open) {
+    nextTick(() => {
+      newWinsInput.value?.focus()
+    })
+  }
+})
 </script>
 
 <template>
@@ -92,9 +101,9 @@ async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?'
     </template>
     <EmptyState v-if="!reviews.items.length" title="No reflections yet" hint="A short pause is enough." />
 
-    <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNew = false"></div>
-      <form @submit.prevent="save"
+    <div v-if="showNew" @keydown.window.esc="showNew = false" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNew = false"></div>
+      <form @submit.prevent="save" @keydown.meta.enter.prevent="save" @keydown.ctrl.enter.prevent="save"
         class="relative w-full max-w-2xl card p-8 animate-rise-in max-h-[85vh] overflow-y-auto">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false">
           <X class="w-4 h-4" />
@@ -103,7 +112,7 @@ async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?'
         <h2 class="font-serif text-3xl mt-1 mb-6">A quiet look back</h2>
         <div class="space-y-5">
           <label class="block"><span class="overline block mb-1">Wins</span>
-            <textarea v-auto-resize v-model="form.wins" rows="1" class="input-block" placeholder="Small or large."
+            <textarea ref="newWinsInput" v-auto-resize v-model="form.wins" rows="1" class="input-block" placeholder="Small or large."
               data-testid="review-wins"></textarea>
           </label>
           <label class="block"><span class="overline block mb-1">Challenges</span>
@@ -121,7 +130,9 @@ async function remove(id) { if (await ui.confirm({ message: 'Delete reflection?'
         </div>
         <div class="flex justify-end gap-2 mt-6">
           <button type="button" class="btn-ghost" @click="showNew = false">Cancel</button>
-          <button type="submit" class="btn-primary" data-testid="review-save">Save reflection</button>
+          <button type="submit" class="btn-primary" data-testid="review-save">
+            Save reflection <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </form>
     </div>

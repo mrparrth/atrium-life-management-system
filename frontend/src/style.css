@@ -287,4 +287,86 @@ input[type="number"] {
   color: rgb(var(--pri-strategic)) !important;
 }
 
+/* Sticky Category Column Utilities */
+.sticky-col-header {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 20 !important;
+  background-color: rgb(var(--surface)) !important;
+  border-left: 1px solid rgb(var(--line) / 0.6) !important;
+}
+
+.sticky-col-cell {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 10 !important;
+  border-left: 1px solid rgb(var(--line) / 0.6) !important;
+}
+
+/* Base states */
+.bg-sticky-category {
+  background-color: rgb(var(--surface)) !important;
+}
+.group:hover .bg-sticky-category {
+  background-image: linear-gradient(rgb(var(--canvas) / 0.3), rgb(var(--canvas) / 0.3)) !important;
+}
+
+.bg-sticky-subgroup {
+  background-color: rgb(var(--surface)) !important;
+  background-image: linear-gradient(rgb(var(--elevated) / 0.2), rgb(var(--elevated) / 0.2)) !important;
+}
+.group:hover .bg-sticky-subgroup {
+  background-image: linear-gradient(rgb(var(--elevated) / 0.35), rgb(var(--elevated) / 0.35)) !important;
+}
+
+.bg-sticky-total {
+  background-color: rgb(var(--surface)) !important;
+  background-image: linear-gradient(rgb(var(--canvas) / 0.3), rgb(var(--canvas) / 0.3)) !important;
+}
+
+.bg-sticky-net {
+  background-color: rgb(var(--elevated)) !important;
+}
+
+/* Solid group header backgrounds to mask scrolled data and prevent bleed-through */
+.bg-sticky-income {
+  background-color: rgb(var(--surface)) !important;
+  background-image: linear-gradient(rgb(16 185 129 / 0.05), rgb(16 185 129 / 0.05)) !important;
+}
+.bg-sticky-investment {
+  background-color: rgb(var(--surface)) !important;
+  background-image: linear-gradient(rgb(59 130 246 / 0.05), rgb(59 130 246 / 0.05)) !important;
+}
+.bg-sticky-expense {
+  background-color: rgb(var(--surface)) !important;
+  background-image: linear-gradient(rgb(244 63 94 / 0.05), rgb(244 63 94 / 0.05)) !important;
+}
+.bg-sticky-asset {
+  background-color: rgb(var(--surface)) !important;
+  background-image: linear-gradient(rgb(16 185 129 / 0.05), rgb(16 185 129 / 0.05)) !important;
+}
+.bg-sticky-liability {
+  background-color: rgb(var(--surface)) !important;
+  background-image: linear-gradient(rgb(244 63 94 / 0.05), rgb(244 63 94 / 0.05)) !important;
+}
+
+/* Premium Fintech Table Column Widths */
+.col-category {
+  width: 240px !important;
+  min-width: 240px !important;
+  max-width: 240px !important;
+}
+.col-month {
+  width: 95px !important;
+  min-width: 95px !important;
+  max-width: 95px !important;
+}
+.col-summary {
+  width: 105px !important;
+  min-width: 105px !important;
+  max-width: 105px !important;
+}
+
+
+
 

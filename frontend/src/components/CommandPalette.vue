@@ -64,7 +64,7 @@ const navItemsWork = [
 const extraNavPersonal = [
   { type: 'nav', label: 'View Networth', action: () => { ui.closeCommand(); router.push('/finance?tab=networth') }, icon: 'wallet' },
   { type: 'nav', label: 'View CashFlow', action: () => { ui.closeCommand(); router.push('/finance?tab=cashflow') }, icon: 'wallet' },
-  { type: 'nav', label: 'Modify Categories', action: () => { ui.closeCommand(); router.push('/finance?tab=categories') }, icon: 'wallet' },
+  { type: 'nav', label: 'Finance Settings', action: () => { ui.closeCommand(); router.push('/finance?tab=categories') }, icon: 'wallet' },
   { type: 'nav', label: 'Year Summary', action: () => { ui.closeCommand(); router.push('/summary?tab=yearly') }, icon: 'goal' },
   { type: 'nav', label: 'YoY summary', action: () => { ui.closeCommand(); router.push('/summary?tab=yoy') }, icon: 'goal' },
 ]
@@ -82,10 +82,10 @@ const quickActionsPersonal = [
 ]
 
 const quickActionsWork = [
-  { type: 'action', label: 'New Client Profile', action: () => { ui.closeCommand(); router.push('/work/clients') } },
-  { type: 'action', label: 'Add Work Item', action: () => { ui.closeCommand(); router.push('/work/items') } },
-  { type: 'action', label: 'Draft Invoice', action: () => { ui.closeCommand(); router.push('/work/invoices') } },
-  { type: 'action', label: 'Capture Workspace Note', action: () => { ui.closeCommand(); router.push('/work/notes') } },
+  { type: 'action', label: 'New Client Profile', action: () => { ui.closeCommand(); router.push('/work/clients?new=true') } },
+  { type: 'action', label: 'Add Work Item', action: () => { ui.closeCommand(); router.push('/work/items?new=true') } },
+  { type: 'action', label: 'Draft Invoice', action: () => { ui.closeCommand(); router.push('/work/invoices?new=true') } },
+  { type: 'action', label: 'Capture Workspace Note', action: () => { ui.closeCommand(); router.push('/work/notes?new=true') } },
 ]
 
 const results = computed(() => {
@@ -116,6 +116,17 @@ const results = computed(() => {
     const wNotes = workNotesStore.items.filter(n => match(n.title) || match(n.body)).slice(0, 6).map(n => ({ type: 'note', label: n.title, to: `/work/notes?id=${n.id}`, item: n }))
 
     const groups = []
+    const termRaw = q.value.trim()
+    if (termRaw) {
+      groups.push({
+        group: 'Create items...',
+        items: [
+          { type: 'action', label: `Create client "${termRaw}"`, action: () => { ui.closeCommand(); router.push({ path: '/work/clients', query: { new: 'true', prefillName: termRaw } }) } },
+          { type: 'action', label: `Create work item "${termRaw}"`, action: () => { ui.closeCommand(); router.push({ path: '/work/items', query: { new: 'true', prefillTitle: termRaw } }) } },
+          { type: 'action', label: `Create note "${termRaw}"`, action: () => { ui.closeCommand(); router.push({ path: '/work/notes', query: { new: 'true', prefillTitle: termRaw } }) } }
+        ]
+      })
+    }
     if (qa.length) groups.push({ group: 'Quick actions', items: qa })
     if (nav.length) groups.push({ group: 'Jump to', items: nav })
     if (clients.length) groups.push({ group: 'Clients Workspaces', items: clients })

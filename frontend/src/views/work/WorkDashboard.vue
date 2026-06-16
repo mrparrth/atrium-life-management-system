@@ -67,7 +67,7 @@ const focusItems = computed(() => {
   return itemsStore.items.filter(item => {
     if (itemsStore.isCompleted(item.status)) return false
     if (item.snoozedUntil && new Date(item.snoozedUntil) > new Date()) return false
-    return item.status === 'in_progress' || !item.dueDate || item.dueDate === todayStr || (item.important && item.urgent)
+    return item.status === 'in_progress' || !item.dueDate || item.dueDate <= todayStr || (item.important && item.urgent)
   }).slice(0, 5)
 })
 
@@ -181,14 +181,14 @@ onMounted(async () => {
           </SectionHeader>
 
           <!-- Quick item add -->
-          <div class="card p-3.5 mb-4 border border-line bg-canvas flex gap-2 flex-wrap items-center">
+          <div class="p-2 mb-4 border border-line bg-canvas rounded-xl flex gap-2 flex-wrap items-center">
             <input v-model="quickTitle" @keyup.enter="addQuickWork" placeholder="Add quick work item..."
-              class="dashboard-quick-input bg-transparent border-0 focus:outline-none text-sm placeholder:text-ink-3 flex-1 min-w-[200px]" />
+              class="dashboard-quick-input bg-surface border border-line rounded-md px-3 h-8 focus:outline-none focus:border-line-2 text-sm placeholder:text-ink-3 flex-1 min-w-[200px]" />
             <span class="kbd text-[10px] select-none text-ink-3 mr-1">⌘3</span>
             <!-- Custom Combobox for Client -->
             <div class="relative min-w-[150px] sm:min-w-[200px]">
               <button @click="showClientDropdown = !showClientDropdown" type="button"
-                class="w-full text-left text-xs bg-surface border border-line rounded-lg px-2.5 py-1.5 text-ink flex items-center justify-between gap-1.5 focus:outline-none hover:border-line-2 transition-colors">
+                class="w-full text-left text-xs bg-surface border border-line rounded-md px-2.5 h-8 text-ink flex items-center justify-between gap-1.5 focus:outline-none hover:border-line-2 transition-colors">
                 <span class="truncate">{{ selectedClientName }}</span>
                 <span class="text-ink-3">▼</span>
               </button>
@@ -196,7 +196,7 @@ onMounted(async () => {
               <div v-if="showClientDropdown" class="fixed inset-0 z-10" @click="showClientDropdown = false"></div>
 
               <div v-if="showClientDropdown"
-                class="absolute right-0 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg z-20 p-2 space-y-1.5 min-w-[220px]">
+                class="absolute right-0 mt-1 w-full bg-surface border border-line rounded-md shadow-lg z-20 p-2 space-y-1.5 min-w-[220px]">
                 <input v-model="clientSearchQuery" placeholder="Search client..."
                   class="w-full text-xs bg-canvas border border-line rounded px-2 py-1 focus:outline-none focus:border-line-2"
                   @click.stop />
@@ -214,7 +214,7 @@ onMounted(async () => {
                 </div>
               </div>
             </div>
-            <button @click="addQuickWork" class="btn-primary !py-1 !px-3 text-xs">Add</button>
+            <button @click="addQuickWork" class="btn-primary h-8 !py-0 !px-4 text-xs !rounded-md">Add</button>
           </div>
 
           <div v-if="focusItems.length" class="space-y-3">

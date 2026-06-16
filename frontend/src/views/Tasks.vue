@@ -70,8 +70,8 @@ const groups = computed(() => {
           <h3 class="text-lg font-medium capitalize">{{ key }}</h3>
           <span class="text-ink-3 text-sm">· {{ items.length }}</span>
         </div>
-        <div class="space-y-3">
-          <TaskCard v-for="t in items" :key="t.id" :task="t" />
+        <div class="space-y-2">
+          <TaskCard v-for="t in items" :key="t.id" :task="t" :single-line="true" />
         </div>
       </section>
       <EmptyState v-if="!filtered.length" title="Nothing here" hint="Try a different filter, or capture a new task." />

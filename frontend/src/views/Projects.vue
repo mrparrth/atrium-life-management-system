@@ -27,7 +27,7 @@ const filter = ref('active')
 const showNew = ref(false)
 const newTitle = ref(''); const newDesc = ref(''); const newArea = ref(null); const newGoal = ref(null)
 
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, nextTick } from 'vue'
 
 function handleQuery() {
   if (route.query.new) {
@@ -66,6 +66,17 @@ onKeyStroke('Escape', (e) => {
   if (showNew.value) {
     e.preventDefault()
     closeNewProject()
+  }
+})
+
+const newTitleInput = ref(null)
+const focusedFields = ref({})
+
+watch(showNew, (open) => {
+  if (open) {
+    nextTick(() => {
+      newTitleInput.value?.focus()
+    })
   }
 })
 </script>
@@ -112,36 +123,51 @@ onKeyStroke('Escape', (e) => {
     <EmptyState v-else title="No projects yet" hint="Start one - even a small one." />
 
     <!-- New project modal -->
-    <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4"
+    <div v-if="showNew" @keydown.window.esc="closeNewProject" class="fixed inset-0 z-50 flex items-center justify-center p-4"
       data-testid="new-project-modal">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="closeNewProject"></div>
-      <form @submit.prevent="createProject" class="relative w-full max-w-lg card p-8 animate-rise-in">
+      <form @submit.prevent="createProject" @keydown.meta.enter.prevent="createProject" @keydown.ctrl.enter.prevent="createProject" class="relative w-full max-w-lg card p-8 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeNewProject">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">New project</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A new thread to tend</h2>
-        <input v-model="newTitle" placeholder="Project title…" class="input-soft text-lg font-serif mb-3" required
-          data-testid="new-project-title" />
-        <textarea v-model="newDesc" placeholder="A line of context…" rows="2" class="input-soft resize-none mb-3"
-          data-testid="new-project-desc" />
-        <div class="grid grid-cols-2 gap-3 mb-5">
-          <label class="block"><span class="overline block mb-1">Area</span>
-            <select v-model="newArea" class="input-block text-sm">
+        
+        <div class="v-field-group mb-4">
+          <input ref="newTitleInput" v-model="newTitle" placeholder=" " class="v-field-input text-base font-semibold" id="new-project-title" required data-testid="new-project-title" />
+          <label for="new-project-title" class="v-field-label text-sm">Project Title *</label>
+        </div>
+
+        <div class="v-field-group mb-4">
+          <textarea v-model="newDesc" placeholder=" " rows="2" class="v-field-input py-3 resize-none font-sans text-xs leading-relaxed" id="new-project-desc" data-testid="new-project-desc"></textarea>
+          <label for="new-project-desc" class="v-field-label text-sm">A line of context (optional)</label>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="v-field-group relative">
+            <select v-model="newArea" @focus="focusedFields.newArea = true" @blur="focusedFields.newArea = false" class="v-field-select text-xs">
               <option :value="null">-</option>
               <option v-for="a in areas.items" :key="a.id" :value="a.id">{{ a.name }}</option>
             </select>
-          </label>
-          <label class="block"><span class="overline block mb-1">Goal</span>
-            <select v-model="newGoal" class="input-block text-sm">
+            <span class="v-field-arrow">▼</span>
+            <label :class="['v-field-label text-xs', (newArea !== null || focusedFields.newArea) ? 'v-field-label--floating' : '']">Area</label>
+          </div>
+
+          <div class="v-field-group relative">
+            <select v-model="newGoal" @focus="focusedFields.newGoal = true" @blur="focusedFields.newGoal = false" class="v-field-select text-xs">
               <option :value="null">-</option>
               <option v-for="g in goals.items" :key="g.id" :value="g.id">{{ g.title }}</option>
             </select>
-          </label>
+            <span class="v-field-arrow">▼</span>
+            <label :class="['v-field-label text-xs', (newGoal !== null || focusedFields.newGoal) ? 'v-field-label--floating' : '']">Goal</label>
+          </div>
         </div>
+
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="closeNewProject">Cancel</button>
-          <button type="submit" class="btn-primary" data-testid="new-project-save">Create</button>
+          <button type="submit" class="btn-primary" data-testid="new-project-save">
+            Create <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </form>
     </div>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useYearsStore } from '@/stores/years'
 import { useGoalsStore } from '@/stores/goals'
 import { useProjectsStore } from '@/stores/projects'
@@ -9,6 +9,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { Plus, X, Trash2, Calendar, TrendingUp, TrendingDown, Landmark, PiggyBank, Briefcase } from 'lucide-vue-next'
 import dayjs from 'dayjs'
+import { onKeyStroke } from '@vueuse/core'
 
 const years = useYearsStore()
 const goals = useGoalsStore()
@@ -23,11 +24,11 @@ const newTheme = ref('')
 const selectedYear = ref(null)
 
 function goalCount(yid) { 
-  return goals.items.filter(g => g.yearId === yid).length 
+  return goals.items.filter(g => g.yearId === yid || (g.yearIds && g.yearIds.includes(yid))).length 
 }
 
 function getYearGoals(yid) {
-  return goals.items.filter(g => g.yearId === yid)
+  return goals.items.filter(g => g.yearId === yid || (g.yearIds && g.yearIds.includes(yid)))
 }
 
 function getGoalProjects(gid) {
@@ -103,6 +104,22 @@ async function removeYear(y) {
   if (!await ui.confirm({ message: `Delete ${y.year}? Its goals will remain.`, title: 'Delete Year' })) return
   await years.remove(y.id)
 }
+
+const newYearInput = ref(null)
+watch(showNew, (open) => {
+  if (open) {
+    nextTick(() => {
+      newYearInput.value?.focus()
+    })
+  }
+})
+
+onKeyStroke('Escape', (e) => {
+  if (showNew.value) {
+    e.preventDefault()
+    showNew.value = false
+  }
+})
 </script>
 
 <template>
@@ -300,17 +317,41 @@ async function removeYear(y) {
     </div>
 
     <!-- NEW YEAR CREATOR DIALOG -->
-    <div v-if="showNew" class="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showNew = false"></div>
-      <form @submit.prevent="create" class="relative w-full max-w-md card p-8 animate-rise-in">
+    <div v-if="showNew" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNew = false"></div>
+      <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create" class="relative w-full max-w-md card p-8 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false"><X class="w-4 h-4" /></button>
         <div class="overline">New year</div>
-        <h2 class="font-serif text-2xl mt-1 mb-5">A new chapter</h2>
-        <input type="number" v-model="newYear" class="input-soft text-3xl font-serif mb-3" required />
-        <input v-model="newTheme" placeholder="A theme for the year…" class="input-soft text-lg font-serif mb-5" />
+        <h2 class="font-serif text-2xl mt-1 mb-6">A new chapter</h2>
+        
+        <div class="v-field-group mb-5">
+          <input 
+            ref="newYearInput" 
+            type="number" 
+            v-model="newYear" 
+            placeholder=" " 
+            class="v-field-input text-lg font-bold font-sans" 
+            id="new-year-val" 
+            required 
+          />
+          <label for="new-year-val" class="v-field-label text-base font-semibold">Year *</label>
+        </div>
+
+        <div class="v-field-group mb-6">
+          <input 
+            v-model="newTheme" 
+            placeholder=" " 
+            class="v-field-input text-base font-sans" 
+            id="new-year-theme" 
+          />
+          <label for="new-year-theme" class="v-field-label text-base font-semibold">A theme for the year</label>
+        </div>
+
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showNew = false">Cancel</button>
-          <button type="submit" class="btn-primary">Create</button>
+          <button type="submit" class="btn-primary">
+            Create <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </form>
     </div>

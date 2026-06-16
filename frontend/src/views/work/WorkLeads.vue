@@ -168,8 +168,13 @@ watch([() => leadsStore.items, () => route.query.id], ([items, id]) => {
   }
 }, { immediate: true })
 
+const editModalFirstInput = ref(null)
 watch(showEditModal, (isOpen) => {
-  if (!isOpen && route.query.id) {
+  if (isOpen) {
+    nextTick(() => {
+      editModalFirstInput.value?.focus()
+    })
+  } else if (route.query.id) {
     router.replace({ query: { ...route.query, id: undefined } })
   }
 })
@@ -312,9 +317,10 @@ onUnmounted(() => {
 
     <!-- CREATE LEAD DIALOG -->
     <div v-if="showAddModal" @keydown.window.esc="showAddModal = false"
-      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddModal = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
+      class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showAddModal = false"></div>
+      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
+        @keydown.meta.enter.prevent="createLead" @keydown.ctrl.enter.prevent="createLead">
         <div>
           <div class="overline">New Sales Lead</div>
           <h2 class="font-serif text-2xl mt-1">Add sales opportunity</h2>
@@ -373,16 +379,19 @@ onUnmounted(() => {
 
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddModal = false" class="btn-ghost">Cancel</button>
-          <button @click="createLead" class="btn-primary">Add Opportunity</button>
+          <button @click="createLead" class="btn-primary">
+            Add Opportunity <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </div>
     </div>
 
     <!-- EDIT LEAD DIALOG -->
     <div v-if="showEditModal" @keydown.window.esc="showEditModal = false"
-      class="fixed inset-0 z-40 flex items-start justify-center pt-24 px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showEditModal = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
+      class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showEditModal = false"></div>
+      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
+        @keydown.meta.enter.prevent="saveLeadEdit" @keydown.ctrl.enter.prevent="saveLeadEdit">
         <div>
           <div class="overline">Modify Sales Lead</div>
           <h2 class="font-serif text-2xl mt-1">Edit opportunity</h2>
@@ -391,7 +400,7 @@ onUnmounted(() => {
         <div class="space-y-4 pt-2">
           <div class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <input v-model="editForm.title" placeholder=" " class="v-field-input" id="edit-lead-title" required />
+              <input ref="editModalFirstInput" v-model="editForm.title" placeholder=" " class="v-field-input" id="edit-lead-title" required />
               <label for="edit-lead-title" class="v-field-label">Opportunity Title *</label>
             </div>
             <div class="v-field-group">
@@ -442,7 +451,9 @@ onUnmounted(() => {
 
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showEditModal = false" class="btn-ghost">Cancel</button>
-          <button @click="saveLeadEdit" class="btn-primary">Save Changes</button>
+          <button @click="saveLeadEdit" class="btn-primary">
+            Save Changes <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </div>
     </div>

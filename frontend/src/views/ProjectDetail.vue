@@ -74,16 +74,16 @@ async function remove() { if (await ui.confirm({ message: 'Delete this project?'
       <SectionHeader overline="Tasks" :title="`${openTasks.length} open`">
         <template #right><button class="btn-primary" @click="ui.openQuickCapture" data-testid="project-capture"><Plus class="w-4 h-4" /> Capture</button></template>
       </SectionHeader>
-      <div v-if="openTasks.length" class="space-y-3">
-        <TaskCard v-for="t in openTasks" :key="t.id" :task="t" :show-project="false" />
+      <div v-if="openTasks.length" class="space-y-2">
+        <TaskCard v-for="t in openTasks" :key="t.id" :task="t" :show-project="false" :single-line="true" />
       </div>
       <EmptyState v-else title="No open tasks" hint="A clean slate." />
     </section>
 
     <section v-if="doneTasks.length" class="mb-10">
       <SectionHeader overline="Completed" :title="`${doneTasks.length} done`" />
-      <div class="space-y-3 opacity-70">
-        <TaskCard v-for="t in doneTasks" :key="t.id" :task="t" :show-project="false" :compact="true" />
+      <div class="space-y-2 opacity-70">
+        <TaskCard v-for="t in doneTasks" :key="t.id" :task="t" :show-project="false" :compact="true" :single-line="true" />
       </div>
     </section>
 

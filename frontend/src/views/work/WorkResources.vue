@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
@@ -48,6 +48,14 @@ const activeTab = ref('url') // url, credentials
 const clientFilter = ref('')
 
 const showAddModal = ref(false)
+const addModalFirstInput = ref(null)
+watch(showAddModal, (open) => {
+  if (open) {
+    nextTick(() => {
+      addModalFirstInput.value?.focus()
+    })
+  }
+})
 const title = ref('')
 const type = ref('url')
 const url = ref('')
@@ -230,9 +238,10 @@ function deleteResource(id) {
 
     <!-- ADD RESOURCE MODAL -->
     <div v-if="showAddModal" @keydown.window.esc="showAddModal = false"
-      class="fixed inset-0 z-40 flex items-center justify-center px-4">
-      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showAddModal = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6">
+      class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showAddModal = false"></div>
+      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
+        @keydown.meta.enter.prevent="createResource" @keydown.ctrl.enter.prevent="createResource">
         <div>
           <div class="overline">New Vault Resource</div>
           <h2 class="font-serif text-2xl mt-1">Add details</h2>
@@ -241,7 +250,7 @@ function deleteResource(id) {
         <div class="space-y-4 pt-2">
           <div class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <input v-model="title" placeholder=" " class="v-field-input" id="resource-title" required />
+              <input ref="addModalFirstInput" v-model="title" placeholder=" " class="v-field-input" id="resource-title" required />
               <label for="resource-title" class="v-field-label">Resource Title *</label>
             </div>
             <div class="v-field-group">
@@ -281,7 +290,9 @@ function deleteResource(id) {
 
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddModal = false" class="btn-ghost">Cancel</button>
-          <button @click="createResource" class="btn-primary">Add to Vault</button>
+          <button @click="createResource" class="btn-primary">
+            Add to Vault <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
         </div>
       </div>
     </div>
