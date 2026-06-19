@@ -24,7 +24,6 @@ const route = useRoute()
 const router = useRouter()
 
 const activeYearId = ref(null)
-const selectedCategory = ref('net_worth')
 const activeTab = ref('yearly') // 'yearly' or 'yoy'
 
 import { watch } from 'vue'
@@ -136,72 +135,7 @@ const yearlyExpenseBreakdown = computed(() => {
   })).sort((a, b) => b.value - a.value)
 })
 
-// ───── Finance Charts Option Mapping
-const chartOptions = computed(() => {
-  const opts = [
-    { key: 'net_worth', label: 'Net Worth (Snapshots)' },
-    { key: 'total_investments', label: 'Total Investments (Cash Flow)' }
-  ]
-
-  // Add net worth categories
-  const nwCats = new Set()
-  finance.networthLogs.forEach(log => {
-    (log.entries || []).forEach(e => nwCats.add(e.category))
-  })
-  Array.from(nwCats).sort().forEach(cat => {
-    opts.push({ key: `nw_cat_${cat}`, label: `Net Worth Asset · ${cat.replace(/_/g, ' ')}` })
-  })
-
-  // Add cashflow categories
-  const cfCats = new Set()
-  finance.cashflowPeriods.forEach(p => {
-    (p.entries || []).forEach(e => cfCats.add(e.category))
-  })
-  Array.from(cfCats).sort().forEach(cat => {
-    opts.push({ key: `cf_cat_${cat}`, label: `Cash Flow Category · ${cat.replace(/_/g, ' ')}` })
-  })
-
-  return opts
-})
-
-const chartData = computed(() => {
-  const opt = selectedCategory.value
-
-  if (opt === 'net_worth') {
-    return finance.networthSeries
-      .map(s => ({ label: formatMonth(s.date), value: s.value }))
-  }
-
-  if (opt === 'total_investments') {
-    return finance.cashflowSeries
-      .map(s => ({ label: formatMonth(s.month), value: s.investment }))
-  }
-
-  if (opt.startsWith('nw_cat_')) {
-    const cat = opt.replace('nw_cat_', '')
-    return [...finance.networthLogs].reverse().map(log => {
-      const entry = (log.entries || []).find(e => e.category === cat)
-      return {
-        label: formatMonth(log.date),
-        value: entry ? +entry.value : 0
-      }
-    })
-  }
-
-  if (opt.startsWith('cf_cat_')) {
-    const cat = opt.replace('cf_cat_', '')
-    return [...finance.cashflowPeriods].reverse().map(p => {
-      const entries = (p.entries || []).filter(e => e.category === cat)
-      const total = entries.reduce((s, e) => s + +e.value, 0)
-      return {
-        label: formatMonth(p.month),
-        value: total
-      }
-    })
-  }
-
-  return []
-})
+// Dynamics option mapping was migrated to components/finance/FinanceOverview.vue
 
 // ───── Year-on-Year Progression Analytics
 const yoyProgression = computed(() => {
@@ -603,24 +537,7 @@ function formatMonth(m) {
           </div>
         </div>
 
-        <!-- Financial Progress Charts -->
-        <section class="mb-10">
-          <div class="flex items-center justify-between gap-6 mb-6 flex-wrap">
-            <SectionHeader overline="Dynamics" title="Financial Progression" />
-            <div class="flex items-center gap-2">
-              <span class="overline text-[10px]">Select Category</span>
-              <select v-model="selectedCategory"
-                class="bg-surface border border-line rounded-xl px-3 py-1.5 text-xs outline-none focus:border-line-2 font-serif"
-                data-testid="summary-chart-select">
-                <option v-for="opt in chartOptions" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="card p-6" data-testid="summary-chart-container">
-            <InteractiveChart :data="chartData" color="#5A7353" />
-          </div>
-        </section>
+        <!-- Financial Progression chart was migrated to components/finance/FinanceOverview.vue -->
       </template>
       <EmptyState v-else title="No years configured" hint="Create your first year inside the Years timeline." />
     </template>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import dayjs from 'dayjs'
 import { useTasksStore } from '@/stores/tasks'
@@ -10,6 +10,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { useReviewsStore } from '@/stores/reviews'
 import { useYearsStore } from '@/stores/years'
 import { useUIStore } from '@/stores/ui'
+import { useFollowsStore } from '@/stores/follows'
 import { todayFocus, upcomingTasks, recentlyIgnored, momentumOpportunities, staleProjects, memoryResurfacing, isTaskOpen } from '@/lib/resurface'
 import { fromNow } from '@/lib/date'
 import { inr } from '@/lib/money'
@@ -18,7 +19,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { ArrowRight, Plus, FolderKanban, NotebookPen, Bookmark, BookOpen } from 'lucide-vue-next'
+import { ArrowRight, Plus, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass } from 'lucide-vue-next'
 
 const router = useRouter()
 const tasks = useTasksStore()
@@ -29,6 +30,24 @@ const finance = useFinanceStore()
 const reviews = useReviewsStore()
 const years = useYearsStore()
 const ui = useUIStore()
+const follows = useFollowsStore()
+
+onMounted(async () => {
+  await follows.load()
+})
+
+const resurfacedFollow = computed(() => {
+  const items = follows.items
+  if (!items || items.length === 0) return null
+  const todayStr = dayjs().format('YYYY-MM-DD')
+  let hash = 0
+  for (let i = 0; i < todayStr.length; i++) {
+    hash = (hash << 5) - hash + todayStr.charCodeAt(i)
+    hash |= 0
+  }
+  const idx = Math.abs(hash) % items.length
+  return items[idx]
+})
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -104,7 +123,7 @@ async function openDailyJournal() {
         </template>
       </SectionHeader>
       <div v-if="focus.length" class="space-y-3">
-        <TaskCard v-for="t in focus" :key="t.id" :task="t" />
+        <TaskCard v-for="t in focus" :key="t.id" :task="t" :single-line="true" />
       </div>
       <EmptyState v-else title="An open day" hint="Capture something gentle to begin." />
     </section>
@@ -180,6 +199,24 @@ async function openDailyJournal() {
       <section data-testid="section-memory">
         <SectionHeader overline="Memory" title="Resurfacing" hint="Notes and bookmarks worth revisiting." />
         <div class="space-y-3">
+          <!-- Daily Inspiration Creator Follow Resurfacing -->
+          <a v-if="resurfacedFollow" :href="resurfacedFollow.url" target="_blank"
+            class="card p-4 block hover:border-line-2 transition-all duration-300 bg-amber-500/5 border-amber-500/20 hover:!border-amber-500/50"
+            data-testid="resurface-follow">
+            <div class="flex items-center gap-2">
+              <Compass class="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
+              <span class="overline text-amber-600 dark:text-amber-400 font-semibold tracking-wider">Creator Inspiration</span>
+            </div>
+            <div class="font-serif text-lg mt-1.5 flex items-center gap-1.5">
+              <span>{{ resurfacedFollow.name }}</span>
+              <span class="text-xs text-ink-3 font-normal font-sans">({{ resurfacedFollow.platform }})</span>
+            </div>
+            <p v-if="resurfacedFollow.reason" class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ resurfacedFollow.reason }}</p>
+            <div class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-2.5 flex items-center gap-1">
+              <span>Checkout posts</span> <ArrowRight class="w-2.5 h-2.5" />
+            </div>
+          </a>
+
           <RouterLink v-for="n in memory.notes.slice(0, 2)" :key="n.id" :to="`/notes/${n.id}`"
             class="card p-4 block hover:border-line-2 transition-all duration-300"
             :data-testid="`resurface-note-${n.id}`">

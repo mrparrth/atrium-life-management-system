@@ -134,6 +134,11 @@ const isOverran = computed(() => {
   return props.item.estimatedHours > 0 && props.item.actualHours > props.item.estimatedHours
 })
 
+const isOverdue = computed(() => {
+  if (itemsStore.isCompleted(props.item.status) || !props.item.dueDate) return false
+  return dayjs(props.item.dueDate).isBefore(dayjs(), 'day')
+})
+
 const driveFolderUrl = computed(() => {
   if (props.item.driveFolderId) {
     return `https://drive.google.com/drive/folders/${props.item.driveFolderId}`
@@ -281,7 +286,7 @@ watch(showEditModal, (isOpen) => {
 
 <template>
   <div class="card p-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
-    :class="[itemsStore.isCompleted(props.item.status) ? 'opacity-60' : '', timerActive ? 'border-pri-strategic shadow-md shadow-pri-strategic/5' : '']"
+    :class="[itemsStore.isCompleted(props.item.status) ? 'opacity-60' : '', timerActive ? 'border-pri-strategic shadow-md shadow-pri-strategic/5' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
     data-testid="work-item-card">
 
     <div class="flex items-start gap-3 flex-1 min-w-0">
@@ -355,8 +360,9 @@ watch(showEditModal, (isOpen) => {
 
         <!-- Metrics & Meta -->
         <div class="flex items-center gap-4 text-[11px] text-ink-3 mt-2 flex-wrap">
-          <span v-if="props.item.dueDate" class="flex items-center gap-1 text-ink-2 font-medium">
-            <Calendar class="w-3.5 h-3.5" /> Due {{ dayjs(props.item.dueDate).format('MMM D') }}
+          <span v-if="props.item.dueDate" class="flex items-center gap-1 text-ink-2 font-medium" :class="{ 'text-pri-critical font-bold': isOverdue }">
+            <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
+            <Calendar v-else class="w-3.5 h-3.5" /> Due {{ dayjs(props.item.dueDate).format('MMM D') }}
           </span>
           <!-- Closed date badge for completed items -->
           <span v-if="itemsStore.isCompleted(props.item.status)"

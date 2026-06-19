@@ -21,6 +21,8 @@ const routes = [
   { path: '/reviews', name: 'reviews', component: () => import('@/views/Reviews.vue') },
   { path: '/settings', name: 'settings', component: () => import('@/views/Settings.vue') },
   { path: '/summary', name: 'summary', component: () => import('@/views/Summary.vue') },
+  { path: '/pipeline', name: 'pipeline', component: () => import('@/views/ContentPipeline.vue') },
+  { path: '/follows', name: 'follows', component: () => import('@/views/Follows.vue') },
   
   // Work Mode Routes
   { path: '/work/clients', name: 'work-clients', component: () => import('@/views/work/WorkClients.vue') },

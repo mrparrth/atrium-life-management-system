@@ -23,6 +23,16 @@ const RAW_SECTIONS_PERSONAL = [
     ],
   },
   {
+    label: 'Horizon',
+    items: [
+      { to: '/tasks', name: 'Tasks', icon: CheckSquare, testid: 'nav-tasks' },
+      { to: '/goals', name: 'Goals', icon: Target, testid: 'nav-goals' },
+      { to: '/years', name: 'Years', icon: Calendar, testid: 'nav-years' },
+      { to: '/summary', name: 'Summary', icon: TrendingUp, testid: 'nav-summary' },
+      { to: '/pipeline', name: 'Pipeline', icon: GitFork, testid: 'nav-pipeline' },
+    ],
+  },
+  {
     label: 'PARA',
     items: [
       { to: '/projects', name: 'Projects', icon: FolderKanban, testid: 'nav-projects' },
@@ -32,19 +42,11 @@ const RAW_SECTIONS_PERSONAL = [
     ],
   },
   {
-    label: 'Horizon',
-    items: [
-      { to: '/years', name: 'Years', icon: Calendar, testid: 'nav-years' },
-      { to: '/goals', name: 'Goals', icon: Target, testid: 'nav-goals' },
-      { to: '/tasks', name: 'Tasks', icon: CheckSquare, testid: 'nav-tasks' },
-      { to: '/summary', name: 'Summary', icon: TrendingUp, testid: 'nav-summary' },
-    ],
-  },
-  {
     label: 'Memory',
     items: [
       { to: '/notes', name: 'Notes', icon: NotebookPen, testid: 'nav-notes' },
       { to: '/bookmarks', name: 'Bookmarks', icon: Bookmark, testid: 'nav-bookmarks' },
+      { to: '/follows', name: 'Follows', icon: Compass, testid: 'nav-follows' },
       { to: '/finance', name: 'Finance', icon: Wallet, testid: 'nav-finance' },
       { to: '/reviews', name: 'Reviews', icon: Sparkles, testid: 'nav-reviews' },
     ],
@@ -109,8 +111,7 @@ const sections = computed(() => {
 })
 
 const settingsItem = computed(() => {
-  // calculate shortcut for settings after sections
-  return { to: '/settings', name: 'Settings', shortcut: assignShortcut('Settings') }
+  return { to: '/settings', name: 'Settings', shortcut: null }
 })
 
 function getHighlightedName(name, shortcut) {
@@ -133,7 +134,7 @@ function handleKeydown(e) {
     e.preventDefault(); router.push(settingsItem.value.to)
     return
   }
-  
+
   for (const section of sections.value) {
     for (const item of section.items) {
       if (item.shortcut?.char === key) {
@@ -170,20 +171,23 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
           <div class="text-[10px] uppercase tracking-overline text-ink-3">quiet system</div>
         </div>
       </RouterLink>
-      
+
       <!-- Pill sliding switch for Work/Personal Mode -->
-      <div class="flex items-center bg-canvas border border-line-2 rounded-full p-1 relative cursor-pointer select-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] hover:border-ink-3 transition-colors"
-        @click="ui.toggleMode" :title="`Switch to ${ui.mode === 'work' ? 'Personal' : 'Work'} Mode`" data-testid="mode-toggle">
+      <div
+        class="flex items-center bg-canvas border border-line-2 rounded-full p-1 relative cursor-pointer select-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] hover:border-ink-3 transition-colors"
+        @click="ui.toggleMode" :title="`Switch to ${ui.mode === 'work' ? 'Personal' : 'Work'} Mode`"
+        data-testid="mode-toggle">
         <!-- Sliding background block (tactile 3D thumb) -->
-        <div class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-gradient-to-b from-ink/90 to-ink rounded-full transition-all duration-300 transform shadow-[0_3px_6px_rgba(0,0,0,0.35),_0_1px_3px_rgba(0,0,0,0.2),_inset_0_1.5px_0_rgba(255,255,255,0.25)] border border-black/50"
+        <div
+          class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-gradient-to-b from-ink/90 to-ink rounded-full transition-all duration-300 transform shadow-[0_3px_6px_rgba(0,0,0,0.35),_0_1px_3px_rgba(0,0,0,0.2),_inset_0_1.5px_0_rgba(255,255,255,0.25)] border border-black/50"
           :class="ui.mode === 'work' ? 'translate-x-[100%]' : 'translate-x-0'"></div>
-        
+
         <!-- Personal Icon (Sparkles) -->
         <div class="relative z-10 flex items-center justify-center w-7 h-7 rounded-full transition-colors duration-300"
           :class="ui.mode === 'personal' ? 'text-canvas' : 'text-ink-3 hover:text-ink-2'">
           <Sparkles class="w-3.5 h-3.5" />
         </div>
-        
+
         <!-- Work Icon (Briefcase) -->
         <div class="relative z-10 flex items-center justify-center w-7 h-7 rounded-full transition-colors duration-300"
           :class="ui.mode === 'work' ? 'text-canvas' : 'text-ink-3 hover:text-ink-2'">
@@ -194,8 +198,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
     <!-- THEME TOGGLE (FLOATING BOTTOM RIGHT) -->
     <Teleport to="body">
-      <button class="fixed bottom-6 right-6 z-50 p-2.5 rounded-full border border-line bg-surface/90 text-ink shadow-lg backdrop-blur-sm cursor-pointer hover:border-line-2 transition-colors flex items-center justify-center"
-        @click="ui.toggleTheme" :title="`Switch to ${ui.theme === 'dark' ? 'light' : 'dark'}`" data-testid="theme-toggle">
+      <button
+        class="fixed bottom-6 right-6 z-50 p-2.5 rounded-full border border-line bg-surface/90 text-ink shadow-lg backdrop-blur-sm cursor-pointer hover:border-line-2 transition-colors flex items-center justify-center"
+        @click="ui.toggleTheme" :title="`Switch to ${ui.theme === 'dark' ? 'light' : 'dark'}`"
+        data-testid="theme-toggle">
         <Sun v-if="ui.theme === 'dark'" class="w-4 h-4 text-pri-interruptive" />
         <Moon v-else class="w-4 h-4 text-pri-strategic" />
       </button>

@@ -53,8 +53,8 @@ const chartData = computed(() => {
       {
         data: props.data.map(item => item.value),
         backgroundColor: props.data.map((_, i) => colors[i % colors.length]),
-        borderColor: 'var(--color-line, rgba(0,0,0,0.1))',
-        borderWidth: 1.5,
+        borderColor: '#F9F8F6',
+        borderWidth: 2,
         hoverOffset: 4,
       }
     ]

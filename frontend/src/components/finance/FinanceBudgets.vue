@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
-import SectionHeader from '@/components/SectionHeader.vue'
 import { inr } from '@/lib/money'
 
 const finance = useFinanceStore()
@@ -131,7 +130,7 @@ const groupedBudgets = computed(() => {
 
   return scopeOrder.filter(s => groups[s] && groups[s].length > 0).map(s => {
     const scopeItems = groups[s]
-    
+
     // Group scopeItems by category.group
     const subGroupsMap = {}
     scopeItems.forEach(item => {
@@ -143,7 +142,7 @@ const groupedBudgets = computed(() => {
     const order = groupOrder[s] || []
     const subGroups = Object.keys(subGroupsMap).map(gName => {
       const items = subGroupsMap[gName].sort((a, b) => a.category.name.localeCompare(b.category.name))
-      
+
       // Calculate subgroup totals
       const actual = items.reduce((sum, item) => sum + item.actual, 0)
       const budget = items.reduce((sum, item) => sum + item.budget, 0)
@@ -191,19 +190,23 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
 
 <template>
   <div>
-    <SectionHeader overline="Budgets" title="Annual Category Budgets"
-      hint="Add and configure yearly budgets for your cash flow and net worth categories.">
-      <template #right>
-        <div class="flex items-center gap-2">
-          <span class="overline text-[10px]">Select Year</span>
-          <select v-model="selectedBudgetYear"
-            class="bg-surface border border-line rounded-xl px-3 py-1.5 text-xs outline-none focus:border-line-2 font-serif"
-            data-testid="budget-year-select">
-            <option v-for="y in budgetYears" :key="y" :value="y">{{ y }}</option>
-          </select>
-        </div>
-      </template>
-    </SectionHeader>
+    <!-- Header Block conforming to the modern visual layout -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 ml-1 gap-4 px-1">
+      <div>
+        <div class="overline text-[10px] text-ink-3 tracking-widest uppercase mb-1 font-sans">Budgets</div>
+        <h2 class="font-serif text-3xl font-bold text-ink">Annual Category Budgets</h2>
+      </div>
+      <!-- Year Selector aligned right in a compact container -->
+      <div
+        class="flex items-center gap-2 bg-surface border border-line rounded-xl px-3 py-1.5 shadow-sm text-xs select-none">
+        <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold font-sans">Select Year</span>
+        <select v-model="selectedBudgetYear"
+          class="bg-transparent font-serif outline-none text-ink font-semibold cursor-pointer"
+          data-testid="budget-year-select">
+          <option v-for="y in budgetYears" :key="y" :value="y">{{ y }}</option>
+        </select>
+      </div>
+    </div>
 
     <div class="card p-6 mb-10 overflow-x-auto">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-2">

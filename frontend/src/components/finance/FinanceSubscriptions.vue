@@ -34,6 +34,12 @@ const formNextRenewal = ref(new Date().toISOString().slice(0, 10))
 const formCategory = ref('')
 const formStatus = ref('active')
 
+const focusedFields = ref({
+  billingPeriod: false,
+  category: false,
+  status: false
+})
+
 // Computeds
 const expenseCategories = computed(() => {
   return finance.categories.filter(c => c.scope === 'expense' && !c.archived)
@@ -354,49 +360,62 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
 
         <div class="space-y-5 mb-8">
           <!-- Name -->
-          <div>
-            <label class="text-xs uppercase tracking-wider text-ink-3 block mb-1.5 font-mono">Service Name</label>
-            <input ref="formNameInput" v-model="formName" placeholder="e.g. Netflix, GitHub" class="input-soft !text-base text-ink" required />
+          <div class="v-field-group">
+            <input ref="formNameInput" v-model="formName" placeholder=" " class="v-field-input text-xs" id="sub-name" required />
+            <label for="sub-name" class="v-field-label text-xs">Service Name</label>
           </div>
 
           <!-- Price & Cycle -->
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-xs uppercase tracking-wider text-ink-3 block mb-1.5 font-mono">Cost (INR)</label>
-              <input type="number" v-model.number="formCost" placeholder="e.g. 199" class="input-soft !text-base text-ink text-right" required />
+            <div class="v-field-group">
+              <input type="number" v-model.number="formCost" placeholder=" " class="v-field-input text-xs" id="sub-cost" required />
+              <label for="sub-cost" class="v-field-label text-xs">Cost (INR)</label>
             </div>
-            <div>
-              <label class="text-xs uppercase tracking-wider text-ink-3 block mb-1.5 font-mono">Billing Cycle</label>
-              <select v-model="formBillingPeriod" class="input-soft !text-base text-ink cursor-pointer">
+            
+            <div class="v-field-group">
+              <select v-model="formBillingPeriod" 
+                @focus="focusedFields.billingPeriod = true"
+                @blur="focusedFields.billingPeriod = false" 
+                class="v-field-select text-xs">
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
               </select>
+              <span class="v-field-arrow">▼</span>
+              <label :class="['v-field-label text-xs', (formBillingPeriod || focusedFields.billingPeriod) ? 'v-field-label--floating' : '', focusedFields.billingPeriod ? 'v-field-label--floating-focused' : '']">Billing Cycle</label>
             </div>
           </div>
 
           <!-- Category Selection -->
-          <div>
-            <label class="text-xs uppercase tracking-wider text-ink-3 block mb-1.5 font-mono">Category</label>
-            <select v-model="formCategory" class="input-soft !text-base text-ink cursor-pointer capitalize">
+          <div class="v-field-group">
+            <select v-model="formCategory" 
+              @focus="focusedFields.category = true"
+              @blur="focusedFields.category = false" 
+              class="v-field-select text-xs capitalize">
               <option v-for="cat in expenseCategories" :key="cat.id" :value="cat.name">
                 {{ label(cat.name) }}
               </option>
             </select>
+            <span class="v-field-arrow">▼</span>
+            <label :class="['v-field-label text-xs', (formCategory || focusedFields.category) ? 'v-field-label--floating' : '', focusedFields.category ? 'v-field-label--floating-focused' : '']">Category</label>
           </div>
 
           <!-- Next Renewal Date -->
-          <div>
-            <label class="text-xs uppercase tracking-wider text-ink-3 block mb-1.5 font-mono">Next Renewal</label>
-            <input type="date" v-model="formNextRenewal" class="input-soft !text-base text-ink" required />
+          <div class="v-field-group">
+            <input type="date" v-model="formNextRenewal" placeholder=" " class="v-field-input text-xs font-mono text-ink-2" id="sub-renewal" required />
+            <label for="sub-renewal" class="v-field-label text-xs">Next Renewal</label>
           </div>
 
           <!-- Status selection (only when editing) -->
-          <div v-if="editingSub">
-            <label class="text-xs uppercase tracking-wider text-ink-3 block mb-1.5 font-mono">Status</label>
-            <select v-model="formStatus" class="input-soft !text-base text-ink cursor-pointer">
+          <div class="v-field-group" v-if="editingSub">
+            <select v-model="formStatus" 
+              @focus="focusedFields.status = true"
+              @blur="focusedFields.status = false" 
+              class="v-field-select text-xs">
               <option value="active">Active</option>
               <option value="paused">Paused</option>
             </select>
+            <span class="v-field-arrow">▼</span>
+            <label :class="['v-field-label text-xs', (formStatus || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Status</label>
           </div>
         </div>
 

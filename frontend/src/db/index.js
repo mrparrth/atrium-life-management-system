@@ -102,6 +102,12 @@ db.version(10).stores({
   finance_categories: "id, scope, name, createdAt, [scope+name]",
 });
 
+// v11 - Content Pipeline and Follows stores
+db.version(11).stores({
+  finance_content_pipeline: "id, status, pillar, type, publishDate, noteId, createdAt",
+  follows: "id, name, username, category, createdAt",
+});
+
 export function newId() {
   return nanoid(12);
 }
@@ -674,17 +680,121 @@ export async function seedIfEmpty() {
   ];
   await db.work_templates.bulkAdd(templates);
 
-  const logs = [
-    {
-      id: newId(),
-      clientId: clientAcmeId,
-      channel: "Slack",
-      date: new Date(Date.now() - 2 * 86400000).toISOString(),
-      notes: "Agreed to proceed with Figma designs and confirmed staging deployments.",
-      createdAt: now(),
-    },
-  ];
-  // await db.work_communication_logs.bulkAdd(logs);
+  // Seed notes, content pipeline, and follows examples if empty
+  const pipelineCount = await db.finance_content_pipeline.count();
+  const followsCount = await db.follows.count();
+  if (pipelineCount === 0 && followsCount === 0) {
+    const note1Id = newId();
+    const note2Id = newId();
+    await db.notes.bulkAdd([
+      {
+        id: note1Id,
+        title: "Tailwind UI Layout Tips",
+        body: "# Tailwind UI Layout Tips\n\n- Use `backdrop-blur-md` with translucent borders.\n- Tailor HSL colors for dynamic themes.\n- Stick to Outfit or Newsreader typography.",
+        tags: ["design", "pipeline-draft"],
+        createdAt: now(),
+        updatedAt: now(),
+        lastViewedAt: now()
+      },
+      {
+        id: note2Id,
+        title: "Draft: Chasing standard MVPs",
+        body: "# Why I stopped chasing standard MVPs\n\n- The market is saturated with basic bootstrap layouts.\n- Premium visual finish creates 10x trust.\n- Details matter: micro-animations, clear contrast, sound feedback.",
+        tags: ["reflection", "pipeline-draft"],
+        createdAt: now(),
+        updatedAt: now(),
+        lastViewedAt: now()
+      }
+    ]);
+
+    await db.finance_content_pipeline.bulkAdd([
+      {
+        id: newId(),
+        title: "10 Tailwind tips for premium UI layouts",
+        status: "active",
+        pillar: "Design",
+        type: "Authority",
+        platform: "LinkedIn",
+        publishDate: "",
+        noteId: note1Id,
+        snippet: "A step-by-step breakdown of how to use glassmorphism, HSL custom color spaces, and backdrop-filters to create premium SaaS widgets.",
+        url: "https://tailwindui.com",
+        createdAt: now()
+      },
+      {
+        id: newId(),
+        title: "Why I stopped chasing standard MVPs",
+        status: "idea",
+        pillar: "Freelance",
+        type: "Connection",
+        platform: "X",
+        publishDate: "",
+        noteId: note2Id,
+        snippet: "Vulnerability post explaining my biggest design failure in 2025 and how it shifted my mindset to building premium-first designs.",
+        url: "",
+        createdAt: now()
+      },
+      {
+        id: newId(),
+        title: "Open for 2 client design audits this July",
+        status: "scheduled",
+        pillar: "Freelance",
+        type: "Conversion",
+        platform: "Upwork",
+        publishDate: "2026-07-01",
+        noteId: "",
+        snippet: "Promotional launch post offering full design-system reviews for SaaS startups.",
+        url: "https://upwork.com",
+        createdAt: now()
+      },
+      {
+        id: newId(),
+        title: "UX layout secrets most SaaS apps ignore",
+        status: "published",
+        pillar: "Design",
+        type: "Growth",
+        platform: "Instagram",
+        publishDate: "2026-06-18",
+        noteId: "",
+        snippet: "High-reach visual breakdown showing before/after layouts of form fields.",
+        url: "",
+        createdAt: now()
+      }
+    ]);
+
+    await db.follows.bulkAdd([
+      {
+        id: newId(),
+        name: "Marc Lou",
+        username: "marclou",
+        category: "freelancing",
+        reason: "Excellent at high-reach Growth posts and bootstrapping products in public. Watch his short-form videos for storytelling hooks.",
+        platform: "x",
+        url: "https://x.com/marclou",
+        createdAt: now()
+      },
+      {
+        id: newId(),
+        name: "Tibo",
+        username: "tibo_maker",
+        category: "social media",
+        reason: "Very consistent posting cadence. Breaks down engagement strategies and conversion copywriting tips.",
+        platform: "x",
+        url: "https://x.com/tibo_maker",
+        createdAt: now()
+      },
+      {
+        id: newId(),
+        name: "Design Sentiments",
+        username: "ds_sentiments",
+        category: "webdev",
+        reason: "Incredible visual design system references and before/after comparisons.",
+        platform: "instagram",
+        url: "https://instagram.com/design_sentiments",
+        createdAt: now()
+      }
+    ]);
+  }
 
   await db.settings.put({ id: "app", theme: "light", firstRun: false, lastDailyReview: null, lastWeeklyReview: null });
 }

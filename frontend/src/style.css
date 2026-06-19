@@ -352,19 +352,19 @@ input[type="number"] {
 
 /* Premium Fintech Table Column Widths */
 .col-category {
-  width: 240px !important;
-  min-width: 240px !important;
-  max-width: 240px !important;
+  width: 180px !important;
+  min-width: 180px !important;
+  max-width: 180px !important;
 }
 .col-month {
-  width: 95px !important;
-  min-width: 95px !important;
-  max-width: 95px !important;
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
 }
 .col-summary {
-  width: 105px !important;
-  min-width: 105px !important;
-  max-width: 105px !important;
+  width: 90px !important;
+  min-width: 90px !important;
+  max-width: 90px !important;
 }
 
 

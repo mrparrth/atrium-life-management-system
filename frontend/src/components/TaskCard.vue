@@ -7,7 +7,7 @@ import { derivePriority } from '@/lib/priority'
 import { inFuture, fromNow } from '@/lib/date'
 import { isSnoozed } from '@/lib/resurface'
 import PriorityBadge from './PriorityBadge.vue'
-import { Calendar, Clock, MoonStar, Trash2, Circle, CheckCircle2, BellOff, MoreVertical, Edit3 } from 'lucide-vue-next'
+import { Calendar, Clock, MoonStar, Trash2, Circle, CheckCircle2, BellOff, MoreVertical, Edit3, AlertCircle } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
 const props = defineProps({
@@ -29,6 +29,10 @@ const project = computed(() => projects.items.find(p => p.id === props.task.proj
 const priority = computed(() => derivePriority(props.task.important, props.task.urgent))
 const isDone = computed(() => props.task.status === 'done')
 const snoozed = computed(() => isSnoozed(props.task))
+const isOverdue = computed(() => {
+  if (isDone.value || !props.task.dueDate) return false
+  return dayjs(props.task.dueDate).isBefore(dayjs(), 'day')
+})
 
 const statusGroups = {
   open: { key: 'open', label: 'Yet to start', color: 'bg-canvas text-ink-2 border-line', dotColor: 'bg-ink-3' },
@@ -82,7 +86,7 @@ onUnmounted(() => {
 
 <template>
   <div v-if="!singleLine" class="card p-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
-    :class="[isDone || snoozed ? 'opacity-60' : '']"
+    :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
     :data-testid="`task-card-${task.id}`">
 
     <div class="flex items-start gap-3 flex-1 min-w-0">
@@ -143,8 +147,9 @@ onUnmounted(() => {
           <span v-if="task.scheduledDate" class="flex items-center gap-1 text-ink-2 font-medium">
             <Calendar class="w-3.5 h-3.5" /> {{ inFuture(task.scheduledDate) }}
           </span>
-          <span v-if="task.dueDate" class="flex items-center gap-1 text-ink-2 font-medium">
-            <Clock class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
+          <span v-if="task.dueDate" class="flex items-center gap-1 text-ink-2 font-medium" :class="{ 'text-pri-critical font-bold': isOverdue }">
+            <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
+            <Clock v-else class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
           </span>
           <!-- Closed date for completed tasks -->
           <span v-if="isDone && task.completedAt" class="flex items-center gap-1 text-pri-strategic font-semibold">
@@ -208,7 +213,7 @@ onUnmounted(() => {
   </div>
 
   <div v-else class="card py-1.5 px-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
-    :class="[isDone || snoozed ? 'opacity-60' : '']"
+    :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
     :data-testid="`task-card-${task.id}`">
 
     <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -273,8 +278,9 @@ onUnmounted(() => {
           <span v-if="task.scheduledDate" class="flex items-center gap-1 font-medium">
             <Calendar class="w-3.5 h-3.5" /> {{ inFuture(task.scheduledDate) }}
           </span>
-          <span v-if="task.dueDate" class="flex items-center gap-1 font-medium">
-            <Clock class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
+          <span v-if="task.dueDate" class="flex items-center gap-1 font-medium" :class="isOverdue ? 'text-pri-critical font-bold' : 'text-ink-3'">
+            <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
+            <Clock v-else class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
           </span>
           <!-- Closed date for completed tasks -->
           <span v-if="isDone && task.completedAt" class="flex items-center gap-1 text-pri-strategic font-semibold">

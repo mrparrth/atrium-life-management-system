@@ -129,7 +129,7 @@ const alerts = computed(() => {
   leadsStore.items.forEach(lead => {
     const key = `lead-stale-${lead.id}`
     if (isSnoozed(key)) return
-    if (lead.followUpDate <= today) { //!['won', 'lost', 'onboarding'].includes(lead.status) && lead.followUpDate && 
+    if (lead.followUpDate <= today && !['won', 'lost', 'onboarding'].includes(lead.status) && lead.followUpDate) {
       list.push({
         id: key,
         type: 'lead',
@@ -181,8 +181,7 @@ watch(alerts, (newAlerts) => {
     </div>
 
     <div class="grid grid-cols-1 gap-3">
-      <div v-for="alert in alerts" :key="alert.id" @click="goToItem(alert)"
-        title="Click to view details"
+      <div v-for="alert in alerts" :key="alert.id" @click="goToItem(alert)" title="Click to view details"
         class="card p-4 flex items-start justify-between gap-4 border border-line bg-surface hover:border-line-2 transition-all duration-300 cursor-pointer">
 
         <div class="space-y-1">
@@ -202,7 +201,8 @@ watch(alerts, (newAlerts) => {
               class="btn-ghost !text-xs !py-1 px-2.5 bg-canvas hover:bg-line/40 rounded-lg flex items-center gap-1 text-ink font-medium">
               <Check class="w-3.5 h-3.5" /> {{ alert.actionText }}
             </button>
-            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-ink text-canvas text-[10px] px-2.5 py-1.5 rounded-lg font-medium shadow-lg whitespace-nowrap z-50">
+            <div
+              class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-ink text-canvas text-[10px] px-2.5 py-1.5 rounded-lg font-medium shadow-lg whitespace-nowrap z-50">
               Resolve: {{ alert.actionText }}
             </div>
           </div>
@@ -212,7 +212,8 @@ watch(alerts, (newAlerts) => {
               class="btn-ghost !p-1.5 hover:bg-canvas text-ink-3 hover:text-ink rounded-lg">
               <EyeOff class="w-3.5 h-3.5" />
             </button>
-            <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-ink text-canvas text-[10px] px-2.5 py-1.5 rounded-lg font-medium shadow-lg whitespace-nowrap z-50">
+            <div
+              class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-ink text-canvas text-[10px] px-2.5 py-1.5 rounded-lg font-medium shadow-lg whitespace-nowrap z-50">
               Snooze for 7 days
             </div>
           </div>
