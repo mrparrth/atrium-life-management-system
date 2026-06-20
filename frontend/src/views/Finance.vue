@@ -100,8 +100,7 @@ watch(() => route.query, handleQuery)
 
 <template>
   <div class="py-10 max-w-7xl mx-auto" data-testid="finance-view">
-    <PageHeader overline="Memory · Finance" title="Money, gently tracked"
-      sub="Date-stamped net-worth snapshots and month-by-month cash flow." />
+    <PageHeader overline="Memory · Finance" title="Money, gently tracked" g />
     <div class="flex flex-wrap items-center justify-between gap-4 mb-10">
       <div class="flex flex-wrap gap-1 bg-elevated rounded-2xl p-1 border border-line text-sm w-fit"
         data-testid="finance-tabs">

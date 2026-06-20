@@ -129,108 +129,110 @@ function onArticleClick(e) {
 </script>
 
 <template>
-  <div v-if="note" class="px-8 md:px-12 py-10 max-w-3xl mx-auto" data-testid="note-detail">
-    <button @click="router.back()" class="btn-ghost mb-4 text-sm">
-      <ArrowLeft class="w-3.5 h-3.5" /> Back
-    </button>
-    <div class="flex items-center justify-end gap-2 mb-4">
-      <button v-if="!editing" class="btn-ghost" @click="startEdit" data-testid="note-edit">
-        <Edit3 class="w-4 h-4" /> Edit
+  <div>
+    <div v-if="note" class="px-8 md:px-12 py-10 max-w-3xl mx-auto" data-testid="note-detail">
+      <button @click="router.back()" class="btn-ghost mb-4 text-sm">
+        <ArrowLeft class="w-3.5 h-3.5" /> Back
       </button>
-      <button v-else class="btn-primary" @click="save" data-testid="note-save">
-        <Save class="w-4 h-4" /> Save
-      </button>
-      <button class="btn-ghost !text-pri-critical" @click="del" data-testid="note-delete">
-        <Trash2 class="w-4 h-4" />
-      </button>
-    </div>
-
-    <template v-if="editing">
-      <input v-model="draftTitle" class="input-soft text-4xl font-serif mb-6" />
-      <div class="relative">
-        <textarea ref="bodyTextarea" v-model="draftBody" @input="onBodyInput" @keydown="onBodyKeydown" rows="20"
-          class="input-block leading-relaxed resize-none w-full font-sans" data-testid="note-body-input"
-          placeholder="Write freely. Type [[ to link another note."></textarea>
-
-        <!-- Suggestion dropdown -->
-        <div v-if="suggestOpen && suggestions.length"
-          class="absolute z-30 card overflow-hidden shadow-xl shadow-black/10 w-72"
-          :style="{ top: suggestPos.top + 'px', left: suggestPos.left + 'px' }" data-testid="wiki-suggest">
-          <div class="overline px-3 py-2 border-b border-line">Link a note</div>
-          <ul>
-            <li v-for="(s, i) in suggestions" :key="s.id"
-              class="px-3 py-2 cursor-pointer text-sm flex items-center gap-2 transition-colors duration-150"
-              :class="i === suggestIdx ? 'bg-elevated text-ink' : 'text-ink-2 hover:bg-elevated/60'"
-              @mouseenter="suggestIdx = i" @mousedown.prevent="applySuggestion(s)"
-              :data-testid="`wiki-suggest-item-${i}`">
-              <Link2 class="w-3.5 h-3.5 text-ink-3" />
-              <span class="truncate">{{ s.title }}</span>
-            </li>
-          </ul>
-          <div class="px-3 py-1.5 border-t border-line text-[11px] text-ink-3 flex items-center gap-3">
-            <span><span class="kbd">↑</span><span class="kbd">↓</span></span>
-            <span><span class="kbd">↵</span> select</span>
-            <span><span class="kbd">esc</span> close</span>
-          </div>
-        </div>
-      </div>
-      <div class="flex justify-between items-center mt-3">
-        <p class="text-xs text-ink-3">Tip: type <span class="kbd">[</span><span class="kbd">[</span> to link another note.</p>
-        <button type="button" @click="showHelp = true" class="text-xs text-ink-3 hover:text-ink flex items-center gap-1 transition-colors">
-          <HelpCircle class="w-3.5 h-3.5" /> Markdown Guide
+      <div class="flex items-center justify-end gap-2 mb-4">
+        <button v-if="!editing" class="btn-ghost" @click="startEdit" data-testid="note-edit">
+          <Edit3 class="w-4 h-4" /> Edit
+        </button>
+        <button v-else class="btn-primary" @click="save" data-testid="note-save">
+          <Save class="w-4 h-4" /> Save
+        </button>
+        <button class="btn-ghost !text-pri-critical" @click="del" data-testid="note-delete">
+          <Trash2 class="w-4 h-4" />
         </button>
       </div>
-    </template>
 
-    <template v-else>
-      <h1 class="font-serif text-4xl md:text-5xl tracking-tight leading-none mb-3">{{ note.title }}</h1>
-      <div v-if="linkedProject" class="text-sm text-ink-2 mb-6">Linked to <RouterLink
-          :to="`/projects/${linkedProject.id}`" class="text-ink underline decoration-line-2 underline-offset-4">{{
-            linkedProject.title }}</RouterLink>
-      </div>
-      <article class="prose-soft" v-html="html" @click="onArticleClick" data-testid="note-rendered"></article>
+      <template v-if="editing">
+        <input v-model="draftTitle" class="input-soft text-4xl font-serif mb-6" />
+        <div class="relative">
+          <textarea ref="bodyTextarea" v-model="draftBody" @input="onBodyInput" @keydown="onBodyKeydown" rows="20"
+            class="input-block leading-relaxed resize-none w-full font-sans" data-testid="note-body-input"
+            placeholder="Write freely. Type [[ to link another note."></textarea>
 
-      <!-- Backlinks panel -->
-      <section v-if="outgoingLinks.length || incomingLinks.length" class="mt-12 pt-8 border-t border-line"
-        data-testid="backlinks-panel">
-        <div v-if="incomingLinks.length" class="mb-8">
-          <div class="overline mb-3 flex items-center gap-2">
-            <Link2 class="w-3 h-3" /> Linked from
-          </div>
-          <div class="space-y-2" data-testid="incoming-links">
-            <RouterLink v-for="n in incomingLinks" :key="n.id" :to="`/notes/${n.id}`"
-              class="card px-4 py-3 block hover:border-line-2 transition-colors duration-300"
-              :data-testid="`incoming-${n.id}`">
-              <div class="font-serif text-base">{{ n.title }}</div>
-              <p class="text-xs text-ink-3 mt-1 line-clamp-1">{{ n.body }}</p>
-            </RouterLink>
+          <!-- Suggestion dropdown -->
+          <div v-if="suggestOpen && suggestions.length"
+            class="absolute z-30 card overflow-hidden shadow-xl shadow-black/10 w-72"
+            :style="{ top: suggestPos.top + 'px', left: suggestPos.left + 'px' }" data-testid="wiki-suggest">
+            <div class="overline px-3 py-2 border-b border-line">Link a note</div>
+            <ul>
+              <li v-for="(s, i) in suggestions" :key="s.id"
+                class="px-3 py-2 cursor-pointer text-sm flex items-center gap-2 transition-colors duration-150"
+                :class="i === suggestIdx ? 'bg-elevated text-ink' : 'text-ink-2 hover:bg-elevated/60'"
+                @mouseenter="suggestIdx = i" @mousedown.prevent="applySuggestion(s)"
+                :data-testid="`wiki-suggest-item-${i}`">
+                <Link2 class="w-3.5 h-3.5 text-ink-3" />
+                <span class="truncate">{{ s.title }}</span>
+              </li>
+            </ul>
+            <div class="px-3 py-1.5 border-t border-line text-[11px] text-ink-3 flex items-center gap-3">
+              <span><span class="kbd">↑</span><span class="kbd">↓</span></span>
+              <span><span class="kbd">↵</span> select</span>
+              <span><span class="kbd">esc</span> close</span>
+            </div>
           </div>
         </div>
-        <div v-if="outgoingLinks.length">
-          <div class="overline mb-3 flex items-center gap-2">
-            <Link2 class="w-3 h-3" /> Links to
-          </div>
-          <div class="flex flex-wrap gap-2" data-testid="outgoing-links">
-            <RouterLink v-for="(l, i) in outgoingLinks.filter(l => l.target)" :key="l.target.id + i"
-              :to="`/notes/${l.target.id}`"
-              class="px-3 py-1.5 rounded-full bg-elevated border border-line text-sm hover:border-line-2 transition-colors duration-300"
-              :data-testid="`outgoing-${l.target.id}`">
-              {{ l.title }}
-            </RouterLink>
-            <span v-for="(l, i) in outgoingLinks.filter(l => !l.target)" :key="'m' + i"
-              class="px-3 py-1.5 rounded-full border border-dashed border-line text-sm text-ink-3 italic"
-              :data-testid="`outgoing-missing-${i}`" :title="`No note titled “${l.title}”`">
-              {{ l.title }}
-            </span>
-          </div>
+        <div class="flex justify-between items-center mt-3">
+          <p class="text-xs text-ink-3">Tip: type <span class="kbd">[</span><span class="kbd">[</span> to link another note.</p>
+          <button type="button" @click="showHelp = true" class="text-xs text-ink-3 hover:text-ink flex items-center gap-1 transition-colors">
+            <HelpCircle class="w-3.5 h-3.5" /> Markdown Guide
+          </button>
         </div>
-      </section>
-    </template>
+      </template>
+
+      <template v-else>
+        <h1 class="font-serif text-4xl md:text-5xl tracking-tight leading-none mb-3">{{ note.title }}</h1>
+        <div v-if="linkedProject" class="text-sm text-ink-2 mb-6">Linked to <RouterLink
+            :to="`/projects/${linkedProject.id}`" class="text-ink underline decoration-line-2 underline-offset-4">{{
+              linkedProject.title }}</RouterLink>
+        </div>
+        <article class="prose-soft" v-html="html" @click="onArticleClick" data-testid="note-rendered"></article>
+
+        <!-- Backlinks panel -->
+        <section v-if="outgoingLinks.length || incomingLinks.length" class="mt-12 pt-8 border-t border-line"
+          data-testid="backlinks-panel">
+          <div v-if="incomingLinks.length" class="mb-8">
+            <div class="overline mb-3 flex items-center gap-2">
+              <Link2 class="w-3 h-3" /> Linked from
+            </div>
+            <div class="space-y-2" data-testid="incoming-links">
+              <RouterLink v-for="n in incomingLinks" :key="n.id" :to="`/notes/${n.id}`"
+                class="card px-4 py-3 block hover:border-line-2 transition-colors duration-300"
+                :data-testid="`incoming-${n.id}`">
+                <div class="font-serif text-base">{{ n.title }}</div>
+                <p class="text-xs text-ink-3 mt-1 line-clamp-1">{{ n.body }}</p>
+              </RouterLink>
+            </div>
+          </div>
+          <div v-if="outgoingLinks.length">
+            <div class="overline mb-3 flex items-center gap-2">
+              <Link2 class="w-3 h-3" /> Links to
+            </div>
+            <div class="flex flex-wrap gap-2" data-testid="outgoing-links">
+              <RouterLink v-for="(l, i) in outgoingLinks.filter(l => l.target)" :key="l.target.id + i"
+                :to="`/notes/${l.target.id}`"
+                class="px-3 py-1.5 rounded-full bg-elevated border border-line text-sm hover:border-line-2 transition-colors duration-300"
+                :data-testid="`outgoing-${l.target.id}`">
+                {{ l.title }}
+              </RouterLink>
+              <span v-for="(l, i) in outgoingLinks.filter(l => !l.target)" :key="'m' + i"
+                class="px-3 py-1.5 rounded-full border border-dashed border-line text-sm text-ink-3 italic"
+                :data-testid="`outgoing-missing-${i}`" :title="`No note titled “${l.title}”`">
+                {{ l.title }}
+              </span>
+            </div>
+          </div>
+        </section>
+      </template>
+    </div>
+    <EmptyState v-else title="Note not found" />
+    
+    <!-- Markdown guide overlay -->
+    <MarkdownHelpModal :isOpen="showHelp" @close="showHelp = false" />
   </div>
-  <EmptyState v-else title="Note not found" />
-  
-  <!-- Markdown guide overlay -->
-  <MarkdownHelpModal :isOpen="showHelp" @close="showHelp = false" />
 </template>
 
 <style scoped>

@@ -15,51 +15,41 @@ const router = useRouter()
 
 const RAW_SECTIONS_PERSONAL = [
   {
-    label: 'Today',
+    label: 'Action',
     items: [
-      { to: '/', name: 'Dashboard', icon: LayoutGrid, testid: 'nav-dashboard' },
       { to: '/today', name: 'Today focus', icon: Sparkles, testid: 'nav-today' },
       { to: '/next-steps', name: 'Next steps', icon: ListChecks, testid: 'nav-next-steps' },
+      { to: '/tasks', name: 'Tasks', icon: CheckSquare, testid: 'nav-tasks' },
+      { to: '/projects', name: 'Projects', icon: FolderKanban, testid: 'nav-projects' },
     ],
   },
   {
-    label: 'Horizon',
+    label: 'Plan',
     items: [
-      { to: '/tasks', name: 'Tasks', icon: CheckSquare, testid: 'nav-tasks' },
       { to: '/goals', name: 'Goals', icon: Target, testid: 'nav-goals' },
       { to: '/years', name: 'Years', icon: Calendar, testid: 'nav-years' },
       { to: '/summary', name: 'Summary', icon: TrendingUp, testid: 'nav-summary' },
-      { to: '/pipeline', name: 'Pipeline', icon: GitFork, testid: 'nav-pipeline' },
     ],
   },
   {
-    label: 'PARA',
-    items: [
-      { to: '/projects', name: 'Projects', icon: FolderKanban, testid: 'nav-projects' },
-      { to: '/areas', name: 'Areas', icon: Compass, testid: 'nav-areas' },
-      { to: '/resources', name: 'Resources', icon: BookOpen, testid: 'nav-resources' },
-      { to: '/archives', name: 'Archives', icon: Archive, testid: 'nav-archives' },
-    ],
-  },
-  {
-    label: 'Memory',
+    label: 'Capture',
     items: [
       { to: '/notes', name: 'Notes', icon: NotebookPen, testid: 'nav-notes' },
       { to: '/bookmarks', name: 'Bookmarks', icon: Bookmark, testid: 'nav-bookmarks' },
-      { to: '/follows', name: 'Follows', icon: Compass, testid: 'nav-follows' },
+      { to: '/radar', name: 'Radar', icon: Compass, testid: 'nav-radar' },
+    ],
+  },
+  {
+    label: 'Track',
+    items: [
       { to: '/finance', name: 'Finance', icon: Wallet, testid: 'nav-finance' },
       { to: '/reviews', name: 'Reviews', icon: Sparkles, testid: 'nav-reviews' },
+      { to: '/archives', name: 'Archives', icon: Archive, testid: 'nav-archives' },
     ],
   },
 ]
 
 const RAW_SECTIONS_WORK = [
-  {
-    label: 'Briefing',
-    items: [
-      { to: '/', name: 'Dashboard', icon: LayoutGrid, testid: 'nav-work-dashboard' },
-    ],
-  },
   {
     label: 'Operations',
     items: [
@@ -130,6 +120,11 @@ function handleKeydown(e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return
 
   const key = e.key.toLowerCase()
+  if (key === 'd') {
+    e.preventDefault()
+    router.push('/')
+    return
+  }
   if (settingsItem.value.shortcut?.char === key) {
     e.preventDefault(); router.push(settingsItem.value.to)
     return
@@ -220,7 +215,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
     </button>
 
     <button @click="handleQuickCaptureClick"
-      class="mx-4 mb-4 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-ink text-canvas hover:opacity-90 transition-opacity duration-300 text-sm font-medium"
+      class="mx-4 mb-2 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-ink text-canvas hover:opacity-90 transition-opacity duration-300 text-sm font-medium"
       data-testid="quick-capture-trigger">
       <span class="flex items-center gap-2">
         <Plus class="w-3.5 h-3.5" />
@@ -232,10 +227,22 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </span>
     </button>
 
-    <nav class="flex-1 overflow-y-auto px-3 pb-4 space-y-6">
+    <nav class="flex-1 overflow-y-auto px-3 pb-4 space-y-3.5">
+      <ul class="mb-2">
+        <li>
+          <RouterLink to="/" data-testid="nav-dashboard"
+            class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-300" :class="isActive('/')
+              ? 'text-ink font-medium bg-surface border border-line'
+              : 'text-ink-2 hover:text-ink hover:bg-surface/60 border border-transparent'">
+            <LayoutGrid class="w-4 h-4" :class="isActive('/') ? 'text-ink' : 'text-ink-3'" />
+            <span>Dashboard</span>
+          </RouterLink>
+        </li>
+      </ul>
+
       <div v-for="section in sections" :key="section.label">
-        <div class="overline px-3 pb-2">{{ section.label }}</div>
-        <ul class="space-y-0.5">
+        <div class="overline px-3 pb-1.5">{{ section.label }}</div>
+        <ul class="">
           <li v-for="item in section.items" :key="item.to">
             <RouterLink :to="item.to" :data-testid="item.testid"
               class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-300" :class="isActive(item.to)

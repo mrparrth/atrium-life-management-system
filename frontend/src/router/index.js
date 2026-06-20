@@ -7,8 +7,6 @@ const routes = [
   { path: '/next-steps', name: 'next-steps', component: () => import('@/views/NextSteps.vue') },
   { path: '/projects', name: 'projects', component: () => import('@/views/Projects.vue') },
   { path: '/projects/:id', name: 'project', component: () => import('@/views/ProjectDetail.vue'), props: true },
-  { path: '/areas', name: 'areas', component: () => import('@/views/Areas.vue') },
-  { path: '/resources', name: 'resources', component: () => import('@/views/Resources.vue') },
   { path: '/archives', name: 'archives', component: () => import('@/views/Archives.vue') },
   { path: '/years', name: 'years', component: () => import('@/views/Years.vue') },
   { path: '/goals', name: 'goals', component: () => import('@/views/Goals.vue') },
@@ -21,8 +19,7 @@ const routes = [
   { path: '/reviews', name: 'reviews', component: () => import('@/views/Reviews.vue') },
   { path: '/settings', name: 'settings', component: () => import('@/views/Settings.vue') },
   { path: '/summary', name: 'summary', component: () => import('@/views/Summary.vue') },
-  { path: '/pipeline', name: 'pipeline', component: () => import('@/views/ContentPipeline.vue') },
-  { path: '/follows', name: 'follows', component: () => import('@/views/Follows.vue') },
+  { path: '/radar', name: 'radar', component: () => import('@/views/Follows.vue') },
   
   // Work Mode Routes
   { path: '/work/clients', name: 'work-clients', component: () => import('@/views/work/WorkClients.vue') },

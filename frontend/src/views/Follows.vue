@@ -276,7 +276,7 @@ function handlePillClick(item) {
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="follows-view">
-    <PageHeader overline="Memory" title="Follows"
+    <PageHeader overline="Memory" title="Radar"
       sub="Network directory of inspiring creators, designers, and strategists. Learn from the best.">
       <template #right>
         <button class="btn-primary" @click="openAddModal" data-testid="add-follows-btn">
@@ -360,7 +360,7 @@ function handlePillClick(item) {
         </div>
       </div>
     </div>
-    <EmptyState v-else title="No follows tracked"
+    <EmptyState v-else title="No radar sources tracked"
       hint="Add creators and developers you seek alignment or insights from." />
 
     <!-- Add/Edit Modal (Scoped Esc handling on form itself rather than window prevents event handler unmount warnings) -->
