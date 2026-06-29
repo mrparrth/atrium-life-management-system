@@ -9,6 +9,7 @@ import { Plus, X, Search, HelpCircle } from 'lucide-vue-next'
 import { onKeyStroke } from '@vueuse/core'
 import { useUIStore } from '@/stores/ui'
 import MarkdownHelpModal from '@/components/MarkdownHelpModal.vue'
+import TiptapEditor from '@/components/TiptapEditor.vue'
 
 const ui = useUIStore()
 
@@ -99,33 +100,32 @@ watch(showNew, (open) => {
 
     <div v-if="showNew" @keydown.window.esc="closeNewNote" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="closeNewNote"></div>
-      <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create" class="relative w-full max-w-xl card p-8 animate-rise-in">
+      <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create" class="relative w-full max-w-5xl h-[85vh] flex flex-col card p-8 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeNewNote">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">New note</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A page of your own</h2>
         
-        <div class="v-field-group mb-4">
+        <div class="v-field-group mb-4 shrink-0">
           <input ref="newTitleInput" v-model="newTitle" placeholder=" " class="v-field-input text-base font-semibold" id="new-note-title" required data-testid="new-note-title" />
           <label for="new-note-title" class="v-field-label text-sm">Title *</label>
         </div>
 
-        <div class="v-field-group mb-3">
-          <textarea v-model="newBody" placeholder=" " rows="6" class="v-field-input py-3 resize-none font-sans text-xs leading-relaxed" id="new-note-body" data-testid="new-note-body" />
-          <label for="new-note-body" class="v-field-label text-sm">Write freely. Markdown welcome.</label>
+        <div class="flex-1 min-h-0 mb-4 flex flex-col">
+          <TiptapEditor v-model="newBody" heightClass="h-full min-h-[300px]" />
         </div>
-        <div class="flex justify-between items-center mb-5">
+
+        <div class="flex justify-between items-center shrink-0">
           <button type="button" @click="showHelp = true" class="text-[11px] text-ink-3 hover:text-ink flex items-center gap-1 transition-colors">
             <HelpCircle class="w-3.5 h-3.5" /> Markdown Guide
           </button>
-          <span class="text-[10px] text-ink-3">Supports [[Wiki-links]]</span>
-        </div>
-        <div class="flex justify-end gap-2">
-          <button type="button" class="btn-ghost" @click="closeNewNote">Cancel</button>
-          <button type="submit" class="btn-primary" data-testid="new-note-save">
-            Save <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
-          </button>
+          <div class="flex justify-end gap-2">
+            <button type="button" class="btn-ghost" @click="closeNewNote">Cancel</button>
+            <button type="submit" class="btn-primary" data-testid="new-note-save">
+              Save <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>

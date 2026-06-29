@@ -15,13 +15,38 @@ export function areNotificationsEnabled() {
     localStorage.getItem('atrium.notifications.enabled') === 'true';
 }
 
-export function sendDesktopNotification(title, options = {}) {
-  if (!areNotificationsEnabled()) return null;
+export async function sendDesktopNotification(title, options = {}) {
+  if (!areNotificationsEnabled()) {
+    console.warn("Desktop notifications are disabled or permission is not granted.");
+    return null;
+  }
   
-  return new Notification(title, {
-    icon: '/atrium-icon.png',
+  const icon = '/atrium-icon.png';
+  const notificationOptions = {
+    icon,
     ...options
-  });
+  };
+
+  // Try service worker first (standard for PWAs/modern browsers)
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && 'showNotification' in reg) {
+        await reg.showNotification(title, notificationOptions);
+        return;
+      }
+    } catch (e) {
+      console.warn('Service Worker notification failed, falling back:', e);
+    }
+  }
+
+  // Fallback to standard window Notification constructor
+  try {
+    return new Notification(title, notificationOptions);
+  } catch (e) {
+    console.error('Window Notification constructor failed:', e);
+  }
+  return null;
 }
 
 export async function initNotificationsOnLoad() {

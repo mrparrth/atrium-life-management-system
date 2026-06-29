@@ -211,7 +211,13 @@ function openAddModal() {
     important: false
   }
   showModal.value = true
+  nextTick(() => {
+    const el = document.getElementById('follow-name')
+    if (el) el.focus()
+  })
 }
+
+import { nextTick } from 'vue'
 
 function openEditModal(item) {
   editingItem.value = item
@@ -239,6 +245,10 @@ function openEditModal(item) {
     important: !!item.important
   }
   showModal.value = true
+  nextTick(() => {
+    const el = document.getElementById('follow-name')
+    if (el) el.focus()
+  })
 }
 
 async function save() {
@@ -272,6 +282,37 @@ function handlePillClick(item) {
     openEditModal(item)
   }
 }
+
+function handleGlobalKeydown(e) {
+  if (e.key === 'Escape' && showModal.value) {
+    showModal.value = false
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && showModal.value) {
+    e.preventDefault()
+    save()
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '1' && !showModal.value) {
+    e.preventDefault()
+    openAddModal()
+  }
+}
+
+function handleGlobalClick(e) {
+  if (categoryDropdownOpen.value && !e.target.closest('.category-select-container')) {
+    categoryDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+  window.addEventListener('click', handleGlobalClick)
+})
+
+import { onUnmounted } from 'vue'
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+  window.removeEventListener('click', handleGlobalClick)
+})
 </script>
 
 <template>
@@ -280,7 +321,8 @@ function handlePillClick(item) {
       sub="Network directory of inspiring creators, designers, and strategists. Learn from the best.">
       <template #right>
         <button class="btn-primary" @click="openAddModal" data-testid="add-follows-btn">
-          <Plus class="w-4 h-4" /> Add Person
+          <Plus class="w-4 h-4" /> Add Person <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
@@ -341,7 +383,6 @@ function handlePillClick(item) {
         <div class="flex flex-col">
           <span class="font-serif text-sm font-semibold text-ink leading-tight flex items-center gap-1">
             <span>{{ item.name }}</span>
-            <Star v-if="item.important" class="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
           </span>
           <span v-if="getPrimaryHandle(item)" class="text-[10px] text-ink-3 leading-tight">{{ getPrimaryHandle(item)
           }}</span>
@@ -372,34 +413,35 @@ function handlePillClick(item) {
           <X class="w-4 h-4" />
         </button>
         <div class="overline">{{ editingItem ? 'Modify Follow' : 'Add Person' }}</div>
-        <h2 class="font-serif text-2xl mt-1 mb-5">{{ editingItem ? 'Update details' : 'Track new creator' }}</h2>
 
-        <!-- Important toggle option -->
-        <div class="flex items-center gap-2 mb-5 px-1">
+        <!-- Header row with Title and Star toggle button inline -->
+        <div class="flex items-center justify-between mt-1 mb-5 gap-4">
+          <h2 class="font-serif text-2xl m-0">{{ editingItem ? 'Update details' : 'Track new creator' }}</h2>
           <button type="button" @click="form.important = !form.important"
-            class="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all select-none"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all select-none shrink-0"
             :class="form.important ? 'border-amber-400 bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'border-line bg-surface text-ink-2 hover:border-line-2'">
             <Star class="w-3.5 h-3.5" :class="form.important ? 'fill-amber-500 text-amber-500' : ''" />
-            <span>{{ form.important ? 'Important Contact' : 'Mark as Important' }}</span>
+            <span>{{ form.important ? 'Important' : 'Important' }}</span>
           </button>
         </div>
 
         <!-- Name and Category side-by-side -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4">
-          <div class="v-field-group">
+        <div class="flex gap-6 items-end mb-6">
+          <div class="v-field-group" style="width: 60%;">
             <input v-model="form.name" placeholder=" " class="v-field-input text-base font-semibold" id="follow-name"
               required />
-            <label for="follow-name" class="v-field-label text-sm">Full Name *</label>
+            <label for="follow-name" class="v-field-label text-sm">Name</label>
           </div>
 
-          <div class="v-field-group">
+          <div class="v-field-group category-select-container" style="width: 40%;">
             <div class="flex-1 relative">
               <!-- Custom select trigger block -->
               <div @click="categoryDropdownOpen = !categoryDropdownOpen"
-                class="v-field-select text-sm capitalize flex items-center justify-between border border-line rounded-lg px-3 py-2.5 bg-surface cursor-pointer min-h-[48px] select-none">
+                class="v-field-select text-sm capitalize flex items-center justify-between border border-line rounded-lg pl-3 pr-8 py-2.5 bg-surface cursor-pointer min-h-[48px] select-none font-semibold text-ink">
                 <span>{{ form.category || 'Select category...' }}</span>
-                <span class="text-xs text-ink-3">▼</span>
               </div>
+              <span
+                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-ink-3 pointer-events-none">▼</span>
               <label class="v-field-label v-field-label--floating text-xs">Category</label>
 
               <!-- Custom select dropdown list popover -->
@@ -426,47 +468,50 @@ function handlePillClick(item) {
           </div>
         </div>
 
-        <!-- Platform link Builder -->
-        <div class="p-4 bg-canvas/60 border border-line rounded-xl mb-4">
+        <!-- Username and Platform side-by-side -->
+        <div class="flex gap-6 items-end mb-6">
+          <div class="v-field-group group/url" style="width: 60%;">
+            <input v-model="form.url" placeholder=" " class="v-field-input text-base font-semibold !pr-10" @input="onUrlInput"
+              id="follow-url" />
+            <label for="follow-url" class="v-field-label text-sm">Username/Url</label>
+            <!-- External Link Icon next to the text box if valid url -->
+            <a v-if="isValidUrl" :href="form.url" target="_blank"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg bg-surface border border-line text-ink-3 hover:bg-canvas hover:text-ink hover:border-line-2 shadow-sm transition-all opacity-0 group-hover/url:opacity-100"
+              title="Open link in browser">
+              <ArrowUpRight class="w-4 h-4" />
+            </a>
+          </div>
 
-          <div class="flex gap-3 mb-3">
-            <div class="w-1/3">
-              <label class="block text-[10px] uppercase text-ink-3 mb-1">Platform</label>
+          <div class="v-field-group" style="width: 40%;">
+            <div class="flex-1 relative">
               <select v-model="form.platform"
-                class="w-full bg-surface border border-line rounded-lg px-2.5 py-2 text-xs select-none">
+                class="w-full bg-surface border border-line rounded-lg px-3 py-2.5 text-sm select-none min-h-[48px] focus:outline-none focus:border-pri-strategic text-ink font-semibold appearance-none cursor-pointer">
                 <option value="x">X / Twitter</option>
                 <option value="linkedin">LinkedIn</option>
                 <option value="instagram">Instagram</option>
                 <option value="threads">Threads</option>
                 <option value="upwork">Upwork</option>
               </select>
-            </div>
-
-            <div class="flex-1 relative flex items-end">
-              <div class="w-full relative">
-                <input v-model="form.url" placeholder="URL or handle (e.g. @username)"
-                  class="w-full bg-surface border border-line rounded-lg pl-3 pr-8 py-2 text-xs" @input="onUrlInput" />
-                <!-- External Link Icon next to the text box if valid url -->
-                <a v-if="isValidUrl" :href="form.url" target="_blank"
-                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink transition-colors"
-                  title="Open link in browser">
-                  <ArrowUpRight class="w-3.5 h-3.5" />
-                </a>
-              </div>
+              <!-- Standardize custom indicator arrow to match custom category selector dropdown -->
+              <span
+                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-ink-3 pointer-events-none">▼</span>
+              <label class="v-field-label v-field-label--floating text-xs">Platform</label>
             </div>
           </div>
         </div>
 
         <!-- Reason / Note field positioned at the very end -->
         <div class="v-field-group mb-6">
-          <textarea v-model="form.reason" placeholder=" " rows="4"
-            class="v-field-input py-2 resize-none font-sans text-xs leading-relaxed" id="follow-reason" />
-          <label for="follow-reason" class="v-field-label text-sm">Reason for following / Insights & Lessons</label>
+          <textarea v-model="form.reason" placeholder=" " rows="3"
+            class="v-field-input py-2.5 resize-none font-sans text-xs leading-relaxed" id="follow-reason" />
+          <label for="follow-reason" class="v-field-label text-sm">Reason for following</label>
         </div>
 
-        <div class="flex justify-end gap-2">
+        <div class="flex justify-end gap-3">
           <button type="button" class="btn-ghost" @click="showModal = false">Cancel</button>
-          <button type="submit" class="btn-primary">Save changes</button>
+          <button type="submit" class="btn-primary">
+            Save changes <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘↵</span>
+          </button>
         </div>
       </form>
     </div>

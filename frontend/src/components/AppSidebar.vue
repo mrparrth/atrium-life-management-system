@@ -235,7 +235,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
               ? 'text-ink font-medium bg-surface border border-line'
               : 'text-ink-2 hover:text-ink hover:bg-surface/60 border border-transparent'">
             <LayoutGrid class="w-4 h-4" :class="isActive('/') ? 'text-ink' : 'text-ink-3'" />
-            <span>Dashboard</span>
+            <span>
+              <span class="underline decoration-ink/40 underline-offset-2">D</span><span>ashboard</span>
+            </span>
           </RouterLink>
         </li>
       </ul>

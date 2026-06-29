@@ -52,41 +52,96 @@ function handleKeydown(e) {
   }
 }
 
+const currentDate = ref(dayjs())
+let timer = null
+
 onMounted(async () => {
   await follows.load()
   window.addEventListener('keydown', handleKeydown, { capture: true })
+  // Check for updates every 60 seconds to automatically transition dates and rotate creator inspiration
+  timer = setInterval(() => {
+    currentDate.value = dayjs()
+  }, 60000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, { capture: true })
+  if (timer) {
+    clearInterval(timer)
+  }
 })
 
-const resurfacedFollow = computed(() => {
+const resurfacedFollows = computed(() => {
   const items = follows.items
-  if (!items || items.length === 0) return null
-  const todayStr = dayjs().format('YYYY-MM-DD')
-  let hash = 0
+  if (!items || items.length === 0) return []
+
+  const todayStr = currentDate.value.format('YYYY-MM-DD')
+  let seed = 0
   for (let i = 0; i < todayStr.length; i++) {
-    hash = (hash << 5) - hash + todayStr.charCodeAt(i)
-    hash |= 0
+    seed = (seed << 5) - seed + todayStr.charCodeAt(i)
+    seed |= 0
   }
-  const idx = Math.abs(hash) % items.length
-  return items[idx]
+
+  function mulberry32(a) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+  }
+
+  const getSeededRandom = mulberry32(seed)
+
+  function pickWeighted(candidates) {
+    if (candidates.length === 0) return null
+    const totalWeight = candidates.reduce((acc, c) => acc + (c.important ? 2.0 : 1.0), 0)
+    let r = getSeededRandom() * totalWeight
+    let sum = 0
+    for (const c of candidates) {
+      sum += (c.important ? 2.0 : 1.0)
+      if (sum >= r) return c
+    }
+    return candidates[candidates.length - 1]
+  }
+
+  const first = pickWeighted(items)
+  if (!first) return []
+
+  let remaining = items.filter(x => x.id !== first.id)
+  let diffCatCandidates = remaining.filter(x => x.category !== first.category)
+
+  let second = null
+  if (diffCatCandidates.length > 0) {
+    second = pickWeighted(diffCatCandidates)
+  } else if (remaining.length > 0) {
+    second = pickWeighted(remaining)
+  }
+
+  return second ? [first, second] : [first]
 })
 
 const greeting = computed(() => {
-  const h = new Date().getHours()
+  const h = currentDate.value.hour()
   if (h < 5) return 'Late night'
   if (h < 12) return 'Good morning'
   if (h < 18) return 'Good afternoon'
   return 'Good evening'
 })
 
-const todayDate = computed(() => dayjs().format('dddd, MMMM D'))
+const todayDate = computed(() => currentDate.value.format('dddd, MMMM D'))
 const currentYear = computed(() => years.items[0])
 
-const todayCount = computed(() => todayFocus(tasks.items).length)
-const upcomingCount = computed(() => upcomingTasks(tasks.items).length)
+const todayCount = computed(() => {
+  // Access currentDate.value so this computed updates reactively
+  currentDate.value
+  return todayFocus(tasks.items).length
+})
+
+const upcomingCount = computed(() => {
+  currentDate.value
+  return upcomingTasks(tasks.items).length
+})
 
 const priorityWeight = {
   backlog: 1,
@@ -96,6 +151,7 @@ const priorityWeight = {
 }
 
 const sortedToday = computed(() => {
+  currentDate.value
   const list = [...todayFocus(tasks.items)]
   list.sort((a, b) => {
     const pA = derivePriority(a.important, a.urgent).key
@@ -106,6 +162,7 @@ const sortedToday = computed(() => {
 })
 
 const sortedUpcoming = computed(() => {
+  currentDate.value
   const list = [...upcomingTasks(tasks.items)]
   list.sort((a, b) => {
     const pA = derivePriority(a.important, a.urgent).key
@@ -115,8 +172,15 @@ const sortedUpcoming = computed(() => {
   return list.slice(0, 3)
 })
 
-const stale = computed(() => staleProjects(projects.items, tasks.items).slice(0, 3))
-const memory = computed(() => memoryResurfacing(notes.items, bookmarks.items))
+const stale = computed(() => {
+  currentDate.value
+  return staleProjects(projects.items, tasks.items).slice(0, 3)
+})
+
+const memory = computed(() => {
+  currentDate.value
+  return memoryResurfacing(notes.items, bookmarks.items)
+})
 
 const lastWeeklyReview = computed(() => reviews.items.find(r => r.type === 'weekly'))
 
@@ -186,8 +250,8 @@ async function openDailyJournal() {
 
         <!-- COMING UP -->
         <section data-testid="section-upcoming">
-          <SectionHeader :overline="`Coming up · ${upcomingCount} task${upcomingCount !== 1 ? 's' : ''}`" title="Coming up"
-            :hint="sortedUpcoming.length ? 'The next seven days.' : 'A clear horizon.'">
+          <SectionHeader :overline="`Coming up · ${upcomingCount} task${upcomingCount !== 1 ? 's' : ''}`"
+            title="Coming up" :hint="sortedUpcoming.length ? 'The next seven days.' : 'A clear horizon.'">
             <template #right>
               <RouterLink to="/tasks" class="btn-ghost text-sm">All tasks
                 <ArrowRight class="w-3 h-3" />
@@ -211,13 +275,15 @@ async function openDailyJournal() {
           </SectionHeader>
           <div v-if="stale.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <RouterLink v-for="p in stale" :key="p.id" :to="`/projects/${p.id}`"
-              class="card p-5 hover:border-line-2 transition-all duration-300 group" :data-testid="`stale-project-${p.id}`">
+              class="card p-5 hover:border-line-2 transition-all duration-300 group"
+              :data-testid="`stale-project-${p.id}`">
               <div class="flex items-center gap-2 mb-3">
                 <FolderKanban class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Project</span>
               </div>
               <div class="font-serif text-xl text-ink mb-1">{{ p.title }}</div>
               <p v-if="p.description" class="text-sm text-ink-2 line-clamp-2">{{ p.description }}</p>
-              <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(p.lastViewedAt) }} · {{ p.openTaskCount }} open
+              <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(p.lastViewedAt) }} · {{ p.openTaskCount }}
+                open
                 task<template v-if="p.openTaskCount !== 1">s</template></div>
             </RouterLink>
           </div>
@@ -253,24 +319,23 @@ async function openDailyJournal() {
           </SectionHeader>
           <div class="space-y-4 mt-5">
             <!-- Daily Inspiration Creator Follow Resurfacing -->
-            <a v-if="resurfacedFollow" :href="resurfacedFollow.url" target="_blank"
-              class="card p-4 block hover:border-line-2 transition-all duration-300 bg-amber-500/5 border-amber-500/20 hover:!border-amber-500/50"
-              data-testid="resurface-follow">
+            <a v-for="rf in resurfacedFollows" :key="rf.id" :href="rf.url" target="_blank"
+              class="card p-4 block hover:border-line-2 transition-all duration-300 bg-amber-500/5 hover:!border-amber-500/50"
+              :class="rf.important ? 'border-amber-500 ring-1 ring-amber-500' : 'border-amber-500/20'"
+              :data-testid="`resurface-follow-${rf.id}`">
               <div class="flex items-center gap-2">
                 <Compass class="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
-                <span class="overline text-amber-600 dark:text-amber-400 font-semibold tracking-wider">Creator
-                  Inspiration</span>
+                <span
+                  class="overline text-amber-600 dark:text-amber-400 font-semibold tracking-wider flex items-center gap-1.5">
+                  <span>Creator Inspiration</span>
+                </span>
               </div>
               <div class="font-serif text-lg mt-1.5 flex items-center gap-1.5">
-                <span>{{ resurfacedFollow.name }}</span>
-                <span class="text-xs text-ink-3 font-normal font-sans">({{ resurfacedFollow.platform }})</span>
+                <span>{{ rf.name }}</span>
+                <span class="text-xs text-ink-3 font-normal font-sans">({{ rf.platform }})</span>
               </div>
-              <p v-if="resurfacedFollow.reason" class="text-sm text-ink-2 mt-1 line-clamp-3 leading-relaxed">{{
-                resurfacedFollow.reason }}</p>
-              <div class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-2.5 flex items-center gap-1">
-                <span>Checkout posts</span>
-                <ArrowRight class="w-2.5 h-2.5" />
-              </div>
+              <p v-if="rf.reason" class="text-sm text-ink-2 mt-1 line-clamp-3 leading-relaxed">{{
+                rf.reason }}</p>
             </a>
 
             <!-- Notes (up to 3) -->
@@ -297,7 +362,7 @@ async function openDailyJournal() {
               <p class="text-sm text-ink-2 mt-1 truncate">{{ b.url }}</p>
             </a>
 
-            <EmptyState v-if="!memory.notes.length && !memory.bookmarks.length && !resurfacedFollow"
+            <EmptyState v-if="!memory.notes.length && !memory.bookmarks.length && !resurfacedFollows.length"
               title="Memory is fresh" hint="Nothing to resurface yet." />
           </div>
         </section>

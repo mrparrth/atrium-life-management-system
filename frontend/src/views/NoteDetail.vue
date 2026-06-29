@@ -1,14 +1,14 @@
 <script setup>
-import { computed, onMounted, ref, watch, nextTick } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useNotesStore } from '@/stores/notes'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
 import { marked } from 'marked'
 import EmptyState from '@/components/EmptyState.vue'
+import TiptapEditor from '@/components/TiptapEditor.vue'
 import { wikilinkPreprocess, backlinksOf, findWikiTargets, resolveTitle } from '@/lib/wikilinks'
-import { ArrowLeft, Trash2, Edit3, Save, Link2, HelpCircle } from 'lucide-vue-next'
-import MarkdownHelpModal from '@/components/MarkdownHelpModal.vue'
+import { ArrowLeft, Trash2, Edit3, Save, Link2 } from 'lucide-vue-next'
 
 const props = defineProps({ id: String })
 const router = useRouter()
@@ -16,24 +16,26 @@ const notes = useNotesStore()
 const projects = useProjectsStore()
 const ui = useUIStore()
 
-
 const note = computed(() => notes.items.find(n => n.id === props.id))
 const editing = ref(false)
-const showHelp = ref(false)
-const draftTitle = ref(''); const draftBody = ref('')
-const bodyTextarea = ref(null)
+const draftTitle = ref('')
+const draftBody = ref('')
 
-// Wiki-link suggestion state
-const suggestOpen = ref(false)
-const suggestQuery = ref('')
-const suggestIdx = ref(0)
-const suggestPos = ref({ top: 0, left: 0 })
-const suggestStart = ref(0) // index of the `[[` that opened the suggester
-
-function startEdit() { if (!note.value) return; draftTitle.value = note.value.title; draftBody.value = note.value.body; editing.value = true }
-function load() {
-  if (note.value) { notes.markViewed(note.value.id); draftTitle.value = note.value.title; draftBody.value = note.value.body }
+function startEdit() {
+  if (!note.value) return
+  draftTitle.value = note.value.title
+  draftBody.value = note.value.body
+  editing.value = true
 }
+
+function load() {
+  if (note.value) {
+    notes.markViewed(note.value.id)
+    draftTitle.value = note.value.title
+    draftBody.value = note.value.body
+  }
+}
+
 onMounted(load)
 watch(() => props.id, load)
 
@@ -52,72 +54,18 @@ const outgoingLinks = computed(() => {
 })
 const incomingLinks = computed(() => backlinksOf(note.value, notes.items))
 
-const suggestions = computed(() => {
-  const q = suggestQuery.value.trim().toLowerCase()
-  const list = notes.items
-    .filter(n => n.id !== note.value?.id)
-    .filter(n => !q || (n.title || '').toLowerCase().includes(q))
-    .slice(0, 8)
-  return list
-})
-
 async function save() {
   await notes.update(note.value.id, { title: draftTitle.value, body: draftBody.value })
   editing.value = false
 }
-async function del() { if (await ui.confirm({ message: 'Delete this note?', title: 'Delete Note' })) { await notes.remove(props.id); router.push('/notes') } }
 
-// ───── Wiki-link autosuggest typing handler
-function onBodyInput(e) {
-  const el = e.target
-  const value = el.value
-  const caret = el.selectionStart
-  // Find the most recent `[[` before caret, no closing `]]` in between
-  const before = value.slice(0, caret)
-  const lastOpen = before.lastIndexOf('[[')
-  if (lastOpen === -1) { suggestOpen.value = false; return }
-  const segment = before.slice(lastOpen + 2)
-  if (/[\]\n]/.test(segment)) { suggestOpen.value = false; return }
-  // Suggest!
-  suggestStart.value = lastOpen
-  suggestQuery.value = segment
-  suggestIdx.value = 0
-  suggestOpen.value = true
-  // Position dropdown near caret - approximate
-  positionSuggest(el)
-}
-function positionSuggest(el) {
-  const r = el.getBoundingClientRect()
-  // Cheap approximation - place dropdown below textarea top
-  suggestPos.value = { top: r.bottom - r.top - el.scrollTop + 16, left: 20 }
-}
-function applySuggestion(target) {
-  const el = bodyTextarea.value
-  if (!el) return
-  const before = draftBody.value.slice(0, suggestStart.value)
-  const after = draftBody.value.slice(el.selectionStart)
-  const inserted = `[[${target.title}]]`
-  draftBody.value = before + inserted + after
-  suggestOpen.value = false
-  nextTick(() => {
-    el.focus()
-    const pos = before.length + inserted.length
-    el.setSelectionRange(pos, pos)
-  })
-}
-function onBodyKeydown(e) {
-  if (!suggestOpen.value) return
-  if (e.key === 'ArrowDown') { e.preventDefault(); suggestIdx.value = Math.min(suggestions.value.length - 1, suggestIdx.value + 1) }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); suggestIdx.value = Math.max(0, suggestIdx.value - 1) }
-  else if (e.key === 'Enter' && suggestions.value[suggestIdx.value]) { e.preventDefault(); applySuggestion(suggestions.value[suggestIdx.value]) }
-  else if (e.key === 'Escape') { suggestOpen.value = false }
-  else if (e.key === ']') {
-    // typing the closing bracket closes the suggester
-    setTimeout(() => { suggestOpen.value = false }, 0)
+async function del() {
+  if (await ui.confirm({ message: 'Delete this note?', title: 'Delete Note' })) {
+    await notes.remove(props.id)
+    router.push('/notes')
   }
 }
 
-// Intercept wiki-link clicks inside rendered article so we can use vue-router
 function onArticleClick(e) {
   const a = e.target.closest('a.wikilink[data-note-id]')
   if (a) {
@@ -130,7 +78,7 @@ function onArticleClick(e) {
 
 <template>
   <div>
-    <div v-if="note" class="px-8 md:px-12 py-10 max-w-3xl mx-auto" data-testid="note-detail">
+    <div v-if="note" class="px-8 md:px-12 py-10 max-w-4xl mx-auto transition-all duration-300" data-testid="note-detail">
       <button @click="router.back()" class="btn-ghost mb-4 text-sm">
         <ArrowLeft class="w-3.5 h-3.5" /> Back
       </button>
@@ -148,39 +96,7 @@ function onArticleClick(e) {
 
       <template v-if="editing">
         <input v-model="draftTitle" class="input-soft text-4xl font-serif mb-6" />
-        <div class="relative">
-          <textarea ref="bodyTextarea" v-model="draftBody" @input="onBodyInput" @keydown="onBodyKeydown" rows="20"
-            class="input-block leading-relaxed resize-none w-full font-sans" data-testid="note-body-input"
-            placeholder="Write freely. Type [[ to link another note."></textarea>
-
-          <!-- Suggestion dropdown -->
-          <div v-if="suggestOpen && suggestions.length"
-            class="absolute z-30 card overflow-hidden shadow-xl shadow-black/10 w-72"
-            :style="{ top: suggestPos.top + 'px', left: suggestPos.left + 'px' }" data-testid="wiki-suggest">
-            <div class="overline px-3 py-2 border-b border-line">Link a note</div>
-            <ul>
-              <li v-for="(s, i) in suggestions" :key="s.id"
-                class="px-3 py-2 cursor-pointer text-sm flex items-center gap-2 transition-colors duration-150"
-                :class="i === suggestIdx ? 'bg-elevated text-ink' : 'text-ink-2 hover:bg-elevated/60'"
-                @mouseenter="suggestIdx = i" @mousedown.prevent="applySuggestion(s)"
-                :data-testid="`wiki-suggest-item-${i}`">
-                <Link2 class="w-3.5 h-3.5 text-ink-3" />
-                <span class="truncate">{{ s.title }}</span>
-              </li>
-            </ul>
-            <div class="px-3 py-1.5 border-t border-line text-[11px] text-ink-3 flex items-center gap-3">
-              <span><span class="kbd">↑</span><span class="kbd">↓</span></span>
-              <span><span class="kbd">↵</span> select</span>
-              <span><span class="kbd">esc</span> close</span>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-between items-center mt-3">
-          <p class="text-xs text-ink-3">Tip: type <span class="kbd">[</span><span class="kbd">[</span> to link another note.</p>
-          <button type="button" @click="showHelp = true" class="text-xs text-ink-3 hover:text-ink flex items-center gap-1 transition-colors">
-            <HelpCircle class="w-3.5 h-3.5" /> Markdown Guide
-          </button>
-        </div>
+        <TiptapEditor v-model="draftBody" />
       </template>
 
       <template v-else>
@@ -229,9 +145,6 @@ function onArticleClick(e) {
       </template>
     </div>
     <EmptyState v-else title="Note not found" />
-    
-    <!-- Markdown guide overlay -->
-    <MarkdownHelpModal :isOpen="showHelp" @close="showHelp = false" />
   </div>
 </template>
 

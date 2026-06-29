@@ -14,7 +14,7 @@ export const useWorkLeadsStore = defineStore('workLeads', () => {
       id: newId(),
       title: payload.title || 'Untitled Lead',
       clientName: payload.clientName || 'Direct Client',
-      status: payload.status || 'lead', // lead, discovery, proposal_sent, negotiation, won, lost, onboarding
+      status: payload.status || 'lead', // lead, discovery, proposal_sent, negotiation, won, lost
       estimatedValue: payload.estimatedValue !== undefined ? Number(payload.estimatedValue) : 0,
       expectedHours: payload.expectedHours !== undefined ? Number(payload.expectedHours) : 0,
       probability: payload.probability !== undefined ? Number(payload.probability) : 0.5,
@@ -22,6 +22,7 @@ export const useWorkLeadsStore = defineStore('workLeads', () => {
       statusChangedAt: payload.statusChangedAt || now(),
       relationshipStrength: payload.relationshipStrength !== undefined ? Number(payload.relationshipStrength) : 3, // 1 to 5
       notes: payload.notes || '',
+      archived: !!payload.archived,
       createdAt: now(),
       updatedAt: now()
     }
@@ -52,30 +53,28 @@ export const useWorkLeadsStore = defineStore('workLeads', () => {
     items.value = items.value.filter(x => x.id !== id)
   }
 
-  // Forecast weights
+  // Forecast weights (excludes won, lost, and archived leads from active pipeline calculations)
   const forecast = computed(() => {
     let high = 0
     let medium = 0
     let low = 0
 
-    items.value.forEach(lead => {
-      if (['won', 'onboarding'].includes(lead.status)) {
-        high += lead.estimatedValue
-      } else if (lead.status === 'lost') {
-        // skip
+    const activeLeads = items.value.filter(lead => !lead.archived && !['won', 'lost'].includes(lead.status))
+
+    activeLeads.forEach(lead => {
+      const val = lead.estimatedValue * lead.probability
+      if (lead.probability >= 0.8) {
+        high += val
+      } else if (lead.probability >= 0.5) {
+        medium += val
       } else {
-        const val = lead.estimatedValue * lead.probability
-        if (lead.probability >= 0.8) {
-          high += val
-        } else if (lead.probability >= 0.5) {
-          medium += val
-        } else {
-          low += val
-        }
+        low += val
       }
     })
 
-    return { high, medium, low, total: high + medium + low }
+    const totalPipeline = activeLeads.reduce((acc, x) => acc + x.estimatedValue, 0)
+
+    return { high, medium, low, total: high + medium + low, totalPipeline }
   })
 
   return { items, load, add, update, remove, forecast }

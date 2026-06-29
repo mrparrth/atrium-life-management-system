@@ -122,10 +122,10 @@ input[type="number"] {
   @apply inline-flex items-center justify-center gap-2 text-ink-2 hover:text-ink hover:bg-elevated rounded-xl px-3 py-2 text-sm font-medium transition-all duration-300;
 }
 .input-soft {
-  @apply bg-transparent border-b border-line focus:border-ink-2 px-0 py-2 text-ink placeholder:text-ink-3 outline-none transition-colors duration-300 w-full;
+  @apply bg-transparent border-b border-line focus:border-pri-strategic px-0 py-2 text-ink placeholder:text-ink-3 outline-none transition-colors duration-300 w-full;
 }
 .input-block {
-  @apply bg-surface border border-line rounded-xl px-3 py-2 text-ink placeholder:text-ink-3 outline-none focus:border-line-2 transition-colors duration-300 w-full;
+  @apply bg-surface border border-line rounded-xl px-3 py-2 text-ink placeholder:text-ink-3 outline-none focus:border-pri-strategic transition-colors duration-300 w-full;
 }
 .overline {
   @apply text-xs uppercase tracking-overline font-medium text-ink-3;
@@ -140,11 +140,17 @@ input[type="number"] {
   @apply font-serif;
 }
 
-/* Focus rings - subtle, calm */
+/* Focus rings - subtle, calm (using green strategic color) */
 :where(button, a, input, textarea, [tabindex]):focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgb(var(--canvas)), 0 0 0 4px rgb(var(--line-2) / 0.6);
+  box-shadow: 0 0 0 2px rgb(var(--canvas)), 0 0 0 4px rgb(var(--pri-strategic) / 0.6);
   border-radius: 0.6rem;
+}
+
+/* Disable ProseMirror inner focus rings to avoid double borders */
+.ProseMirror:focus, .ProseMirror:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Markdown prose */

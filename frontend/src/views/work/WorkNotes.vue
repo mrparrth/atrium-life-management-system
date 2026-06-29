@@ -10,6 +10,7 @@ import { Plus, Trash, Eye, EyeOff, Search, FileText, Check, CornerDownLeft, Spar
 import dayjs from 'dayjs'
 import { marked } from 'marked'
 import MarkdownHelpModal from '@/components/MarkdownHelpModal.vue'
+import TiptapEditor from '@/components/TiptapEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -233,7 +234,7 @@ const renderedMarkdown = computed(() => {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto h-[calc(100vh-80px)] flex flex-col" data-testid="work-notes">
+  <div class="px-8 md:px-12 pt-8 pb-4 max-w-7xl mx-auto h-[calc(100vh-40px)] flex flex-col" data-testid="work-notes">
 
     <!-- HEADER -->
     <PageHeader overline="Memory" title="Context Notes"
@@ -354,14 +355,12 @@ const renderedMarkdown = computed(() => {
           </div>
 
           <!-- Writer Editor Textarea or Markdown Preview -->
-          <div class="flex-1 min-h-0">
+          <div class="flex-1 min-h-0 flex flex-col">
             <div v-if="previewMode"
               class="h-full overflow-y-auto prose-soft bg-canvas/20 border border-line rounded-xl p-4"
               v-html="renderedMarkdown">
             </div>
-            <textarea v-else v-model="editBody"
-              placeholder="Start typing here... Markdown tags (#, -, [[Note Link]]) supported."
-              class="w-full h-full bg-transparent border-0 focus:outline-none font-sans text-sm resize-none text-ink leading-relaxed placeholder:text-ink-3" />
+            <TiptapEditor v-else v-model="editBody" heightClass="h-full min-h-[300px]" />
           </div>
 
           <!-- Bottom keyboard helper -->

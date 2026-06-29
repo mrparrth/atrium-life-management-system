@@ -7,7 +7,8 @@ import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, Target, DollarSign, Calendar, MessageSquare, Trash, Briefcase } from 'lucide-vue-next'
+import ClientPopup from '@/components/work/ClientPopup.vue'
+import { Plus, Target, DollarSign, Calendar, MessageSquare, Trash, Briefcase, Archive, ArchiveRestore, MoreHorizontal } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
 const route = useRoute()
@@ -22,6 +23,22 @@ const focusedFields = ref({})
 const showAddModal = ref(false)
 const addModalFirstInput = ref(null)
 
+// Toggles for empty columns and archived leads (persisted in localStorage)
+const showEmptyColumns = ref(localStorage.getItem('leads-show-empty-columns') !== 'false')
+const showArchivedLeads = ref(localStorage.getItem('leads-show-archived') === 'true')
+
+watch(showEmptyColumns, (val) => {
+  localStorage.setItem('leads-show-empty-columns', val.toString())
+})
+watch(showArchivedLeads, (val) => {
+  localStorage.setItem('leads-show-archived', val.toString())
+})
+
+// Onboarding Client Popup States
+const showClientPopup = ref(false)
+const prefillClientName = ref('')
+const onboardingLeadId = ref(null)
+
 watch(showAddModal, (val) => {
   if (val) nextTick(() => addModalFirstInput.value?.focus())
 })
@@ -33,6 +50,11 @@ const probability = ref(50)
 const followUpDate = ref(new Date().toISOString().slice(0, 10))
 const notes = ref('')
 const status = ref('lead')
+
+function openAddModalForStage(stageKey) {
+  status.value = stageKey
+  showAddModal.value = true
+}
 
 async function createLead() {
   const missing = []
@@ -51,7 +73,8 @@ async function createLead() {
     expectedHours: hours.value,
     probability: probability.value / 100,
     followUpDate: followUpDate.value,
-    notes: notes.value
+    notes: notes.value,
+    archived: false
   })
 
   title.value = ''
@@ -70,12 +93,20 @@ const stages = [
   { key: 'discovery', name: 'Discovery' },
   { key: 'proposal_sent', name: 'Proposal Sent' },
   { key: 'negotiation', name: 'Negotiation' },
-  { key: 'won', name: 'Won' },
-  { key: 'onboarding', name: 'Onboarding' }
+  { key: 'won', name: 'Won' }
 ]
 
+const visibleStages = computed(() => {
+  if (showEmptyColumns.value) return stages
+  return stages.filter(stage => getLeadsByStage(stage.key).length > 0)
+})
+
 function getLeadsByStage(stageKey) {
-  return leadsStore.items.filter(lead => lead.status === stageKey)
+  return leadsStore.items.filter(lead => {
+    if (lead.status !== stageKey) return false
+    if (!showArchivedLeads.value && lead.archived) return false
+    return true
+  })
 }
 
 function getStageTotalValue(stageKey) {
@@ -97,22 +128,27 @@ function deleteLead(id) {
   })
 }
 
-async function convertToClient(lead) {
-  const existingClient = clientsStore.items.find(c => c.name.toLowerCase() === lead.clientName.toLowerCase())
-  if (existingClient) {
-    ui.showToast('Client workspace already exists with this name', 'warning')
-    return
+function onboardLead(lead) {
+  prefillClientName.value = lead.clientName
+  onboardingLeadId.value = lead.id
+  showClientPopup.value = true
+}
+
+async function handleClientCreated(client) {
+  if (onboardingLeadId.value) {
+    await leadsStore.update(onboardingLeadId.value, {
+      status: 'won',
+      archived: true
+    })
+    ui.showToast(`Lead onboarded successfully and client "${client.name}" created!`, 'success')
+    onboardingLeadId.value = null
   }
+}
 
-  await clientsStore.add({
-    name: lead.clientName,
-    status: 'prospect',
-    relationshipNotes: lead.notes || `Converted from sales lead: ${lead.title}`,
-    clientSource: 'Referral'
-  })
-
-  await leadsStore.update(lead.id, { status: 'won' })
-  ui.showToast(`Successfully converted ${lead.clientName} to Client Workspace!`, 'success')
+async function toggleArchiveLead(lead) {
+  const nextVal = !lead.archived
+  await leadsStore.update(lead.id, { archived: nextVal })
+  ui.showToast(nextVal ? 'Lead archived' : 'Lead restored', 'success')
 }
 
 const showEditModal = ref(false)
@@ -125,7 +161,8 @@ const editForm = ref({
   probability: 50,
   followUpDate: '',
   notes: '',
-  status: 'lead'
+  status: 'lead',
+  archived: false
 })
 
 function loadLeadForEdit(lead) {
@@ -138,7 +175,8 @@ function loadLeadForEdit(lead) {
     probability: Math.round((lead.probability || 0.5) * 100),
     followUpDate: lead.followUpDate || '',
     notes: lead.notes || '',
-    status: lead.status || 'lead'
+    status: lead.status || 'lead',
+    archived: !!lead.archived
   }
   showEditModal.value = true
 }
@@ -153,7 +191,8 @@ async function saveLeadEdit() {
     probability: editForm.value.probability / 100,
     followUpDate: editForm.value.followUpDate,
     notes: editForm.value.notes.trim(),
-    status: editForm.value.status
+    status: editForm.value.status,
+    archived: !!editForm.value.archived
   })
   showEditModal.value = false
   ui.showToast('Lead opportunity updated', 'success')
@@ -179,138 +218,223 @@ watch(showEditModal, (isOpen) => {
   }
 })
 
+const activeDropdownLeadId = ref(null)
+
+function toggleDropdown(leadId) {
+  if (activeDropdownLeadId.value === leadId) {
+    activeDropdownLeadId.value = null
+  } else {
+    activeDropdownLeadId.value = leadId
+  }
+}
+
+function closeDropdowns() {
+  activeDropdownLeadId.value = null
+}
+
 function handleEscKey(e) {
   if (e.key === 'Escape') {
     if (showAddModal.value) showAddModal.value = false
     if (showEditModal.value) showEditModal.value = false
+    if (showClientPopup.value) showClientPopup.value = false
+    activeDropdownLeadId.value = null
   }
 }
 
 onMounted(() => {
   window.addEventListener('keydown', handleEscKey)
+  document.addEventListener('click', closeDropdowns)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleEscKey)
+  document.removeEventListener('click', closeDropdowns)
 })
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto space-y-8 animate-fade-in" data-testid="work-leads">
+  <div class="px-10 py-8 max-w-7xl mx-auto space-y-7 animate-fade-in" data-testid="work-leads">
 
     <!-- HEADER -->
     <PageHeader overline="Business" title="Leads funnel" sub="Great opportunities deserve great follow-through">
       <template #right>
         <button @click="showAddModal = true" class="btn-primary">
-          <Plus class="w-4 h-4" /> Create Lead <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
+          <Plus class="w-4 h-4" /> Create Lead <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
 
-    <!-- PIPELINE FORECAST BRIEFING -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="card p-4 bg-surface/50 border border-line">
-        <div class="overline text-ink-3">Total Estimated Pipeline</div>
-        <div class="font-serif text-2xl font-bold mt-1 text-ink">
-          ${{leadsStore.items.reduce((acc, x) => acc + x.estimatedValue, 0).toLocaleString()}}
+    <!-- METRICS & FILTERS ROW -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <!-- Estimated Pipeline -->
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[72px]">
+        <div class="font-serif text-xl font-extrabold text-ink leading-tight">
+          ${{ Math.round(leadsStore.forecast.totalPipeline).toLocaleString() }}
         </div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">Estimated Pipeline</div>
       </div>
-      <div class="card p-4 bg-surface/50 border border-line">
-        <div class="overline text-pri-strategic">High Confidence Forecast (P >= 80%)</div>
-        <div class="font-serif text-2xl font-bold mt-1 text-pri-strategic">
+      <!-- High Confidence -->
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[72px]">
+        <div class="font-serif text-xl font-extrabold text-pri-strategic leading-tight">
           ${{ Math.round(leadsStore.forecast.high).toLocaleString() }}
         </div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">High Confidence</div>
       </div>
-      <div class="card p-4 bg-surface/50 border border-line">
-        <div class="overline text-pri-interruptive">Medium Confidence Forecast (P >= 50%)</div>
-        <div class="font-serif text-2xl font-bold mt-1 text-pri-interruptive">
+      <!-- Medium Confidence -->
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[72px]">
+        <div class="font-serif text-xl font-extrabold text-pri-interruptive leading-tight">
           ${{ Math.round(leadsStore.forecast.medium).toLocaleString() }}
         </div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">Medium Confidence</div>
       </div>
-      <div class="card p-4 bg-surface/50 border border-line">
-        <div class="overline text-ink-3">Total Weighted Opportunity</div>
-        <div class="font-serif text-2xl font-bold mt-1 text-ink">
+      <!-- Weighted Opportunity -->
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[72px]">
+        <div class="font-serif text-xl font-extrabold text-ink leading-tight">
           ${{ Math.round(leadsStore.forecast.total).toLocaleString() }}
         </div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">Weighted Forecast</div>
+      </div>
+      <!-- Filters Card -->
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-3 flex flex-col justify-center gap-2 min-h-[72px]">
+        <label class="relative inline-flex items-center cursor-pointer select-none">
+          <input type="checkbox" v-model="showEmptyColumns" class="sr-only peer" />
+          <div
+            class="w-8 h-4 bg-canvas border border-line rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[3px] after:left-[4px] after:bg-ink-3 peer-checked:after:bg-pri-strategic after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-pri-strategic/10 peer-checked:border-pri-strategic/30">
+          </div>
+          <span class="ml-2 text-[9px] font-bold text-ink-2 uppercase tracking-wide">Show Empty</span>
+        </label>
+        <label class="relative inline-flex items-center cursor-pointer select-none">
+          <input type="checkbox" v-model="showArchivedLeads" class="sr-only peer" />
+          <div
+            class="w-8 h-4 bg-canvas border border-line rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[3px] after:left-[4px] after:bg-ink-3 peer-checked:after:bg-pri-strategic after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-pri-strategic/10 peer-checked:border-pri-strategic/30">
+          </div>
+          <span class="ml-2 text-[9px] font-bold text-ink-2 uppercase tracking-wide">Show Archived</span>
+        </label>
       </div>
     </div>
 
     <!-- PIPELINE COLUMNS BOARD -->
-    <div class="flex gap-4 overflow-x-auto pb-6 -mx-8 px-8 snap-x">
-      <div v-for="stage in stages" :key="stage.key"
-        class="w-80 shrink-0 select-none flex flex-col h-[600px] bg-canvas/30 rounded-2xl border border-line/60 p-4 snap-start">
+    <div class="flex gap-4 overflow-x-auto pb-6 px-8 snap-x">
+      <div v-for="stage in visibleStages" :key="stage.key"
+        class="w-80 shrink-0 select-none flex flex-col h-[640px] bg-canvas/60 rounded-2xl border border-line/50 p-2 snap-start">
 
         <!-- Column Header -->
-        <div class="flex items-center justify-between pb-3 mb-4 border-b border-line/50">
-          <div>
-            <h3 class="font-serif text-sm font-semibold text-ink">{{ stage.name }}</h3>
-            <span class="text-[10px] text-ink-3 font-semibold uppercase tracking-wider">${{
-              getStageTotalValue(stage.key).toLocaleString() }}</span>
+        <div
+          class="flex items-center justify-between p-3.5 mb-4 bg-surface border border-[#ECE8E2] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+          <div class="flex flex-col gap-1">
+            <h3 class="font-serif text-sm font-semibold text-ink leading-none">{{ stage.name }}</h3>
+            <span class="text-[10px] text-ink-3 font-semibold font-mono leading-none">
+              {{ getLeadsByStage(stage.key).length }} {{ getLeadsByStage(stage.key).length === 1 ? 'lead' : 'leads' }} ·
+              ${{ getStageTotalValue(stage.key).toLocaleString() }}
+            </span>
           </div>
-          <span class="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-canvas border text-ink-2">
-            {{ getLeadsByStage(stage.key).length }}
-          </span>
+          <button @click.stop="openAddModalForStage(stage.key)"
+            class="p-1 hover:bg-canvas border border-[#ECE8E2] rounded-lg text-ink-2 hover:text-ink transition-all shadow-sm shrink-0"
+            title="Add lead to this stage">
+            <Plus class="w-3.5 h-3.5" />
+          </button>
         </div>
 
         <!-- Column Cards Container -->
         <div class="flex-1 overflow-y-auto space-y-3 pr-1">
-          <div v-for="lead in getLeadsByStage(stage.key)" :key="lead.id"
-            @click="loadLeadForEdit(lead)"
-            class="card p-4 bg-surface border border-line hover:border-line-2 hover:shadow-sm transition-all duration-300 relative group/card cursor-pointer">
+          <div v-for="lead in getLeadsByStage(stage.key)" :key="lead.id" @click="loadLeadForEdit(lead)"
+            class="p-[18px] border border-[#ECE8E2] rounded-[14px] shadow-[0_3px_10px_rgba(0,0,0,0.05)] transition-all duration-300 relative group/card cursor-pointer"
+            :class="lead.archived ? 'opacity-70 bg-surface/50' : 'bg-surface'">
 
-            <div class="space-y-1">
-              <div class="text-[10px] uppercase font-semibold tracking-wider text-ink-3">{{ lead.clientName }}</div>
-              <h4 class="font-medium text-ink text-sm leading-snug">{{ lead.title }}</h4>
-            </div>
+            <div class="flex items-start justify-between gap-3">
+              <h4 class="font-serif text-base font-bold text-ink leading-snug truncate">{{ lead.clientName }}</h4>
 
-            <!-- Value / Probability -->
-            <div class="mt-4 flex items-center justify-between text-xs border-t border-line/40 pt-3">
-              <span class="font-serif font-bold text-ink">${{ lead.estimatedValue.toLocaleString() }}</span>
-              <span class="text-[10px] bg-canvas border px-2 py-0.5 rounded font-mono font-semibold text-ink-2">
-                {{ Math.round(lead.probability * 100) }}% prob
-              </span>
-            </div>
-
-            <!-- Follow-up date / notes -->
-            <div class="mt-3 flex flex-col gap-1 text-[10px] text-ink-3">
-              <span v-if="lead.followUpDate" class="flex items-center gap-1 text-pri-interruptive font-semibold">
-                <Calendar class="w-3.5 h-3.5" /> Follow Up: {{ dayjs(lead.followUpDate).format('MMM D, YYYY') }}
-              </span>
-              <span v-else class="italic">No follow-up set</span>
-
-              <span v-if="lead.statusChangedAt" class="text-[9px] text-ink-3 opacity-80">
-                Status updated: {{ dayjs(lead.statusChangedAt).format('MMM D, h:mm A') }}
-              </span>
-            </div>
-
-            <!-- Quick actions -->
-            <div @click.stop
-              class="mt-3 pt-2 border-t border-line/30 flex justify-between gap-2 items-center opacity-0 group-hover/card:opacity-100 transition-opacity">
-              <!-- Select drop stage switcher -->
-              <select :value="lead.status" @change="updateStage(lead.id, $event.target.value)"
-                class="text-[10px] bg-canvas border rounded px-1.5 py-0.5 text-ink-2 focus:outline-none">
-                <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
-                <option value="lost">Lost</option>
-              </select>
-
-              <div class="flex items-center gap-1.5">
-                <button v-if="lead.status !== 'won' && lead.status !== 'onboarding'"
-                  class="text-[10px] text-pri-strategic hover:underline flex items-center gap-0.5"
-                  @click="convertToClient(lead)" title="Convert to Workspace Client">
-                  <Briefcase class="w-3 h-3" /> Convert
+              <!-- Action Dropdown Trigger -->
+              <div @click.stop class="relative inline-block text-left shrink-0">
+                <button @click="toggleDropdown(lead.id)"
+                  class="text-ink-3 hover:text-ink p-1 rounded-lg hover:bg-canvas transition-colors"
+                  title="Manage Lead">
+                  <MoreHorizontal class="w-4 h-4" />
                 </button>
-                <button @click="deleteLead(lead.id)" class="text-ink-3 hover:text-pri-critical p-1 rounded"
-                  title="Delete Opportunity">
-                  <Trash class="w-3.5 h-3.5" />
-                </button>
+
+                <!-- Dropdown Menu -->
+                <div v-if="activeDropdownLeadId === lead.id"
+                  class="absolute right-0 mt-1 w-48 bg-surface border border-[#ECE8E2] rounded-xl shadow-lg py-1.5 z-20 animate-fade-in">
+
+                  <!-- Onboard Lead -->
+                  <button v-if="lead.status !== 'won'" @click="onboardLead(lead); activeDropdownLeadId = null"
+                    class="w-full text-left px-3 py-2 text-xs text-pri-strategic hover:bg-canvas font-semibold flex items-center gap-2">
+                    <Briefcase class="w-3.5 h-3.5" />
+                    <span>Onboard Client</span>
+                  </button>
+
+                  <!-- Stage Selection Header -->
+                  <div
+                    class="px-3 py-1 text-[9px] uppercase font-bold text-ink-3 tracking-wider border-t border-line/30 mt-1">
+                    Move to Stage</div>
+                  <button v-for="stg in stages" :key="stg.key"
+                    @click="updateStage(lead.id, stg.key); activeDropdownLeadId = null"
+                    class="w-full text-left px-5 py-1.5 text-xs text-ink-2 hover:bg-canvas flex items-center justify-between"
+                    :class="{ 'font-bold text-ink bg-canvas/30': lead.status === stg.key }">
+                    <span>{{ stg.name }}</span>
+                    <span v-if="lead.status === stg.key" class="text-[9px]">✓</span>
+                  </button>
+                  <button @click="updateStage(lead.id, 'lost'); activeDropdownLeadId = null"
+                    class="w-full text-left px-5 py-1.5 text-xs text-ink-2 hover:bg-canvas flex items-center justify-between"
+                    :class="{ 'font-bold text-ink bg-canvas/30': lead.status === 'lost' }">
+                    <span>Lost</span>
+                    <span v-if="lead.status === 'lost'" class="text-[9px]">✓</span>
+                  </button>
+
+                  <div class="border-t border-line/30 my-1"></div>
+
+                  <!-- Archive / Restore -->
+                  <button @click="toggleArchiveLead(lead); activeDropdownLeadId = null"
+                    class="w-full text-left px-3 py-2 text-xs text-ink-2 hover:bg-canvas flex items-center gap-2">
+                    <ArchiveRestore v-if="lead.archived" class="w-3.5 h-3.5" />
+                    <Archive v-else class="w-3.5 h-3.5" />
+                    <span>{{ lead.archived ? 'Restore Lead' : 'Archive Lead' }}</span>
+                  </button>
+
+                  <!-- Delete -->
+                  <button @click="deleteLead(lead.id); activeDropdownLeadId = null"
+                    class="w-full text-left px-3 py-2 text-xs text-pri-critical hover:bg-pri-critical-bg font-semibold flex items-center gap-2">
+                    <Trash class="w-3.5 h-3.5" />
+                    <span>Delete Lead</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div v-if="!getLeadsByStage(stage.key).length"
-            class="h-24 flex items-center justify-center border border-dashed border-line rounded-xl text-[11px] text-ink-3 italic">
-            Column empty
+            <!-- Value / Probability Badge -->
+            <div class="mt-4 flex items-center justify-between text-xs">
+              <span class="font-serif font-extrabold text-ink text-sm">${{ lead.estimatedValue.toLocaleString()
+                }}</span>
+
+              <!-- Visually prominent probability badge -->
+              <span class="text-[10px] border px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1" :class="[
+                lead.probability >= 0.8 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                  lead.probability >= 0.5 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                    'bg-rose-500/10 text-rose-600 border-rose-500/20'
+              ]">
+                <span>{{ lead.probability >= 0.8 ? '🟢' : lead.probability >= 0.5 ? '🟡' : '🔴' }}</span>
+                <span>{{ Math.round(lead.probability * 100) }}%</span>
+              </span>
+            </div>
+
+            <!-- Follow-up date -->
+            <div class="mt-3 flex items-center justify-between text-[11px] text-ink-3">
+              <span v-if="lead.followUpDate" class="flex items-center gap-1 font-semibold text-pri-interruptive">
+                <Calendar class="w-3.5 h-3.5" /> Follow-up {{ dayjs(lead.followUpDate).format('MMM D') }}
+              </span>
+              <span v-else class="italic opacity-60">No follow-up set</span>
+
+              <span v-if="lead.archived"
+                class="text-[8px] bg-canvas border border-[#ECE8E2] px-1.5 py-0.5 rounded uppercase tracking-wider font-semibold">Archived</span>
+            </div>
           </div>
+        </div>
+
+        <!-- Reduced empty column box -->
+        <div v-if="!getLeadsByStage(stage.key).length"
+          class="py-4 text-center border-t border-dashed border-line/30 text-[11px] text-ink-3 italic font-semibold">
+          Empty
         </div>
       </div>
     </div>
@@ -329,7 +453,8 @@ onUnmounted(() => {
         <div class="space-y-4 pt-2">
           <div class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <input ref="addModalFirstInput" v-model="title" placeholder=" " class="v-field-input" id="lead-title" required />
+              <input ref="addModalFirstInput" v-model="title" placeholder=" " class="v-field-input" id="lead-title"
+                required />
               <label for="lead-title" class="v-field-label">Opportunity Title *</label>
             </div>
             <div class="v-field-group">
@@ -351,28 +476,34 @@ onUnmounted(() => {
 
           <div class="grid grid-cols-2 gap-4 items-center">
             <div class="py-1">
-              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{ probability }}%)</label>
+              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{
+                probability }}%)</label>
               <input type="range" v-model="probability" min="10" max="100" step="5"
                 class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
             </div>
             <div class="v-field-group">
-              <input type="date" v-model="followUpDate" placeholder=" " class="v-field-input text-ink-2" id="lead-followup" />
+              <input type="date" v-model="followUpDate" placeholder=" " class="v-field-input text-ink-2"
+                id="lead-followup" />
               <label for="lead-followup" class="v-field-label">Follow-up Target Date</label>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <select v-model="status" @focus="focusedFields.status = true" @blur="focusedFields.status = false" class="v-field-select">
+              <select v-model="status" @focus="focusedFields.status = true" @blur="focusedFields.status = false"
+                class="v-field-select">
                 <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
               </select>
               <span class="v-field-arrow">▼</span>
-              <label :class="['v-field-label', (status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Initial Stage</label>
+              <label
+                :class="['v-field-label', (status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Initial
+                Stage</label>
             </div>
           </div>
 
           <div class="v-field-group">
-            <textarea v-model="notes" placeholder=" " class="v-field-input min-h-[80px] resize-none" id="lead-notes"></textarea>
+            <textarea v-model="notes" placeholder=" " class="v-field-input min-h-[80px] resize-none"
+              id="lead-notes"></textarea>
             <label for="lead-notes" class="v-field-label">Opportunity Notes</label>
           </div>
         </div>
@@ -380,7 +511,8 @@ onUnmounted(() => {
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddModal = false" class="btn-ghost">Cancel</button>
           <button @click="createLead" class="btn-primary">
-            Add Opportunity <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Add Opportunity <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </div>
@@ -400,51 +532,70 @@ onUnmounted(() => {
         <div class="space-y-4 pt-2">
           <div class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <input ref="editModalFirstInput" v-model="editForm.title" placeholder=" " class="v-field-input" id="edit-lead-title" required />
+              <input ref="editModalFirstInput" v-model="editForm.title" placeholder=" " class="v-field-input"
+                id="edit-lead-title" required />
               <label for="edit-lead-title" class="v-field-label">Opportunity Title *</label>
             </div>
             <div class="v-field-group">
-              <input v-model="editForm.clientName" placeholder=" " class="v-field-input" id="edit-lead-client" required />
+              <input v-model="editForm.clientName" placeholder=" " class="v-field-input" id="edit-lead-client"
+                required />
               <label for="edit-lead-client" class="v-field-label">Prospect Name *</label>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <input type="number" v-model="editForm.estimatedValue" min="0" placeholder=" " class="v-field-input" id="edit-lead-value" />
+              <input type="number" v-model="editForm.estimatedValue" min="0" placeholder=" " class="v-field-input"
+                id="edit-lead-value" />
               <label for="edit-lead-value" class="v-field-label">Est. Deal Value ($)</label>
             </div>
             <div class="v-field-group">
-              <input type="number" v-model="editForm.expectedHours" min="0" placeholder=" " class="v-field-input" id="edit-lead-hours" />
+              <input type="number" v-model="editForm.expectedHours" min="0" placeholder=" " class="v-field-input"
+                id="edit-lead-hours" />
               <label for="edit-lead-hours" class="v-field-label">Expected Scoped Hours</label>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4 items-center">
             <div class="py-1">
-              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{ editForm.probability }}%)</label>
+              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{
+                editForm.probability }}%)</label>
               <input type="range" v-model="editForm.probability" min="10" max="100" step="5"
                 class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
             </div>
             <div class="v-field-group">
-              <input type="date" v-model="editForm.followUpDate" placeholder=" " class="v-field-input text-ink-2 font-mono" id="edit-lead-followup" />
+              <input type="date" v-model="editForm.followUpDate" placeholder=" "
+                class="v-field-input text-ink-2 font-mono" id="edit-lead-followup" />
               <label for="edit-lead-followup" class="v-field-label">Follow-up Target Date</label>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <select v-model="editForm.status" @focus="focusedFields.editStatus = true" @blur="focusedFields.editStatus = false" class="v-field-select font-semibold">
+              <select v-model="editForm.status" @focus="focusedFields.editStatus = true"
+                @blur="focusedFields.editStatus = false" class="v-field-select font-semibold">
                 <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
                 <option value="lost">Lost</option>
               </select>
               <span class="v-field-arrow">▼</span>
-              <label :class="['v-field-label', (editForm.status || focusedFields.editStatus) ? 'v-field-label--floating' : '', focusedFields.editStatus ? 'v-field-label--floating-focused' : '']">Pipeline Stage</label>
+              <label
+                :class="['v-field-label', (editForm.status || focusedFields.editStatus) ? 'v-field-label--floating' : '', focusedFields.editStatus ? 'v-field-label--floating-focused' : '']">Pipeline
+                Stage</label>
+            </div>
+            <div class="flex items-center pl-2">
+              <label class="relative inline-flex items-center cursor-pointer select-none">
+                <input type="checkbox" v-model="editForm.archived" class="sr-only peer" />
+                <div
+                  class="w-9 h-5 bg-canvas border border-line rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-ink-3 peer-checked:after:bg-pri-strategic after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-pri-strategic/10 peer-checked:border-pri-strategic/30">
+                </div>
+                <span class="ml-3 text-xs font-semibold text-ink-2">Archived</span>
+              </label>
             </div>
           </div>
 
           <div class="v-field-group">
-            <textarea v-model="editForm.notes" placeholder=" " class="v-field-input min-h-[80px] resize-none" id="edit-lead-notes"></textarea>
+            <textarea v-model="editForm.notes" placeholder=" " class="v-field-input min-h-[80px] resize-none"
+              id="edit-lead-notes"></textarea>
             <label for="edit-lead-notes" class="v-field-label">Opportunity Notes</label>
           </div>
         </div>
@@ -452,11 +603,16 @@ onUnmounted(() => {
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showEditModal = false" class="btn-ghost">Cancel</button>
           <button @click="saveLeadEdit" class="btn-primary">
-            Save Changes <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Save Changes <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </div>
     </div>
+
+    <!-- CLIENT ONBOARDING POPUP -->
+    <ClientPopup v-if="showClientPopup" :prefillName="prefillClientName" @close="showClientPopup = false"
+      @saved="handleClientCreated" />
 
   </div>
 </template>

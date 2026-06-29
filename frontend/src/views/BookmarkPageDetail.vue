@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBookmarksStore } from '@/stores/bookmarks'
 import { useUIStore } from '@/stores/ui'
+import { useSettingsStore } from '@/stores/settings'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { fromNow } from '@/lib/date'
@@ -13,19 +14,82 @@ const props = defineProps({ id: String })
 const router = useRouter()
 const bookmarks = useBookmarksStore()
 const ui = useUIStore()
+const settingsStore = useSettingsStore()
 
 const page = computed(() => bookmarks.pages.find(p => p.id === props.id))
 const list = computed(() => bookmarks.bookmarksInPage(props.id))
 
 const showNewBm = ref(false)
-const newBm = ref({ title: '', url: '', description: '', tags: '' })
+const newBm = ref({ title: '', url: '', description: '', category: 'work', tags: '' })
 
 const editing = ref(false)
 const draft = ref({ title: '', description: '', emoji: '', tags: '' })
 
 const showEditBm = ref(false)
 const editBmId = ref(null)
-const editBmForm = ref({ title: '', url: '', description: '', tags: '', pageId: null })
+const editBmForm = ref({ title: '', url: '', description: '', category: 'work', tags: '', pageId: null })
+
+const baseCategories = ['work', 'personal', 'inspiration', 'reference', 'reading list']
+const categories = computed(() => {
+  const customCats = settingsStore.get('bookmarks_custom_categories', [])
+  const all = [...baseCategories, ...customCats]
+  bookmarks.items.forEach(item => {
+    if (item.category && !all.includes(item.category)) {
+      all.push(item.category)
+    }
+  })
+  return all
+})
+
+const showCustomCategoryPrompt = ref(false)
+const newCategoryInputVal = ref('')
+const categoryDropdownOpen = ref(false)
+const editCategoryDropdownOpen = ref(false)
+
+async function addCustomCategory(newCatName) {
+  const clean = newCatName.trim().toLowerCase()
+  if (clean && !categories.value.includes(clean)) {
+    const current = settingsStore.get('bookmarks_custom_categories', [])
+    const updated = [...current, clean]
+    await settingsStore.set('bookmarks_custom_categories', updated)
+    return clean
+  }
+  return null
+}
+
+function submitCustomCategory() {
+  const val = newCategoryInputVal.value.trim()
+  if (val) {
+    addCustomCategory(val).then(clean => {
+      if (clean) {
+        if (showNewBm.value) {
+          newBm.value.category = clean
+        } else if (showEditBm.value) {
+          editBmForm.value.category = clean
+        }
+      }
+    })
+  }
+  showCustomCategoryPrompt.value = false
+}
+
+function handleGlobalClick(e) {
+  if (categoryDropdownOpen.value && !e.target.closest('.category-select-container-new')) {
+    categoryDropdownOpen.value = false
+  }
+  if (editCategoryDropdownOpen.value && !e.target.closest('.category-select-container-edit')) {
+    editCategoryDropdownOpen.value = false
+  }
+}
+
+onMounted(async () => {
+  await settingsStore.load()
+  window.addEventListener('click', handleGlobalClick)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', handleGlobalClick)
+})
 
 function startEdit() {
   if (!page.value) return
@@ -54,10 +118,11 @@ async function createBookmark() {
     title: newBm.value.title,
     url: newBm.value.url,
     description: newBm.value.description,
+    category: newBm.value.category,
     tags: newBm.value.tags.split(',').map(t => t.trim()).filter(Boolean),
     pageId: props.id,
   })
-  newBm.value = { title: '', url: '', description: '', tags: '' }
+  newBm.value = { title: '', url: '', description: '', category: 'work', tags: '' }
   showNewBm.value = false
 }
 
@@ -65,7 +130,7 @@ async function openBookmark(b) { await bookmarks.markViewed(b.id); window.open(b
 async function remove(b) { if (await ui.confirm({ message: 'Remove bookmark?', title: 'Remove Bookmark' })) await bookmarks.remove(b.id) }
 async function detach(b) { await bookmarks.update(b.id, { pageId: null }); ui.showToast('Moved to loose bookmarks', 'success') }
 async function removePage() {
-  if (!await ui.confirm({ message: `Remove "${page.value.title}"? Bookmarks inside will be detached, not deleted.`, title: 'Remove Collection' })) return
+  if (!await ui.confirm({ message: `Remove "${page.value.title}"? Bookmarks inside it will be detached, not deleted.`, title: 'Remove Collection' })) return
   await bookmarks.removePage(props.id)
   router.push('/bookmarks')
 }
@@ -76,6 +141,7 @@ function startEditBookmark(b) {
     title: b.title || '',
     url: b.url,
     description: b.description || '',
+    category: b.category || 'work',
     tags: (b.tags || []).join(', '),
     pageId: b.pageId || null
   }
@@ -94,13 +160,14 @@ async function saveBookmarkEdit() {
 }
 
 async function closeEditBookmark() {
-  const original = bookmarks.bookmarks.find(b => b.id === editBmId.value)
+  const original = bookmarks.items.find(b => b.id === editBmId.value)
   if (original) {
     const isModified = editBmForm.value.url.trim() !== (original.url || '') ||
       editBmForm.value.title.trim() !== (original.title || '') ||
       editBmForm.value.description.trim() !== (original.description || '') ||
       editBmForm.value.tags.trim() !== (original.tags || []).join(', ') ||
-      editBmForm.value.pageId !== (original.pageId || null)
+      editBmForm.value.pageId !== (original.pageId || null) ||
+      editBmForm.value.category !== (original.category || 'work')
     if (isModified) {
       if (!await ui.confirm({ title: 'Discard changes?', message: 'You have unsaved changes. Discard them?' })) return
     }
@@ -251,15 +318,15 @@ watch(showEditBm, (open) => {
       <div v-for="b in filteredList" :key="b.id" 
         class="py-2 px-4 hover:bg-canvas/40 group transition-all duration-300 flex items-center justify-between gap-4"
         :data-testid="`page-bookmark-${b.id}`">
-        <div class="flex items-center gap-3 min-w-0 flex-1">
-          <BookmarkIcon class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-          <span class="font-serif text-sm font-medium text-ink truncate max-w-[200px] sm:max-w-[300px] shrink-0" 
+        <div class="flex items-start gap-3 min-w-0 flex-1">
+          <BookmarkIcon class="w-3.5 h-3.5 text-ink-3 shrink-0 mt-0.5" />
+          <span class="font-serif text-sm font-normal text-ink truncate max-w-[200px] sm:max-w-[300px] shrink-0" 
             :title="b.description ? `${b.title || b.url} — ${b.description}` : (b.title || b.url)">
             {{ b.title || b.url }}
           </span>
-          <span class="text-ink-3/40 shrink-0 text-xs">|</span>
+          <span class="text-ink-3/40 shrink-0 text-xs mt-0.5">|</span>
           <a :href="b.url" target="_blank" @click.prevent="openBookmark(b)" 
-            class="text-[11px] text-ink-3 hover:text-pri-strategic truncate hover:underline flex-1 min-w-0">
+            class="text-[11px] text-ink-3 hover:text-pri-strategic truncate hover:underline flex-1 min-w-0 mt-0.5">
             {{ b.url }}
           </a>
           <div v-if="b.tags?.length" class="flex gap-1 shrink-0">
@@ -311,7 +378,7 @@ watch(showEditBm, (open) => {
     <!-- New bookmark modal -->
     <div v-if="showNewBm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNewBm = false"></div>
-      <form @submit.prevent="createBookmark" @keydown.meta.enter.prevent="createBookmark" @keydown.ctrl.enter.prevent="createBookmark" class="relative w-full max-w-md card p-8 animate-rise-in">
+      <form @submit.prevent="createBookmark" @keydown.meta.enter.prevent="createBookmark" @keydown.ctrl.enter.prevent="createBookmark" class="relative w-full max-w-md card p-8 animate-rise-in max-h-[90vh] overflow-y-auto">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewBm = false">
           <X class="w-4 h-4" />
         </button>
@@ -322,6 +389,29 @@ watch(showEditBm, (open) => {
         <input v-model="newBm.title" placeholder="Title (optional)" class="input-soft mb-3"
           data-testid="page-new-bm-title" />
         <input v-model="newBm.tags" placeholder="Tags (comma separated)" class="input-soft mb-3" />
+
+        <div class="category-select-container-new relative mb-3">
+          <div @click="categoryDropdownOpen = !categoryDropdownOpen"
+            class="input-soft text-sm capitalize flex items-center justify-between cursor-pointer select-none font-semibold text-ink min-h-[38px] py-1.5 px-3">
+            <span>{{ newBm.category || 'work' }}</span>
+            <span class="text-[10px] text-ink-3">▼</span>
+          </div>
+          <div v-if="categoryDropdownOpen"
+            class="absolute left-0 right-0 mt-1 bg-surface border border-line rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto p-1.5 space-y-0.5 text-left">
+            <div v-for="cat in categories" :key="cat"
+              class="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-canvas transition-colors cursor-pointer capitalize"
+              @click="newBm.category = cat; categoryDropdownOpen = false">
+              <span>{{ cat }}</span>
+            </div>
+            <div class="border-t border-line my-1"></div>
+            <div
+              class="px-3 py-2 rounded-lg text-xs hover:bg-canvas transition-colors cursor-pointer text-pri-strategic font-medium flex items-center gap-1.5"
+              @click="newCategoryInputVal = ''; showCustomCategoryPrompt = true; categoryDropdownOpen = false">
+              <Plus class="w-3.5 h-3.5" /> Add Custom...
+            </div>
+          </div>
+        </div>
+
         <textarea v-model="newBm.description" placeholder="Why save it?" rows="2"
           class="input-soft resize-none mb-5"></textarea>
         <div class="flex justify-end gap-2">
@@ -337,7 +427,7 @@ watch(showEditBm, (open) => {
     <div v-if="showEditBm" class="fixed inset-0 z-50 flex items-center justify-center p-4"
       data-testid="edit-bookmark-modal">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="closeEditBookmark"></div>
-      <form @submit.prevent="saveBookmarkEdit" @keydown.meta.enter.prevent="saveBookmarkEdit" @keydown.ctrl.enter.prevent="saveBookmarkEdit" class="relative w-full max-w-md card p-8 animate-rise-in">
+      <form @submit.prevent="saveBookmarkEdit" @keydown.meta.enter.prevent="saveBookmarkEdit" @keydown.ctrl.enter.prevent="saveBookmarkEdit" class="relative w-full max-w-md card p-8 animate-rise-in max-h-[90vh] overflow-y-auto">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeEditBookmark">
           <X class="w-4 h-4" />
         </button>
@@ -349,6 +439,29 @@ watch(showEditBm, (open) => {
           data-testid="edit-bookmark-title" />
         <input v-model="editBmForm.tags" placeholder="Tags (comma separated)" class="input-soft mb-3"
           data-testid="edit-bookmark-tags" />
+
+        <div class="category-select-container-edit relative mb-3">
+          <div @click="editCategoryDropdownOpen = !editCategoryDropdownOpen"
+            class="input-soft text-sm capitalize flex items-center justify-between cursor-pointer select-none font-semibold text-ink min-h-[38px] py-1.5 px-3">
+            <span>{{ editBmForm.category || 'work' }}</span>
+            <span class="text-[10px] text-ink-3">▼</span>
+          </div>
+          <div v-if="editCategoryDropdownOpen"
+            class="absolute left-0 right-0 mt-1 bg-surface border border-line rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto p-1.5 space-y-0.5 text-left">
+            <div v-for="cat in categories" :key="cat"
+              class="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-canvas transition-colors cursor-pointer capitalize"
+              @click="editBmForm.category = cat; editCategoryDropdownOpen = false">
+              <span>{{ cat }}</span>
+            </div>
+            <div class="border-t border-line my-1"></div>
+            <div
+              class="px-3 py-2 rounded-lg text-xs hover:bg-canvas transition-colors cursor-pointer text-pri-strategic font-medium flex items-center gap-1.5"
+              @click="newCategoryInputVal = ''; showCustomCategoryPrompt = true; editCategoryDropdownOpen = false">
+              <Plus class="w-3.5 h-3.5" /> Add Custom...
+            </div>
+          </div>
+        </div>
+
         <label class="block mb-3"><span class="overline block mb-1">Collection</span>
           <select v-model="editBmForm.pageId" class="input-block text-sm" data-testid="edit-bookmark-page">
             <option :value="null">- none (loose) -</option>
@@ -364,6 +477,29 @@ watch(showEditBm, (open) => {
           </button>
         </div>
       </form>
+    </div>
+
+    <!-- Custom Category Prompt Dialog (Premium Design Overlay) -->
+    <div v-if="showCustomCategoryPrompt" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showCustomCategoryPrompt = false"></div>
+      <div class="relative w-full max-w-sm card p-6 shadow-xl animate-rise-in">
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showCustomCategoryPrompt = false">
+          <X class="w-4 h-4" />
+        </button>
+        <div class="overline">New Category</div>
+        <h3 class="font-serif text-lg font-semibold mt-1 mb-4">Add Custom Category</h3>
+
+        <div class="v-field-group mb-4 text-left">
+          <input v-model="newCategoryInputVal" placeholder=" " class="v-field-input text-sm" id="new-custom-cat-detail"
+            required @keydown.enter.prevent="submitCustomCategory" />
+          <label for="new-custom-cat-detail" class="v-field-label text-xs">Category Name</label>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn-ghost text-xs" @click="showCustomCategoryPrompt = false">Cancel</button>
+          <button type="button" class="btn-primary text-xs" @click="submitCustomCategory">Add Category</button>
+        </div>
+      </div>
     </div>
   </div>
   <EmptyState v-else title="Collection not found" />

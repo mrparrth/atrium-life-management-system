@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/ui'
 import { X, Plus } from 'lucide-vue-next'
 import PriorityBadge from './PriorityBadge.vue'
 import dayjs from 'dayjs'
+import DateField from './DateField.vue'
 
 const props = defineProps({ defaultProjectId: { type: String, default: null }, initialTask: { type: Object, default: null } })
 const emit = defineEmits(['close', 'created', 'updated'])
@@ -40,10 +41,7 @@ watch(status, (newVal) => {
   }
 })
 
-function adjustDueDate(days) {
-  const current = dueDate.value ? dayjs(dueDate.value) : dayjs()
-  dueDate.value = current.add(days, 'day').format('YYYY-MM-DD')
-}
+
 
 async function save() {
   if (!title.value.trim()) return
@@ -101,21 +99,8 @@ async function save() {
     </div>
 
     <div class="grid grid-cols-2 gap-4">
-      <div class="v-field-group">
-        <input type="date" v-model="scheduledDate" placeholder=" " class="v-field-input text-xs text-ink-2 font-mono" id="task-scheduled" data-testid="task-scheduled-input" />
-        <label for="task-scheduled" class="v-field-label text-xs">Scheduled Date</label>
-      </div>
-      <div class="v-field-group block">
-        <input type="date" v-model="dueDate" placeholder=" " class="v-field-input text-xs text-ink-2 font-mono" id="task-due" data-testid="task-due-input" />
-        <label for="task-due" class="v-field-label text-xs">Due Date</label>
-        <div class="flex items-center gap-1 mt-1.5 flex-wrap">
-          <button type="button" @click="adjustDueDate(-1)" class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono" title="Subtract 1 day">-1d</button>
-          <button type="button" @click="adjustDueDate(1)" class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono" title="Add 1 day">+1d</button>
-          <button type="button" @click="adjustDueDate(5)" class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono" title="Add 5 days">+5d</button>
-          <button type="button" @click="adjustDueDate(10)" class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono" title="Add 10 days">+10d</button>
-          <button type="button" @click="dueDate = ''" class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 hover:text-ink ml-auto transition-all">Clear</button>
-        </div>
-      </div>
+      <DateField v-model="scheduledDate" label="Scheduled Date" id="task-scheduled" dataTestid="task-scheduled-input" />
+      <DateField v-model="dueDate" label="Due Date" id="task-due" dataTestid="task-due-input" />
     </div>
 
     <!-- Closed Date — only visible when editing a completed task -->
@@ -125,27 +110,26 @@ async function save() {
     </div>
 
     <div class="v-field-group">
-      <select v-model="status" @focus="focusedFields.status = true"
-        @blur="focusedFields.status = false" class="v-field-select text-xs font-semibold" data-testid="task-status-select">
-        <option value="open">Yet to start</option>
-        <option value="in_progress">In progress</option>
-        <option value="done">Complete</option>
-      </select>
-      <span class="v-field-arrow">▼</span>
-      <label
-        :class="['v-field-label text-xs font-semibold', (status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Status</label>
+      <label class="block text-[10px] uppercase text-ink-3 mb-1.5 font-bold">Status</label>
+      <div class="relative">
+        <select v-model="status" class="w-full bg-surface border border-line rounded-lg px-3 py-2.5 text-xs select-none min-h-[48px] focus:outline-none focus:border-pri-strategic text-ink font-semibold appearance-none cursor-pointer" data-testid="task-status-select">
+          <option value="open">Yet to start</option>
+          <option value="in_progress">In progress</option>
+          <option value="done">Complete</option>
+        </select>
+        <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-ink-3 pointer-events-none">▼</span>
+      </div>
     </div>
 
     <div class="v-field-group">
-      <select v-model="projectId" @focus="focusedFields.projectId = true"
-        @blur="focusedFields.projectId = false" class="v-field-select text-xs font-semibold" data-testid="task-project-select">
-        <option :value="null">- none -</option>
-        <option v-for="p in projects.items.filter(p => p.status === 'active')" :key="p.id" :value="p.id">{{ p.title }}
-        </option>
-      </select>
-      <span class="v-field-arrow">▼</span>
-      <label
-        :class="['v-field-label text-xs font-semibold', (projectId !== null || focusedFields.projectId) ? 'v-field-label--floating' : '', focusedFields.projectId ? 'v-field-label--floating-focused' : '']">Project</label>
+      <label class="block text-[10px] uppercase text-ink-3 mb-1.5 font-bold">Project</label>
+      <div class="relative">
+        <select v-model="projectId" class="w-full bg-surface border border-line rounded-lg px-3 py-2.5 text-xs select-none min-h-[48px] focus:outline-none focus:border-pri-strategic text-ink font-semibold appearance-none cursor-pointer" data-testid="task-project-select">
+          <option :value="null">- none -</option>
+          <option v-for="p in projects.items.filter(p => p.status === 'active')" :key="p.id" :value="p.id">{{ p.title }}</option>
+        </select>
+        <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-ink-3 pointer-events-none">▼</span>
+      </div>
     </div>
 
     <div class="flex items-center justify-end gap-2 pt-2">

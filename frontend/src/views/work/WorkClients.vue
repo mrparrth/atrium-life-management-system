@@ -366,7 +366,7 @@ onUnmounted(() => {
               </div>
 
               <h3
-                class="font-serif text-base font-semibold text-ink group-hover:text-ink transition-colors flex items-center justify-between gap-3">
+                class="font-serif text-base text-ink group-hover:text-ink transition-colors flex items-center justify-between gap-3">
                 <span class="flex items-center gap-1.5 flex-wrap leading-snug">
                   {{ client.name }}
                 </span>
@@ -409,7 +409,8 @@ onUnmounted(() => {
                   <span class="w-1 h-1 rounded-full bg-emerald-400/70 inline-block"></span>
                   {{ getClientTaskCounts(client).completed }} done
                 </span>
-                <span v-if="getClientTaskCounts(client).total === 0" class="text-[9px] text-ink-3/60 italic">no tasks</span>
+                <span v-if="getClientTaskCounts(client).total === 0" class="text-[9px] text-ink-3/60 italic">no
+                  tasks</span>
               </span>
             </div>
           </div>
@@ -482,6 +483,7 @@ onUnmounted(() => {
     </section>
 
     <!-- CREATE CLIENT POPUP -->
-    <ClientPopup v-if="showAddModal" :prefillName="prefillName" @close="showAddModal = false" @saved="handleClientSaved" />
+    <ClientPopup v-if="showAddModal" :prefillName="prefillName" @close="showAddModal = false"
+      @saved="handleClientSaved" />
   </div>
 </template>

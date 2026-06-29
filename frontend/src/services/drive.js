@@ -302,8 +302,16 @@ export async function autoBackup() {
   if (mode === "manual") return;
 
   const last = lastBackupAt();
+  const lastAttempt = localStorage.getItem("atrium.drive.lastBackupAttempt");
+  const now = Date.now();
   const intervalMin = Number(localStorage.getItem("atrium.sync.interval")) || 60;
-  if (last && Date.now() - new Date(last).getTime() < intervalMin * 60000) return;
+
+  if (last && now - new Date(last).getTime() < intervalMin * 60000) return;
+
+  // Throttle failed attempts: wait at least 15 minutes between backup attempts
+  if (lastAttempt && now - new Date(lastAttempt).getTime() < 15 * 60000) return;
+
+  localStorage.setItem("atrium.drive.lastBackupAttempt", new Date().toISOString());
 
   try {
     const token = await ensureToken({ prompt: "none", scope: SCOPE });
@@ -374,7 +382,6 @@ export async function syncGoogleCalendar({ force = false } = {}) {
       const isMeetingKeyword = titleLower.includes("meeting") || titleLower.includes("sync");
       const isSlashFormat = /\w+\s*\/\s*\w+/.test(titleLower);
 
-      console.log("hasGuests:", hasGuests, "isMeetingKeyword:", isMeetingKeyword, "isSlashFormat:", isSlashFormat, item.summary);
       if (!hasGuests && !isMeetingKeyword && !isSlashFormat) continue;
 
       let meetLink = item.hangoutLink || (item.location && item.location.includes("http") ? item.location : "");
@@ -388,7 +395,8 @@ export async function syncGoogleCalendar({ force = false } = {}) {
       const existing = meetingsStore.items.find((m) => m.googleCalendarId === item.id);
       if (existing) {
         const timeChanged = existing.startDateTime !== start || existing.endDateTime !== end;
-        const detailsChanged = existing.title !== item.summary ||
+        const detailsChanged =
+          existing.title !== item.summary ||
           existing.description !== (item.description || "") ||
           existing.meetLink !== meetLink;
 
@@ -403,7 +411,7 @@ export async function syncGoogleCalendar({ force = false } = {}) {
 
           if (timeChanged) {
             sendDesktopNotification("Meeting Rescheduled", {
-              body: `"${item.summary || "Untitled"}" has been rescheduled to ${new Date(start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} on ${new Date(start).toLocaleDateString()}`
+              body: `"${item.summary || "Untitled"}" has been rescheduled to ${new Date(start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} on ${new Date(start).toLocaleDateString()}`,
             });
           }
         }
@@ -420,7 +428,7 @@ export async function syncGoogleCalendar({ force = false } = {}) {
         // Notify for new future meetings
         if (new Date(start) > new Date()) {
           sendDesktopNotification("New Meeting Scheduled", {
-            body: `${item.summary || "Untitled Meeting"} - ${new Date(start).toLocaleDateString()} at ${new Date(start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+            body: `${item.summary || "Untitled Meeting"} - ${new Date(start).toLocaleDateString()} at ${new Date(start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
           });
         }
       }

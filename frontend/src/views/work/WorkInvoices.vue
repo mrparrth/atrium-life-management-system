@@ -1045,65 +1045,58 @@ onUnmounted(() => {
                   <path d="M50 5 C50 35 65 50 95 50 C65 50 50 65 50 95 C50 65 35 50 5 50 C35 50 50 35 50 5 Z" />
                 </svg>
                 <label v-if="isEditingInvoiceDoc"
-                  class="absolute -bottom-2 -right-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full p-1 shadow-md cursor-pointer print:hidden">
+                  class="absolute -bottom-2 -right-2 bg-pri-strategic hover:bg-emerald-700 text-white rounded-full p-1 shadow-md cursor-pointer print:hidden">
                   <Edit3 class="w-3 h-3" />
                   <input type="file" accept="image/*" class="hidden" @change="handleLogoUpload" />
                 </label>
               </div>
               <div>
-                <div class="font-serif text-xl font-extrabold tracking-tight text-ink">{{ senderName }}</div>
+                <div class="font-sans text-xl font-extrabold tracking-tight text-ink">{{ senderName }}</div>
                 <p class="text-[10px] text-ink-2 font-bold uppercase tracking-wider">Freelance Engineering</p>
               </div>
             </div>
 
             <div class="text-right space-y-1">
-              <h1 class="text-3xl font-extrabold tracking-wider text-[#1b8a4a] uppercase">INVOICE</h1>
+              <h1 class="text-3xl font-extrabold tracking-wider text-pri-strategic uppercase font-sans">INVOICE</h1>
               <div class="flex items-center justify-end gap-1.5 font-mono text-xs text-ink-2">
-                <div v-if="isEditingInvoiceDoc" class="flex items-center gap-1">
+                <div v-if="isEditingInvoiceDoc" class="flex items-center gap-1 print:hidden">
                   <input v-model="previewInvoice.invoiceNumber" @change="saveDocField(previewInvoice)"
-                    class="text-right font-mono font-semibold text-xs bg-white border border-emerald-100 rounded px-1.5 py-0.5 focus:outline-none w-28" />
+                    class="text-right font-mono font-semibold text-xs bg-white border border-line rounded px-1.5 py-0.5 focus:outline-none w-28" />
                   <select v-model="previewInvoice.currency" @change="saveDocField(previewInvoice)"
-                    class="text-right text-[10px] bg-white border border-emerald-100 rounded px-1.5 py-0.5 focus:outline-none font-semibold">
+                    class="text-right text-[10px] bg-white border border-line rounded px-1.5 py-0.5 focus:outline-none font-semibold">
                     <option value="USD">USD ($)</option>
                     <option value="GBP">GBP (£)</option>
                     <option value="INR">INR (₹)</option>
                   </select>
                 </div>
-                <template v-else>
-                  <span class="font-bold text-ink">#{{ previewInvoice.invoiceNumber }}</span>
-                  <span :class="statusBadgeClass(previewInvoice.status)"
-                    class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border">
-                    {{ previewInvoice.status }}
-                  </span>
-                </template>
               </div>
             </div>
           </div>
 
           <!-- Billed By / Billed To Section -->
           <div
-            class="grid grid-cols-1 md:grid-cols-2 gap-8 p-5 bg-white/80 border border-emerald-100/50 backdrop-blur-sm rounded-2xl shadow-sm">
+            class="grid grid-cols-1 md:grid-cols-2 gap-8 p-5 bg-canvas border border-line rounded-2xl shadow-sm print:bg-transparent">
             <!-- Billed By -->
             <div class="space-y-1.5">
               <div class="flex items-center justify-between">
-                <span class="text-[9px] uppercase tracking-wider text-[#1b8a4a] font-bold">Billed By</span>
+                <span class="text-[9px] uppercase tracking-wider text-pri-strategic font-bold">Billed By</span>
                 <button v-if="isEditingInvoiceDoc && !isEditingSenderProfile" @click="isEditingSenderProfile = true"
-                  class="text-[#1b8a4a] hover:text-emerald-800 text-[10px] flex items-center gap-0.5 font-semibold print:hidden">
+                  class="text-pri-strategic hover:underline text-[10px] flex items-center gap-0.5 font-semibold print:hidden">
                   <Edit3 class="w-2.5 h-2.5" /> Edit
                 </button>
               </div>
               <div v-if="isEditingSenderProfile" class="space-y-2 mt-2 print:hidden text-left">
                 <input v-model="senderName"
-                  class="w-full text-xs font-bold bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-xs font-bold bg-white border border-line rounded px-2 py-1" />
                 <input v-model="senderAddress"
-                  class="w-full text-[11px] bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-[11px] bg-white border border-line rounded px-2 py-1" />
                 <input v-model="senderEmail"
-                  class="w-full text-[11px] bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-[11px] bg-white border border-line rounded px-2 py-1" />
                 <input v-model="senderPhone"
-                  class="w-full text-[11px] bg-canvas border border-line rounded px-2 py-1" />
-                <input v-model="senderPAN" class="w-full text-[11px] bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-[11px] bg-white border border-line rounded px-2 py-1" />
+                <input v-model="senderPAN" class="w-full text-[11px] bg-white border border-line rounded px-2 py-1" />
                 <button @click="saveSenderProfile"
-                  class="text-[9px] bg-emerald-600 text-white rounded px-2 py-1 flex ml-auto">Save</button>
+                  class="text-[9px] bg-pri-strategic text-white rounded px-2 py-1 flex ml-auto">Save</button>
               </div>
               <div v-else>
                 <div class="text-xs font-bold text-ink">{{ senderName }}</div>
@@ -1119,33 +1112,33 @@ onUnmounted(() => {
             <!-- Billed To -->
             <div class="space-y-1.5 text-right md:text-left">
               <div class="flex items-center justify-between">
-                <span class="text-[9px] uppercase tracking-wider text-[#1b8a4a] font-bold">Billed To</span>
+                <span class="text-[9px] uppercase tracking-wider text-pri-strategic font-bold">Billed To</span>
                 <div class="flex gap-2">
                   <select v-if="isEditingInvoiceDoc" v-model="previewInvoice.clientId"
                     @change="saveDocField(previewInvoice)"
-                    class="text-[10px] font-semibold bg-white border border-emerald-100 rounded px-1.5 py-0.5 focus:outline-none print:hidden">
+                    class="text-[10px] font-semibold bg-white border border-line rounded px-1.5 py-0.5 focus:outline-none print:hidden">
                     <option v-for="c in activeClients" :key="c.id" :value="c.id">{{ c.name }}</option>
                   </select>
                   <button v-if="isEditingInvoiceDoc && !isEditingClientProfile && previewInvoice.clientId"
                     @click="isEditingClientProfile = true"
-                    class="text-[#1b8a4a] hover:text-emerald-800 text-[10px] flex items-center gap-0.5 font-semibold print:hidden">
+                    class="text-pri-strategic hover:underline text-[10px] flex items-center gap-0.5 font-semibold print:hidden">
                     <Edit3 class="w-2.5 h-2.5" /> Edit
                   </button>
                 </div>
               </div>
               <div v-if="isEditingClientProfile && isEditingInvoiceDoc" class="space-y-2 mt-2 text-left print:hidden">
                 <input v-model="clientCompanyName"
-                  class="w-full text-xs font-bold bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-xs font-bold bg-white border border-line rounded px-2 py-1" />
                 <input v-model="clientContactName"
-                  class="w-full text-[11px] bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-[11px] bg-white border border-line rounded px-2 py-1" />
                 <input v-model="clientAddress"
-                  class="w-full text-[11px] bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-[11px] bg-white border border-line rounded px-2 py-1" />
                 <input v-model="clientEmail"
-                  class="w-full text-[11px] bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-[11px] bg-white border border-line rounded px-2 py-1" />
                 <input v-model="clientPhone"
-                  class="w-full text-[11px] bg-canvas border border-line rounded px-2 py-1" />
+                  class="w-full text-[11px] bg-white border border-line rounded px-2 py-1" />
                 <button @click="saveClientProfile"
-                  class="text-[9px] bg-emerald-600 text-white rounded px-2 py-1 flex ml-auto">Save</button>
+                  class="text-[9px] bg-pri-strategic text-white rounded px-2 py-1 flex ml-auto">Save</button>
               </div>
               <div v-else>
                 <div class="text-xs font-bold text-ink">
@@ -1168,7 +1161,7 @@ onUnmounted(() => {
           </div>
 
           <!-- Schedule Dates Bar -->
-          <div class="grid grid-cols-3 gap-4 border-t border-b border-emerald-100/30 py-4 text-[11px] font-sans">
+          <div class="grid grid-cols-3 gap-4 border-t border-b border-line py-4 text-[11px] font-sans">
             <div>
               <span class="text-[9px] uppercase tracking-wider text-ink-3 block mb-0.5">Invoice Date</span>
               <span class="font-semibold text-ink">{{ dayjs(previewInvoice.createdAt).format('MMMM D, YYYY') }}</span>
@@ -1177,7 +1170,7 @@ onUnmounted(() => {
               <span class="text-[9px] uppercase tracking-wider text-ink-3 block mb-0.5">Due Date</span>
               <div v-if="isEditingInvoiceDoc">
                 <input type="date" v-model="previewInvoice.dueDate" @change="saveDocField(previewInvoice)"
-                  class="bg-white border border-emerald-100 rounded px-1.5 py-0.5 focus:outline-none font-mono text-[10px]" />
+                  class="bg-white border border-line rounded px-1.5 py-0.5 focus:outline-none font-mono text-[10px]" />
               </div>
               <span v-else class="font-semibold text-ink">{{ dayjs(previewInvoice.dueDate).format('MMMM D, YYYY')
                 }}</span>
@@ -1186,44 +1179,44 @@ onUnmounted(() => {
               <span class="text-[9px] uppercase tracking-wider text-ink-3 block mb-0.5">Due Schedule Status</span>
               <div v-if="isEditingInvoiceDoc">
                 <select v-model="previewInvoice.status" @change="saveDocField(previewInvoice)"
-                  class="bg-white border border-emerald-100 rounded px-1.5 py-0.5 text-[10px] focus:outline-none">
+                  class="bg-white border border-line rounded px-1.5 py-0.5 text-[10px] focus:outline-none">
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
                   <option value="overdue">Overdue</option>
                   <option value="partially_paid">Partially Paid</option>
                 </select>
               </div>
-              <span v-else class="font-bold text-emerald-700 uppercase tracking-wide text-xs">{{ previewInvoice.status
+              <span v-else class="font-bold text-pri-strategic uppercase tracking-wide text-xs">{{ previewInvoice.status
                 }}</span>
             </div>
           </div>
 
           <!-- Items Table -->
           <table
-            class="w-full text-left border-collapse text-xs bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden border border-emerald-100/50 shadow-sm">
+            class="w-full text-left border-collapse text-xs bg-canvas rounded-2xl overflow-hidden border border-line shadow-sm print:bg-transparent">
             <thead>
               <tr
-                class="bg-[#8b5cf6] text-white uppercase tracking-wider text-[10px] font-bold print:bg-[#8b5cf6] print:text-white">
+                class="bg-pri-strategic text-white uppercase tracking-wider text-[10px] font-bold print:bg-pri-strategic print:text-white">
                 <th class="p-4 rounded-tl-2xl">Item</th>
-                <th class="p-4 text-right w-32 rounded-tr-2xl">Rate</th>
+                <th class="p-4 text-right w-32 rounded-tr-2xl">Cost</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-emerald-100/30">
+            <tbody class="divide-y divide-line">
               <tr v-for="(item, idx) in previewInvoice.items" :key="idx"
-                class="hover:bg-emerald-50/10 transition-colors">
+                class="hover:bg-canvas/50 transition-colors">
                 <td class="p-4 font-medium text-ink">
                   <div v-if="isEditingInvoiceDoc" class="space-y-1.5 text-left">
                     <input v-model="item.description" @change="saveDocField(previewInvoice)"
-                      class="w-full bg-canvas border border-line rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500"
+                       class="w-full bg-white border border-line rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-pri-strategic"
                       placeholder="Item Name..." />
                     <textarea v-model="item.details" @change="saveDocField(previewInvoice)" rows="2"
                       @input="autoGrowTextarea"
-                      class="w-full bg-canvas border border-line rounded-lg px-3 py-1.5 text-[11px] text-ink-2 focus:outline-none focus:border-emerald-500 font-sans"
+                      class="w-full bg-white border border-line rounded-lg px-3 py-1.5 text-[11px] text-ink-2 focus:outline-none focus:border-pri-strategic font-sans"
                       placeholder="Item details/notes..."></textarea>
                   </div>
                   <div v-else class="space-y-1">
                     <div class="font-bold text-sm text-ink flex items-start gap-1.5">
-                      <span class="text-emerald-700 font-mono">{{ idx + 1 }}.</span>
+                      <span class="text-pri-strategic font-mono">{{ idx + 1 }}.</span>
                       <span>{{ item.description }}</span>
                     </div>
                     <div v-if="item.details"
@@ -1237,28 +1230,28 @@ onUnmounted(() => {
                     <div class="flex items-center gap-1.5">
                       <span class="text-ink-3">Qty:</span>
                       <input type="number" v-model="item.quantity" @change="saveDocField(previewInvoice)"
-                        class="w-12 text-center bg-canvas border border-line rounded py-0.5 focus:outline-none font-mono text-xs" />
+                        class="w-12 text-center bg-white border border-line rounded py-0.5 focus:outline-none font-mono text-xs" />
                     </div>
                     <div class="flex items-center gap-1.5">
                       <span class="text-ink-3">Rate:</span>
                       <input type="number" v-model="item.rate" @change="saveDocField(previewInvoice)"
-                        class="w-20 text-right bg-canvas border border-line rounded py-0.5 focus:outline-none font-mono text-xs" />
+                        class="w-20 text-right bg-white border border-line rounded py-0.5 focus:outline-none font-mono text-xs" />
                     </div>
-                    <div class="font-bold text-[#1b8a4a] mt-1">
+                    <div class="font-bold text-pri-strategic mt-1">
                       {{ formatMoney(item.quantity * item.rate, previewInvoice.currency) }}
                     </div>
                   </div>
-                  <div v-else class="pt-0.5 font-bold text-[#1b8a4a]">
+                  <div v-else class="pt-0.5 font-bold text-pri-strategic">
                     {{ formatMoney(item.quantity * item.rate, previewInvoice.currency) }}
                   </div>
                 </td>
               </tr>
 
               <!-- Add Row button inside table if editing -->
-              <tr v-if="isEditingInvoiceDoc" class="bg-emerald-50/5">
+              <tr v-if="isEditingInvoiceDoc" class="bg-canvas print:hidden">
                 <td colspan="2" class="p-3 text-center">
                   <button @click="addDocItemRow(previewInvoice)"
-                    class="text-xs text-emerald-700 hover:text-emerald-950 font-bold flex items-center gap-1.5 mx-auto">
+                    class="text-xs text-pri-strategic hover:underline font-bold flex items-center gap-1.5 mx-auto">
                     <Plus class="w-4 h-4" /> Add Line Item
                   </button>
                 </td>
@@ -1270,30 +1263,30 @@ onUnmounted(() => {
           <div class="grid grid-cols-1 md:grid-cols-12 gap-8 pt-4">
             <!-- Left: Bank Details Box -->
             <div
-              class="md:col-span-7 bg-white/80 border border-emerald-100/50 backdrop-blur-sm p-5 rounded-2xl shadow-sm space-y-3 relative">
+              class="md:col-span-7 bg-canvas border border-line p-5 rounded-2xl shadow-sm space-y-3 relative print:bg-transparent">
               <div class="flex items-center justify-between">
-                <span class="text-[10px] uppercase tracking-wider text-[#1b8a4a] font-bold">Bank Details</span>
+                <span class="text-[10px] uppercase tracking-wider text-pri-strategic font-bold">Bank Details</span>
                 <button v-if="!isEditingBankDetails" @click="isEditingBankDetails = true"
-                  class="text-[#1b8a4a] hover:text-emerald-800 text-[10px] flex items-center gap-0.5 font-semibold print:hidden">
+                  class="text-pri-strategic hover:underline text-[10px] flex items-center gap-0.5 font-semibold print:hidden">
                   <Edit3 class="w-2.5 h-2.5" /> Edit
                 </button>
               </div>
 
               <div v-if="isEditingBankDetails" class="space-y-2 text-xs print:hidden text-left">
-                <input v-model="bankAccountName" class="w-full bg-canvas border border-line rounded px-2 py-1"
+                <input v-model="bankAccountName" class="w-full bg-white border border-line rounded px-2 py-1"
                   placeholder="Account Name" />
-                <input v-model="bankAccountNumber" class="w-full bg-canvas border border-line rounded px-2 py-1"
+                <input v-model="bankAccountNumber" class="w-full bg-white border border-line rounded px-2 py-1"
                   placeholder="Account Number" />
-                <input v-model="bankIFSC" class="w-full bg-canvas border border-line rounded px-2 py-1"
+                <input v-model="bankIFSC" class="w-full bg-white border border-line rounded px-2 py-1"
                   placeholder="IFSC" />
-                <input v-model="bankSWIFT" class="w-full bg-canvas border border-line rounded px-2 py-1"
+                <input v-model="bankSWIFT" class="w-full bg-white border border-line rounded px-2 py-1"
                   placeholder="SWIFT Code" />
-                <input v-model="bankName" class="w-full bg-canvas border border-line rounded px-2 py-1"
+                <input v-model="bankName" class="w-full bg-white border border-line rounded px-2 py-1"
                   placeholder="Bank" />
-                <input v-model="bankMICR" class="w-full bg-canvas border border-line rounded px-2 py-1"
+                <input v-model="bankMICR" class="w-full bg-white border border-line rounded px-2 py-1"
                   placeholder="MICR" />
                 <button @click="saveBankDetails"
-                  class="text-[9px] bg-emerald-600 text-white rounded px-2 py-1 flex ml-auto">Save</button>
+                  class="text-[9px] bg-pri-strategic text-white rounded px-2 py-1 flex ml-auto">Save</button>
               </div>
               <div v-else class="grid grid-cols-3 gap-y-1.5 gap-x-2 text-[11px] leading-relaxed text-left">
                 <span class="text-ink-3 font-semibold">Account Name</span>
@@ -1315,25 +1308,25 @@ onUnmounted(() => {
             <div class="md:col-span-5 flex flex-col justify-between space-y-6">
               <!-- Grand Total Summary Box -->
               <div
-                class="bg-white/80 border border-emerald-100/50 backdrop-blur-sm p-5 rounded-2xl space-y-3 shadow-sm">
+                class="bg-canvas border border-line p-5 rounded-2xl space-y-3 shadow-sm print:bg-transparent">
                 <div class="flex justify-between text-xs text-ink-2">
                   <span class="text-ink-3">Subtotal</span>
                   <span class="font-mono font-medium">{{formatMoney(previewInvoice.items.reduce((sum, x) => sum +
                     (x.quantity * x.rate), 0), previewInvoice.currency) }}</span>
                 </div>
                 <!-- Hide Tax Row in Final View, show only when editing -->
-                <div v-if="isEditingInvoiceDoc" class="flex justify-between text-xs text-ink-2 text-left">
+                <div v-if="isEditingInvoiceDoc" class="flex justify-between text-xs text-ink-2 text-left print:hidden">
                   <span class="flex items-center gap-1 text-ink-3">
                     Tax (<input type="number" v-model="previewInvoice.taxRate" @change="saveDocField(previewInvoice)"
-                      class="w-10 text-center bg-white border border-emerald-100 rounded focus:outline-none" />%)
+                      class="w-10 text-center bg-white border border-line rounded focus:outline-none" />%)
                   </span>
                   <span class="font-mono font-medium">{{formatMoney(previewInvoice.items.reduce((sum, x) => sum +
                     (x.quantity * x.rate), 0) * (previewInvoice.taxRate / 100), previewInvoice.currency) }}</span>
                 </div>
                 <div
-                  class="flex justify-between items-center pt-3 border-t border-emerald-100/20 text-sm font-bold bg-[#8b5cf6] text-white -mx-5 -mb-5 p-4 rounded-b-2xl shadow-sm">
+                  class="flex justify-between items-center pt-3 border-t border-line text-sm font-bold text-ink">
                   <span class="uppercase tracking-wider text-[10px] font-black">Total</span>
-                  <span class="font-mono text-lg font-black">{{ formatMoney(previewInvoice.amount,
+                  <span class="font-mono text-lg font-black text-pri-strategic">{{ formatMoney(previewInvoice.amount,
                     previewInvoice.currency)
                     }}</span>
                 </div>
@@ -1346,19 +1339,19 @@ onUnmounted(() => {
                   <img v-if="sigSrc" :src="sigSrc" class="max-w-full max-h-full object-contain" />
                   <div v-else class="w-full h-full flex items-center justify-center">
                     <svg viewBox="0 0 150 50"
-                      class="w-full h-full text-indigo-700/80 stroke-current fill-none stroke-[2.5] stroke-linecap-round stroke-linejoin-round">
+                      class="w-full h-full text-pri-strategic/80 stroke-current fill-none stroke-[2.5] stroke-linecap-round stroke-linejoin-round">
                       <path
                         d="M 10 35 C 20 20, 30 15, 35 25 C 40 35, 45 40, 50 30 C 60 15, 70 10, 75 25 C 80 35, 85 45, 90 20 C 100 5, 110 10, 115 30 C 120 40, 130 35, 140 25" />
                       <path d="M 20 42 C 40 40, 90 38, 130 35" />
                     </svg>
                   </div>
                   <label v-if="isEditingInvoiceDoc"
-                    class="absolute -bottom-1 -right-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full p-1 shadow-md cursor-pointer print:hidden">
+                    class="absolute -bottom-1 -right-1 bg-pri-strategic hover:bg-emerald-700 text-white rounded-full p-1 shadow-md cursor-pointer print:hidden">
                     <Edit3 class="w-2.5 h-2.5" />
                     <input type="file" accept="image/*" class="hidden" @change="handleSigUpload" />
                   </label>
                   <button v-if="isEditingInvoiceDoc && sigSrc" @click="removeSig"
-                    class="absolute -top-1 -right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full p-1 shadow-md print:hidden">
+                    class="absolute -top-1 -right-1 bg-pri-critical text-white rounded-full p-1 shadow-md print:hidden">
                     <Trash class="w-2.5 h-2.5" />
                   </button>
                 </div>
@@ -1369,14 +1362,14 @@ onUnmounted(() => {
           </div>
 
           <!-- Bottom Footer -->
-          <div class="text-center text-[10px] text-ink-3 pt-6 border-t border-emerald-100/30">
+          <div class="text-center text-[10px] text-ink-3 pt-6 border-t border-line">
             For any enquiry, reach out via email at <span class="text-ink font-semibold">{{ senderEmail }}</span>, call
             on
             <span class="text-ink font-semibold">{{ senderPhone }}</span>
           </div>
         </div>
       </div>
-    </div>
 
+    </div>
   </div>
 </template>

@@ -23,6 +23,7 @@ import { useWorkTemplatesStore } from '@/stores/workTemplates'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { db, seedIfEmpty } from '@/db'
 import { backup as driveBackup, isConnected, lastBackupAt, autoBackup } from '@/services/drive'
+import { autoOfflineBackup } from '@/services/offlineSync'
 import { initNotificationsOnLoad } from '@/lib/notifications'
 
 
@@ -66,8 +67,8 @@ onMounted(async () => {
   ])
 
   // Dynamic periodic auto-backup check (runs silent checks in the background)
-  setTimeout(() => autoBackup(), 5000)
-  setInterval(() => autoBackup(), 60000) // check every minute, actual backup respects interval setting
+  setTimeout(() => { autoBackup(); autoOfflineBackup(); }, 5000)
+  setInterval(() => { autoBackup(); autoOfflineBackup(); }, 60000) // check every minute, actual backup respects interval setting
 
   window.addEventListener('keydown', (e) => {
     const isClientDetail = route.path && route.path.includes('/work/clients/')
@@ -156,6 +157,42 @@ onMounted(async () => {
 
   checkAutoBackup()
   setInterval(checkAutoBackup, 1000 * 60 * 60) // Check every hour
+
+  // Auto-reload stores when active/visible or every 5 mins
+  async function reloadAllStores() {
+    try {
+      await Promise.all([
+        useYearsStore().load(),
+        useGoalsStore().load(),
+        useProjectsStore().load(),
+        useTasksStore().load(),
+        useNotesStore().load(),
+        useWorkNotesStore().load(),
+        useBookmarksStore().load(),
+        useFinanceStore().load(),
+        useAreasStore().load(),
+        useReviewsStore().load(),
+        useNextStepsStore().load(),
+        useWorkClientsStore().load(),
+        useWorkItemsStore().load(),
+        useWorkLeadsStore().load(),
+        useWorkInvoicesStore().load(),
+        useWorkMeetingsStore().load(),
+        useWorkForecastStore().load(),
+        useWorkTemplatesStore().load(),
+        useWorkResourcesStore().load(),
+      ])
+    } catch (e) {
+      console.error('Failed to auto-reload stores:', e)
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      reloadAllStores()
+    }
+  })
+  setInterval(reloadAllStores, 5 * 60 * 1000)
 })
 
 // Sync and preserve active routes per mode
