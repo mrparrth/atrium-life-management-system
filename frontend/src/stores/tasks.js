@@ -5,7 +5,22 @@ import { db, newId, now, plain } from '@/db'
 export const useTasksStore = defineStore('tasks', () => {
   const items = ref([])
 
-  async function load() { items.value = await db.tasks.orderBy('createdAt').reverse().toArray() }
+  function sortTasks(list) {
+    list.sort((a, b) => {
+      if (a.dueDate && b.dueDate) {
+        return a.dueDate.localeCompare(b.dueDate)
+      }
+      if (a.dueDate) return -1
+      if (b.dueDate) return 1
+      return b.createdAt.localeCompare(a.createdAt)
+    })
+    return list
+  }
+
+  async function load() { 
+    const raw = await db.tasks.toArray()
+    items.value = sortTasks(raw)
+  }
 
   async function add(payload) {
     const task = {
@@ -29,7 +44,8 @@ export const useTasksStore = defineStore('tasks', () => {
       lastViewedAt: now(),
     }
     await db.tasks.add(task)
-    items.value.unshift(task)
+    items.value.push(task)
+    sortTasks(items.value)
     return task
   }
 
@@ -45,6 +61,7 @@ export const useTasksStore = defineStore('tasks', () => {
     }
     Object.assign(t, patch, { updatedAt: now() })
     await db.tasks.put(plain(t))
+    sortTasks(items.value)
   }
 
   async function toggleComplete(id) {

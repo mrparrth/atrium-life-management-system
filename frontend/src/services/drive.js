@@ -77,6 +77,9 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
     }
     tokenClient.callback = (resp) => {
       if (resp.error) return reject(new Error(resp.error));
+      if (!resp.access_token) {
+        return reject(new Error("Access not granted or popup closed"));
+      }
       accessToken = resp.access_token;
       const expiresInSec = Number(resp.expires_in) || 3600;
       tokenExpiresAt = Date.now() + expiresInSec * 1000;

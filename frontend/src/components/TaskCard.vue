@@ -168,19 +168,30 @@ onUnmounted(() => {
     <!-- Actions -->
     <div class="flex items-center gap-2 shrink-0">
       <!-- Checkbox / Mark Done -->
-      <button @click.stop="toggle"
-        class="text-ink-3 hover:text-ink shrink-0 transition-colors mr-1 cursor-pointer"
-        :data-testid="`task-toggle-${task.id}`" :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
-        <CheckCircle2 v-if="isDone" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
-        <Circle v-else class="w-5 h-5" />
-      </button>
+      <div class="relative group">
+        <button @click.stop="toggle"
+          class="text-ink-3 hover:text-ink shrink-0 transition-colors mr-1 cursor-pointer flex items-center justify-center"
+          :data-testid="`task-toggle-${task.id}`" 
+          :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
+          <CheckCircle2 v-if="isDone" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
+          <Circle v-else class="w-5 h-5" />
+        </button>
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
+          {{ isDone ? 'Mark incomplete' : 'Mark complete' }}
+        </div>
+      </div>
 
       <!-- Easy One-Click Snooze Button -->
-      <button v-if="!isDone" @click.stop="snooze1d"
-        class="p-2 rounded-xl border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm"
-        title="Snooze until tomorrow" :data-testid="`task-snooze-${task.id}`">
-        <BellOff class="w-4 h-4" />
-      </button>
+      <div class="relative group" v-if="!isDone">
+        <button @click.stop="snooze1d"
+          class="p-2 rounded-xl border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm flex items-center justify-center"
+          :data-testid="`task-snooze-${task.id}`">
+          <BellOff class="w-4 h-4" />
+        </button>
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
+          Snooze task (1 day)
+        </div>
+      </div>
 
       <!-- Snooze / Delete Menu -->
       <div class="relative">
@@ -300,19 +311,30 @@ onUnmounted(() => {
     <!-- Actions -->
     <div class="flex items-center gap-2 shrink-0">
       <!-- Checkbox / Mark Done -->
-      <button @click.stop="toggle"
-        class="text-ink-3 hover:text-ink shrink-0 transition-colors mr-1 cursor-pointer"
-        :data-testid="`task-toggle-${task.id}`" :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
-        <CheckCircle2 v-if="isDone" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
-        <Circle v-else class="w-5 h-5" />
-      </button>
+      <div class="relative group">
+        <button @click.stop="toggle"
+          class="text-ink-3 hover:text-ink shrink-0 transition-colors mr-1 cursor-pointer flex items-center justify-center"
+          :data-testid="`task-toggle-${task.id}`" 
+          :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
+          <CheckCircle2 v-if="isDone" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
+          <Circle v-else class="w-5 h-5" />
+        </button>
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
+          {{ isDone ? 'Mark incomplete' : 'Mark complete' }}
+        </div>
+      </div>
 
       <!-- Easy One-Click Snooze Button -->
-      <button v-if="!isDone" @click.stop="snooze1d"
-        class="p-1 rounded-lg border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm"
-        title="Snooze until tomorrow" :data-testid="`task-snooze-${task.id}`">
-        <BellOff class="w-3.5 h-3.5" />
-      </button>
+      <div class="relative group" v-if="!isDone">
+        <button @click.stop="snooze1d"
+          class="p-1 rounded-lg border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm flex items-center justify-center"
+          :data-testid="`task-snooze-${task.id}`">
+          <BellOff class="w-3.5 h-3.5" />
+        </button>
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
+          Snooze task (1 day)
+        </div>
+      </div>
 
       <!-- Snooze / Delete Menu -->
       <div class="relative">

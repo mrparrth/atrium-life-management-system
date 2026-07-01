@@ -83,7 +83,7 @@ const resurfacedFollows = computed(() => {
   }
 
   function mulberry32(a) {
-    return function() {
+    return function () {
       let t = a += 0x6D2B79F5;
       t = Math.imul(t ^ (t >>> 15), t | 1);
       t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -154,22 +154,24 @@ const sortedToday = computed(() => {
   currentDate.value
   const list = [...todayFocus(tasks.items)]
   list.sort((a, b) => {
-    const pA = derivePriority(a.important, a.urgent).key
-    const pB = derivePriority(b.important, b.urgent).key
-    return (priorityWeight[pA] || 0) - (priorityWeight[pB] || 0)
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
+    if (a.dueDate) return -1
+    if (b.dueDate) return 1
+    return b.createdAt.localeCompare(a.createdAt)
   })
-  return list.slice(0, 3)
+  return list.slice(0, 5)
 })
 
 const sortedUpcoming = computed(() => {
   currentDate.value
   const list = [...upcomingTasks(tasks.items)]
   list.sort((a, b) => {
-    const pA = derivePriority(a.important, a.urgent).key
-    const pB = derivePriority(b.important, b.urgent).key
-    return (priorityWeight[pA] || 0) - (priorityWeight[pB] || 0)
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
+    if (a.dueDate) return -1
+    if (b.dueDate) return 1
+    return b.createdAt.localeCompare(a.createdAt)
   })
-  return list.slice(0, 3)
+  return list.slice(0, 5)
 })
 
 const stale = computed(() => {
@@ -231,35 +233,35 @@ async function openDailyJournal() {
     <!-- 70/30 Layout split on desktop screens -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
       <!-- Left Column (70%): Task planning and execution -->
-      <div :class="[isSidebarCollapsed ? 'lg:col-span-3' : 'lg:col-span-2', 'space-y-12 transition-all duration-300']">
+      <div :class="[isSidebarCollapsed ? 'lg:col-span-3' : 'lg:col-span-2', 'space-y-6 transition-all duration-300']">
         <!-- TODAY FOCUS -->
         <section data-testid="section-today-focus">
-          <SectionHeader :overline="`Today · ${todayCount} task${todayCount !== 1 ? 's' : ''}`" title="Today focus"
+          <SectionHeader overline="Today" title="Today focus"
             :hint="sortedToday.length ? 'A few quiet things to attend to.' : 'Nothing scheduled - the day is open.'">
             <template #right>
-              <RouterLink to="/today" class="btn-ghost text-sm">Open today
-                <ArrowRight class="w-3 h-3" />
+              <RouterLink to="/today" class="btn-ghost text-sm">Open today ({{ todayCount }})
+                <ArrowRight class="w-3 h-3 ml-1" />
               </RouterLink>
             </template>
           </SectionHeader>
           <div v-if="sortedToday.length" class="space-y-3">
-            <TaskCard v-for="t in sortedToday" :key="t.id" :task="t" :single-line="true" />
+            <TaskCard v-for="t in sortedToday" :key="t.id" :task="t" :single-line="true" :show-project="false" />
           </div>
           <EmptyState v-else title="An open day" hint="Capture something gentle to begin." />
         </section>
 
         <!-- COMING UP -->
         <section data-testid="section-upcoming">
-          <SectionHeader :overline="`Coming up · ${upcomingCount} task${upcomingCount !== 1 ? 's' : ''}`"
-            title="Coming up" :hint="sortedUpcoming.length ? 'The next seven days.' : 'A clear horizon.'">
+          <SectionHeader overline="Coming up" title="Coming up"
+            :hint="sortedUpcoming.length ? 'The next seven days.' : 'A clear horizon.'">
             <template #right>
-              <RouterLink to="/tasks" class="btn-ghost text-sm">All tasks
-                <ArrowRight class="w-3 h-3" />
+              <RouterLink to="/tasks" class="btn-ghost text-sm">All tasks ({{ upcomingCount }})
+                <ArrowRight class="w-3 h-3 ml-1" />
               </RouterLink>
             </template>
           </SectionHeader>
           <div v-if="sortedUpcoming.length" class="space-y-3">
-            <TaskCard v-for="t in sortedUpcoming" :key="t.id" :task="t" :single-line="true" />
+            <TaskCard v-for="t in sortedUpcoming" :key="t.id" :task="t" :single-line="true" :show-project="false" />
           </div>
           <EmptyState v-else title="A clear horizon" hint="Plan when ready." />
         </section>
@@ -299,7 +301,7 @@ async function openDailyJournal() {
               <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
               <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
                 fromNow(lastWeeklyReview.createdAt)
-              }}</p>
+                }}</p>
             </div>
             <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
           </div>
@@ -344,7 +346,7 @@ async function openDailyJournal() {
               :data-testid="`resurface-note-${n.id}`">
               <div class="flex items-center gap-2">
                 <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
-                }}</span>
+                  }}</span>
               </div>
               <div class="font-serif text-lg mt-1.5 leading-snug">{{ n.title }}</div>
               <p class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ n.body }}</p>
@@ -356,7 +358,7 @@ async function openDailyJournal() {
               :data-testid="`resurface-bookmark-${b.id}`">
               <div class="flex items-center gap-2">
                 <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{ fromNow(b.lastViewedAt)
-                }}</span>
+                  }}</span>
               </div>
               <div class="font-serif text-lg mt-1.5 leading-snug">{{ b.title }}</div>
               <p class="text-sm text-ink-2 mt-1 truncate">{{ b.url }}</p>
