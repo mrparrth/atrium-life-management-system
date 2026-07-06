@@ -77,7 +77,9 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   async function snooze(id, days = 1) {
-    const until = new Date(); until.setDate(until.getDate() + days)
+    const until = new Date()
+    until.setHours(0, 0, 0, 0)
+    until.setDate(until.getDate() + days)
     await update(id, { snoozedUntil: until.toISOString() })
   }
 

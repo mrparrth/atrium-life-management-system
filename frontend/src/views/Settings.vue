@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { db } from '@/db'
+import VCheckbox from '@/components/VCheckbox.vue'
+import VSelect from '@/components/VSelect.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import { downloadLocalBackup, getClientId, setClientId, connect as driveConnect, backup as driveBackup, restore as driveRestore, disconnect as driveDisconnect, lastBackupAt } from '@/services/drive'
@@ -254,10 +256,23 @@ function saveOfflineSettings() {
       <div class="flex items-center justify-between"><span>Close overlay</span><span class="kbd">esc</span></div>
     </div>
 
-    <SectionHeader overline="Appearance" title="Theme" />
-    <div class="card p-5 mb-10 flex items-center justify-between">
-      <p class="text-sm text-ink-2">Currently {{ ui.theme }}</p>
-      <button class="btn-secondary" @click="ui.toggleTheme" data-testid="settings-toggle-theme">Switch theme</button>
+    <SectionHeader overline="Appearance" title="Workspace & Theme" />
+    <div class="card p-5 mb-10 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-ink">Theme Mode</p>
+          <p class="text-xs text-ink-3">Adjust the visual color scheme (currently {{ ui.theme }}).</p>
+        </div>
+        <button class="btn-secondary" @click="ui.toggleTheme" data-testid="settings-toggle-theme">Switch theme</button>
+      </div>
+      <hr class="border-line/40" />
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-ink">Show Cross-Workspace Alerts</p>
+          <p class="text-xs text-ink-3">Notify me at the top of the screen if I have tasks due today in my other workspace.</p>
+        </div>
+        <VCheckbox v-model="ui.showWorkspaceAlerts" />
+      </div>
     </div>
 
     <SectionHeader overline="Notifications" title="Desktop Alerts" />
@@ -302,11 +317,7 @@ function saveOfflineSettings() {
         </div>
         <div>
           <label class="overline block mb-1">Default Billing Currency</label>
-          <select v-model="defaultCurrencyInput" class="input-block text-sm">
-            <option value="USD">USD ($)</option>
-            <option value="GBP">GBP (£)</option>
-            <option value="INR">INR (₹)</option>
-          </select>
+          <VSelect v-model="defaultCurrencyInput" :options="[{value: 'USD', label: 'USD ($)'}, {value: 'GBP', label: 'GBP (£)'}, {value: 'INR', label: 'INR (₹)'}]" />
         </div>
       </div>
       <p class="text-xs text-ink-3 leading-relaxed">
@@ -356,10 +367,7 @@ function saveOfflineSettings() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="overline block mb-1">Sync Execution Mode</label>
-            <select v-model="syncModeInput" class="input-block text-sm" data-testid="sync-mode-select">
-              <option value="auto">Automatic Sync (Background)</option>
-              <option value="manual">Manual Sync (Only on request)</option>
-            </select>
+            <VSelect v-model="syncModeInput" :options="[{value: 'auto', label: 'Automatic Sync (Background)'}, {value: 'manual', label: 'Manual Sync (Only on request)'}]" />
             <p class="text-[11px] text-ink-3 mt-1.5 leading-relaxed">
               <strong>Automatic:</strong> Runs backup & calendar checks in the background. May prompt Google
               verification
@@ -372,14 +380,13 @@ function saveOfflineSettings() {
             <label class="overline block mb-1" :class="{ 'opacity-40 select-none': syncModeInput !== 'auto' }">Auto-Sync
               Time
               Interval</label>
-            <select v-model="syncIntervalInput" :disabled="syncModeInput !== 'auto'" class="input-block text-sm"
-              :class="{ 'opacity-40 cursor-not-allowed': syncModeInput !== 'auto' }" data-testid="sync-interval-select">
-              <option :value="5">Every 5 Minutes</option>
-              <option :value="15">Every 15 Minutes</option>
-              <option :value="30">Every 30 Minutes</option>
-              <option :value="60">Every 1 Hour (Recommended)</option>
-              <option :value="180">Every 3 Hours</option>
-            </select>
+            <VSelect v-model="syncIntervalInput" :disabled="syncModeInput !== 'auto'" :options="[
+              { value: 5, label: 'Every 5 Minutes' },
+              { value: 15, label: 'Every 15 Minutes' },
+              { value: 30, label: 'Every 30 Minutes' },
+              { value: 60, label: 'Every 1 Hour (Recommended)' },
+              { value: 180, label: 'Every 3 Hours' }
+            ]" />
             <p class="text-[11px] text-ink-3 mt-1.5 leading-relaxed"
               :class="{ 'opacity-40 select-none': syncModeInput !== 'auto' }">
               Set how frequently the system silently updates backups and calendar events.
@@ -458,22 +465,21 @@ function saveOfflineSettings() {
             <label class="text-sm font-medium text-ink">Enable Offline Folder Sync</label>
             <p class="text-xs text-ink-3">Check to automatically run local backup cycles.</p>
           </div>
-          <input type="checkbox" v-model="offlineEnabled"
-            class="w-4 h-4 rounded text-pri-strategic focus:ring-pri-strategic" @change="saveOfflineSettings" />
+          <VCheckbox v-model="offlineEnabled" @change="saveOfflineSettings" />
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="overline block mb-1">Backup Frequency</label>
-            <select v-model="offlineInterval" class="input-block text-sm" @change="saveOfflineSettings">
-              <option :value="5">Every 5 Minutes</option>
-              <option :value="15">Every 15 Minutes</option>
-              <option :value="30">Every 30 Minutes</option>
-              <option :value="60">Every 1 Hour</option>
-              <option :value="180">Every 3 Hours</option>
-              <option :value="720">Every 12 Hours</option>
-              <option :value="1440">Every 24 Hours (Recommended)</option>
-            </select>
+            <VSelect v-model="offlineInterval" @change="saveOfflineSettings" :options="[
+              { value: 5, label: 'Every 5 Minutes' },
+              { value: 15, label: 'Every 15 Minutes' },
+              { value: 30, label: 'Every 30 Minutes' },
+              { value: 60, label: 'Every 1 Hour' },
+              { value: 180, label: 'Every 3 Hours' },
+              { value: 720, label: 'Every 12 Hours' },
+              { value: 1440, label: 'Every 24 Hours (Recommended)' }
+            ]" option-value="value" option-label="label" />
             <p class="text-[11px] text-ink-3 mt-1.5">
               Select how often to write local JSON backup files.
             </p>

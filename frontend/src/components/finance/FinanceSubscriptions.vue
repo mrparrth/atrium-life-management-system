@@ -7,7 +7,11 @@ import { inr } from '@/lib/money'
 import { 
   Plus, Edit3, Trash2, Calendar, CreditCard, Play, Pause, X, AlertTriangle, ArrowUpDown, ChevronDown
 } from 'lucide-vue-next'
-
+import DateField from '@/components/DateField.vue'
+import VInput from '@/components/VInput.vue'
+import VSelect from '@/components/VSelect.vue'
+import VRow from '@/components/VRow.vue'
+import VCol from '@/components/VCol.vue'
 const finance = useFinanceStore()
 const ui = useUIStore()
 
@@ -360,63 +364,71 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
 
         <div class="space-y-5 mb-8">
           <!-- Name -->
-          <div class="v-field-group">
-            <input ref="formNameInput" v-model="formName" placeholder=" " class="v-field-input text-xs" id="sub-name" required />
-            <label for="sub-name" class="v-field-label text-xs">Service Name</label>
-          </div>
+          <VInput
+            ref="formNameInput"
+            v-model="formName"
+            label="Service Name"
+            id="sub-name"
+            required
+          />
 
           <!-- Price & Cycle -->
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <input type="number" v-model.number="formCost" placeholder=" " class="v-field-input text-xs" id="sub-cost" required />
-              <label for="sub-cost" class="v-field-label text-xs">Cost (INR)</label>
-            </div>
-            
-            <div class="v-field-group">
-              <select v-model="formBillingPeriod" 
-                @focus="focusedFields.billingPeriod = true"
-                @blur="focusedFields.billingPeriod = false" 
-                class="v-field-select text-xs">
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-              <span class="v-field-arrow">▼</span>
-              <label :class="['v-field-label text-xs', (formBillingPeriod || focusedFields.billingPeriod) ? 'v-field-label--floating' : '', focusedFields.billingPeriod ? 'v-field-label--floating-focused' : '']">Billing Cycle</label>
-            </div>
-          </div>
+          <VRow>
+            <VCol cols="12" sm="6">
+              <VInput
+                type="number"
+                v-model.number="formCost"
+                label="Cost (INR)"
+                id="sub-cost"
+                required
+              />
+            </VCol>
+            <VCol cols="12" sm="6">
+              <VSelect
+                v-model="formBillingPeriod"
+                label="Billing Cycle"
+                id="sub-billing-period"
+                :options="[
+                  { value: 'monthly', label: 'Monthly' },
+                  { value: 'yearly', label: 'Yearly' }
+                ]"
+                option-value="value"
+                option-label="label"
+              />
+            </VCol>
+          </VRow>
 
           <!-- Category Selection -->
-          <div class="v-field-group">
-            <select v-model="formCategory" 
-              @focus="focusedFields.category = true"
-              @blur="focusedFields.category = false" 
-              class="v-field-select text-xs capitalize">
-              <option v-for="cat in expenseCategories" :key="cat.id" :value="cat.name">
-                {{ label(cat.name) }}
-              </option>
-            </select>
-            <span class="v-field-arrow">▼</span>
-            <label :class="['v-field-label text-xs', (formCategory || focusedFields.category) ? 'v-field-label--floating' : '', focusedFields.category ? 'v-field-label--floating-focused' : '']">Category</label>
-          </div>
+          <VSelect
+            v-model="formCategory"
+            label="Category"
+            id="sub-category"
+            :options="expenseCategories"
+            option-value="name"
+            option-label="name"
+          />
 
           <!-- Next Renewal Date -->
-          <div class="v-field-group">
-            <input type="date" v-model="formNextRenewal" placeholder=" " class="v-field-input text-xs font-mono text-ink-2" id="sub-renewal" required />
-            <label for="sub-renewal" class="v-field-label text-xs">Next Renewal</label>
-          </div>
+          <DateField
+            v-model="formNextRenewal"
+            label="Next Renewal"
+            id="sub-renewal"
+            required
+          />
 
           <!-- Status selection (only when editing) -->
-          <div class="v-field-group" v-if="editingSub">
-            <select v-model="formStatus" 
-              @focus="focusedFields.status = true"
-              @blur="focusedFields.status = false" 
-              class="v-field-select text-xs">
-              <option value="active">Active</option>
-              <option value="paused">Paused</option>
-            </select>
-            <span class="v-field-arrow">▼</span>
-            <label :class="['v-field-label text-xs', (formStatus || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Status</label>
-          </div>
+          <VSelect
+            v-if="editingSub"
+            v-model="formStatus"
+            label="Status"
+            id="sub-status"
+            :options="[
+              { value: 'active', label: 'Active' },
+              { value: 'paused', label: 'Paused' }
+            ]"
+            option-value="value"
+            option-label="label"
+          />
         </div>
 
         <div class="flex justify-end gap-3">

@@ -11,7 +11,13 @@ import {
   X, User, HardDrive, Save, Trash2,
   Globe, Info, Sparkles, ExternalLink, Tag
 } from 'lucide-vue-next'
-
+import VInput from '@/components/VInput.vue'
+import VSelect from '@/components/VSelect.vue'
+import VUrlInput from '@/components/VUrlInput.vue'
+import VTextarea from '@/components/VTextarea.vue'
+import VRow from '@/components/VRow.vue'
+import VCol from '@/components/VCol.vue'
+import VCheckbox from '@/components/VCheckbox.vue'
 const props = defineProps({
   // If editing, pass the client object. If creating, leave null/undefined.
   client: {
@@ -274,6 +280,9 @@ function handleKeydown(e) {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  nextTick(() => {
+    firstInputRef.value?.focus()
+  })
 })
 
 onUnmounted(() => {
@@ -290,7 +299,7 @@ onUnmounted(() => {
 
       <!-- Modal Card -->
       <div
-        class="relative w-full max-w-5xl card p-8 shadow-xl bg-surface z-50 animate-rise-in max-h-[90vh] overflow-y-auto space-y-6">
+        class="relative w-full max-w-5xl card p-8 shadow-xl bg-surface z-50 animate-rise-in overflow-visible my-auto space-y-2">
         <!-- Header -->
         <div class="flex items-start justify-between">
           <div>
@@ -313,21 +322,34 @@ onUnmounted(() => {
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <!-- Main Workspace (lg:col-span-3) -->
-          <div class="lg:col-span-3 space-y-6">
+          <div class="lg:col-span-3 space-y-4">
 
             <!-- Identity -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="v-field-group">
-                <input ref="firstInputRef" v-model="name" placeholder=" " class="v-field-input text-base font-medium"
-                  required />
-                <label class="v-field-label">Client Contact Name *</label>
-              </div>
+            <VRow>
+              <VCol cols="12" sm="6">
+                <VInput ref="firstInputRef" v-model="name" label="Client Contact Name *" id="client-name" required />
+              </VCol>
+              <VCol cols="12" sm="6">
+                <VInput v-model="companyName" label="Company / Workspace Name" id="client-company" />
+              </VCol>
+            </VRow>
 
-              <div class="v-field-group">
-                <input v-model="companyName" placeholder=" " class="v-field-input" />
-                <label class="v-field-label">Company / Workspace Name</label>
-              </div>
-            </div>
+            <!-- Workspace Status & Timezone Row (1/3 & 2/3 split) -->
+            <VRow>
+              <VCol cols="12" sm="4">
+                <VSelect v-model="status" label="Workspace Status" id="client-status"
+                  :options="Object.entries(clientsStore.STATUS_MAP).map(([key, val]) => ({ key, label: val.label }))"
+                  option-value="key" option-label="label" />
+              </VCol>
+
+              <VCol cols="12" sm="8">
+                <VSelect v-model="timezone" label="Timezone" id="client-timezone" :options="timezoneOptions"
+                  option-value="value" option-label="label" searchable />
+                <div v-if="getClientLocalTime(timezone)" class="text-[10px] text-pri-strategic font-semibold pl-3 mt-1">
+                  local time - {{ getClientLocalTime(timezone) }}
+                </div>
+              </VCol>
+            </VRow>
 
             <!-- Tags Directly Below Notes & Address -->
             <div class="space-y-2">
@@ -342,162 +364,88 @@ onUnmounted(() => {
                 </button>
               </div>
             </div>
-            <!-- Notes & Billing Address (Side-by-side, equal height) -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-              <!-- Relationship Context (Large & Central) -->
-              <div class="v-field-group md:col-span-2">
-                <textarea v-model="relationshipNotes" placeholder=" "
-                  class="v-field-input min-h-[200px] lg:min-h-[280px] py-3 resize-y font-sans leading-relaxed"></textarea>
-                <label class="v-field-label">Operational Memory & Relationship Notes</label>
-              </div>
 
-              <!-- Billing Address (Enlarged to match notes height) -->
-              <div class="v-field-group md:col-span-2">
-                <textarea v-model="address" placeholder=" "
-                  class="v-field-input min-h-[200px] lg:min-h-[280px] py-3 resize-y font-sans leading-relaxed"></textarea>
-                <label class="v-field-label">Billing Address</label>
-              </div>
-            </div>
+            <VRow>
+              <VCol cols="12" sm="6">
+                <VTextarea v-model="relationshipNotes" label="Relationship Notes" id="client-notes" rows="6" />
+              </VCol>
+              <VCol cols="12" sm="6">
+                <VTextarea v-model="address" label="Billing Address" id="client-address" rows="6" />
+              </VCol>
+            </VRow>
 
           </div>
 
           <!-- Sidebar / Operations & Secondary (lg:col-span-2) -->
-          <div class="lg:col-span-2 space-y-6">
+          <div class="lg:col-span-2 space-y-4">
 
-            <!-- Primary Controls Panel (Status, Timezone, Pricing) -->
-            <div class="space-y-4">
-              <div class="grid grid-cols-2 gap-4">
-                <!-- Workspace Status -->
-                <div class="v-field-group">
-                  <select v-model="status" @focus="focusedFields.status = true" @blur="focusedFields.status = false"
-                    class="v-field-select font-semibold">
-                    <option v-for="(val, key) in clientsStore.STATUS_MAP" :key="key" :value="key">
-                      {{ val.label }}
-                    </option>
-                  </select>
-                  <span class="v-field-arrow">▼</span>
-                  <label
-                    :class="['v-field-label', (status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Workspace
-                    Status</label>
-                </div>
+            <!-- Contact Section (Compact & Secondary) (Moved above Google Drive Connection) -->
+            <div class="bg-canvas/15 p-4 rounded-2xl border border-line/25">
+              <VRow>
+                <VCol cols="12">
+                  <div class="flex items-center gap-1.5 text-ink-3">
+                    <Globe class="w-4 h-4 text-ink-3" />
+                    <span class="text-[10px] font-semibold uppercase tracking-wider">Contact Channels</span>
+                  </div>
+                </VCol>
 
-                <!-- Pricing Sensitivity -->
-                <div class="v-field-group">
-                  <select v-model="pricingSensitivity" @focus="focusedFields.sensitivity = true"
-                    @blur="focusedFields.sensitivity = false" class="v-field-select">
-                    <option value="Low">Low (Value-driven)</option>
-                    <option value="Medium">Medium (Budget-aware)</option>
-                    <option value="High">High (Cost-focused)</option>
-                  </select>
-                  <span class="v-field-arrow">▼</span>
-                  <label
-                    :class="['v-field-label', (pricingSensitivity || focusedFields.sensitivity) ? 'v-field-label--floating' : '', focusedFields.sensitivity ? 'v-field-label--floating-focused' : '']">Pricing
-                    Sensitivity</label>
-                </div>
-              </div>
+                <VCol cols="12">
+                  <VInput v-model="email" type="email" label="Email Address" id="client-email" />
+                </VCol>
+                <VCol cols="12">
+                  <VInput v-model="phone" label="Phone Number" id="client-phone" />
+                </VCol>
 
-              <!-- Timezone -->
-              <div class="space-y-1">
-                <div class="v-field-group">
-                  <select v-model="timezone" @focus="focusedFields.timezone = true"
-                    @blur="focusedFields.timezone = false" class="v-field-select">
-                    <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
-                      {{ tz.label }}
-                    </option>
-                  </select>
-                  <span class="v-field-arrow">▼</span>
-                  <label
-                    :class="['v-field-label', (timezone || focusedFields.timezone) ? 'v-field-label--floating' : '', focusedFields.timezone ? 'v-field-label--floating-focused' : '']">Timezone</label>
-                </div>
-                <div v-if="getClientLocalTime(timezone)" class="text-[10px] text-pri-strategic font-semibold pl-3">
-                  local time - {{ getClientLocalTime(timezone) }}
-                </div>
-              </div>
+                <VCol cols="12">
+                  <VSelect v-model="pricingSensitivity" label="Pricing Sensitivity" id="client-pricing" :options="[
+                    { key: 'Low', label: 'Low (Value-driven)' },
+                    { key: 'Medium', label: 'Medium (Budget-aware)' },
+                    { key: 'High', label: 'High (Cost-focused)' }
+                  ]" option-value="key" option-label="label" />
+                </VCol>
+
+                <VCol cols="12" sm="6">
+                  <VSelect v-model="preferredCommunication" label="Preferred Comm" id="client-preferred-comm" :options="[
+                    { value: 'Slack', label: 'Slack' },
+                    { value: 'Email', label: 'Email' },
+                    { value: 'WhatsApp', label: 'WhatsApp' },
+                    { value: 'Teams', label: 'Microsoft Teams' },
+                    { value: 'Other', label: 'Other' }
+                  ]" />
+                </VCol>
+                <VCol cols="12" sm="6">
+                  <VSelect v-model="clientSource" label="Acquisition Source" id="client-source" :options="[
+                    { value: 'Upwork', label: 'Upwork' },
+                    { value: 'Referral', label: 'Referral' },
+                    { value: 'Cold Email', label: 'Cold Email' },
+                    { value: 'LinkedIn', label: 'LinkedIn' },
+                    { value: 'Twitter/X', label: 'Twitter/X' },
+                    { value: 'Other', label: 'Other' }
+                  ]" />
+                </VCol>
+              </VRow>
             </div>
 
             <!-- Google Drive Directory Integration -->
-            <div class="space-y-3 bg-canvas/30 p-4 rounded-2xl border border-line/45">
-              <div class="flex items-center gap-1.5 text-ink-3">
-                <HardDrive class="w-4 h-4 text-pri-strategic" />
-                <span class="text-[10px] font-semibold uppercase tracking-wider">Google Drive Connection</span>
-              </div>
-
-              <!-- Switch for Auto-generate -->
-              <div class="flex items-center">
-                <label class="relative inline-flex items-center cursor-pointer select-none">
-                  <input type="checkbox" v-model="createDriveFolder" class="sr-only peer" />
-                  <div
-                    class="w-9 h-5 bg-canvas border border-line rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-ink-3 peer-checked:after:bg-pri-strategic after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-pri-strategic/10 peer-checked:border-pri-strategic/30">
+            <div class="bg-canvas/30 p-4 rounded-2xl border border-line/45">
+              <VRow dense>
+                <VCol cols="12">
+                  <div class="flex items-center gap-1.5 text-ink-3">
+                    <HardDrive class="w-4 h-4 text-pri-strategic" />
+                    <span class="text-[10px] font-semibold uppercase tracking-wider">Google Drive Connection</span>
                   </div>
-                  <span class="ml-3 text-xs font-semibold text-ink-2">Auto-generate folder</span>
-                </label>
-              </div>
+                </VCol>
 
-              <!-- Custom Folder Input -->
-              <div v-if="!createDriveFolder" class="relative v-field-group">
-                <input v-model="customDriveUrlOrId" placeholder=" " class="v-field-input pr-10 text-xs" />
-                <label class="v-field-label text-xs">Drive Folder URL or ID</label>
-                <button v-if="customDriveUrlOrId.trim()" type="button" @click="openDriveFolder"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 btn-ghost !p-2 text-pri-strategic hover:text-pri-strategic-hover flex items-center justify-center cursor-pointer bg-stone-100"
-                  title="Open folder in browser">
-                  <ExternalLink class="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+                <!-- Switch for Auto-generate -->
+                <VCol cols="12" class="flex items-center pt-2">
+                  <VCheckbox v-model="createDriveFolder" label="Auto-generate folder" />
+                </VCol>
 
-            <!-- Contact Section (Compact & Secondary) -->
-            <div class="bg-canvas/15 p-4 rounded-2xl border border-line/25 space-y-4">
-              <div class="flex items-center gap-1.5 text-ink-3">
-                <Globe class="w-4 h-4 text-ink-3" />
-                <span class="text-[10px] font-semibold uppercase tracking-wider">Contact Channels</span>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
-                <div class="v-field-group">
-                  <input v-model="email" type="email" placeholder=" " class="v-field-input text-xs" />
-                  <label class="v-field-label text-xs">Email Address</label>
-                </div>
-
-                <div class="v-field-group">
-                  <input v-model="phone" placeholder=" " class="v-field-input text-xs" />
-                  <label class="v-field-label text-xs">Phone Number</label>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
-                <!-- Preferred Comm -->
-                <div class="v-field-group">
-                  <select v-model="preferredCommunication" @focus="focusedFields.comm = true"
-                    @blur="focusedFields.comm = false" class="v-field-select text-xs">
-                    <option value="Slack">Slack</option>
-                    <option value="Email">Email</option>
-                    <option value="WhatsApp">WhatsApp</option>
-                    <option value="Teams">Microsoft Teams</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  <span class="v-field-arrow">▼</span>
-                  <label
-                    :class="['v-field-label text-xs', (preferredCommunication || focusedFields.comm) ? 'v-field-label--floating' : '', focusedFields.comm ? 'v-field-label--floating-focused' : '']">Preferred
-                    Comm</label>
-                </div>
-
-                <!-- Acquisition Source -->
-                <div class="v-field-group">
-                  <select v-model="clientSource" @focus="focusedFields.source = true"
-                    @blur="focusedFields.source = false" class="v-field-select text-xs">
-                    <option value="Upwork">Upwork</option>
-                    <option value="Referral">Referral</option>
-                    <option value="Cold Email">Cold Email</option>
-                    <option value="LinkedIn">LinkedIn</option>
-                    <option value="Twitter/X">Twitter/X</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  <span class="v-field-arrow">▼</span>
-                  <label
-                    :class="['v-field-label text-xs', (clientSource || focusedFields.source) ? 'v-field-label--floating' : '', focusedFields.source ? 'v-field-label--floating-focused' : '']">Acquisition
-                    Source</label>
-                </div>
-              </div>
+                <!-- Custom Folder Input -->
+                <VCol cols="12" v-if="!createDriveFolder" class="pt-2">
+                  <VUrlInput v-model="customDriveUrlOrId" label="Drive Folder URL or ID" id="client-drive-url" />
+                </VCol>
+              </VRow>
             </div>
 
           </div>

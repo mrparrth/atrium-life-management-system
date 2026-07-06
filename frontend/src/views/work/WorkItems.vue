@@ -26,7 +26,11 @@ const prefillTitle = ref('')
 const groupedActiveItems = computed(() => {
   const list = itemsStore.items.filter(item => {
     if (itemsStore.isCompleted(item.status)) return false
-    if (item.snoozedUntil && new Date(item.snoozedUntil) > new Date()) return false
+    if (item.snoozedUntil) {
+      const until = new Date(item.snoozedUntil); until.setHours(0, 0, 0, 0)
+      const now = new Date(); now.setHours(0, 0, 0, 0)
+      if (until > now) return false
+    }
     return true
   })
 

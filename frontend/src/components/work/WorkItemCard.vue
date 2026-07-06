@@ -299,11 +299,6 @@ watch(showEditModal, (isOpen) => {
             title="Go to client details">
             {{ client.name }} <template v-if="clientLocalTime">· {{ clientLocalTime }} Local</template>
           </span>
-          <!-- Charged Badge -->
-          <span v-if="props.item.charged > 0"
-            class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-            ${{ props.item.charged }}
-          </span>
           <!-- Status Tag with Dropdown Menu (Rightmost in labels list) -->
           <div class="relative inline-block">
             <button @click.stop="showStatusMenu = !showStatusMenu"
@@ -348,6 +343,12 @@ watch(showEditModal, (isOpen) => {
               </button>
             </div>
           </div>
+
+          <!-- Consolidated Client Tags Badge (Placed after status) -->
+          <span v-if="client && client.tags && client.tags.length"
+            class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full">
+            {{ client.tags.map(t => '#' + t).join(' ') }}
+          </span>
         </div>
 
         <h4 class="font-medium text-ink text-sm leading-snug"

@@ -61,15 +61,40 @@ const greeting = computed(() => {
 
 const todayDate = computed(() => dayjs().format('dddd, MMMM D'))
 
-// Filter today's focus work items: due today or marked as in_progress (and not done)
-const focusItems = computed(() => {
-  const todayStr = dayjs().format('YYYY-MM-DD')
+const todayStr = computed(() => dayjs().format('YYYY-MM-DD'))
+const tomorrowStr = computed(() => dayjs().add(1, 'day').format('YYYY-MM-DD'))
+
+// All active (non-completed, non-snoozed) tasks
+const activeItems = computed(() => {
   return itemsStore.items.filter(item => {
     if (itemsStore.isCompleted(item.status)) return false
-    if (item.snoozedUntil && new Date(item.snoozedUntil) > new Date()) return false
-    return item.status === 'in_progress' || !item.dueDate || item.dueDate <= todayStr || (item.important && item.urgent)
-  }).slice(0, 5)
+    if (item.snoozedUntil) {
+      const until = new Date(item.snoozedUntil); until.setHours(0, 0, 0, 0)
+      const now = new Date(); now.setHours(0, 0, 0, 0)
+      if (until > now) return false
+    }
+    return true
+  })
 })
+
+// Today's Tasks: due on/before today or no due date
+const todayTasksAll = computed(() => {
+  const today = todayStr.value
+  return activeItems.value.filter(item => {
+    return !item.dueDate || item.dueDate <= today
+  })
+})
+
+// Tomorrow's Tasks: due exactly tomorrow
+const tomorrowTasksAll = computed(() => {
+  const tomorrow = tomorrowStr.value
+  return activeItems.value.filter(item => {
+    return item.dueDate === tomorrow
+  })
+})
+
+const todayTasksLimit = computed(() => todayTasksAll.value.slice(0, 5))
+const tomorrowTasksLimit = computed(() => tomorrowTasksAll.value.slice(0, 5))
 
 // Compute revenue stats
 const pendingRevenue = computed(() => invoicesStore.summary.pending)
@@ -217,10 +242,39 @@ onMounted(async () => {
             <button @click="addQuickWork" class="btn-primary h-8 !py-0 !px-4 text-xs !rounded-md">Add</button>
           </div>
 
-          <div v-if="focusItems.length" class="space-y-3">
-            <WorkItemCard v-for="item in focusItems" :key="item.id" :item="item" />
+          <div class="space-y-6">
+            <!-- Today's Tasks Section -->
+            <div class="space-y-3">
+              <h4 class="text-xs uppercase tracking-wider font-bold text-ink-3">Today's Tasks ({{ todayTasksAll.length }})</h4>
+              <div v-if="todayTasksLimit.length" class="space-y-3">
+                <WorkItemCard v-for="item in todayTasksLimit" :key="item.id" :item="item" />
+                <div v-if="todayTasksAll.length > 5" class="mt-2 text-right">
+                  <RouterLink to="/work/items" class="text-xs font-semibold text-pri-strategic hover:underline">
+                    ...{{ todayTasksAll.length - 5 }} more
+                  </RouterLink>
+                </div>
+              </div>
+              <div v-else class="text-xs text-ink-3 italic bg-canvas/30 border border-line/45 rounded-xl p-4 text-center">
+                No tasks scheduled for today.
+              </div>
+            </div>
+
+            <!-- Tomorrow's Tasks Section -->
+            <div class="space-y-3">
+              <h4 class="text-xs uppercase tracking-wider font-bold text-ink-3">Tomorrow's Tasks ({{ tomorrowTasksAll.length }})</h4>
+              <div v-if="tomorrowTasksLimit.length" class="space-y-3">
+                <WorkItemCard v-for="item in tomorrowTasksLimit" :key="item.id" :item="item" />
+                <div v-if="tomorrowTasksAll.length > 5" class="mt-2 text-right">
+                  <RouterLink to="/work/items" class="text-xs font-semibold text-pri-strategic hover:underline">
+                    ...{{ tomorrowTasksAll.length - 5 }} more
+                  </RouterLink>
+                </div>
+              </div>
+              <div v-else class="text-xs text-ink-3 italic bg-canvas/30 border border-line/45 rounded-xl p-4 text-center">
+                No tasks scheduled for tomorrow.
+              </div>
+            </div>
           </div>
-          <EmptyState v-else title="Horizon is clear" hint="Add or unsnooze tasks to structure your day." />
         </section>
 
         <!-- SCOPE CREEP INTEL -->

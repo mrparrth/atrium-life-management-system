@@ -12,6 +12,11 @@ import EmptyState from '@/components/EmptyState.vue'
 import { Plus, FolderKanban, X } from 'lucide-vue-next'
 import { onKeyStroke } from '@vueuse/core'
 import { useUIStore } from '@/stores/ui'
+import VInput from '@/components/VInput.vue'
+import VTextarea from '@/components/VTextarea.vue'
+import VSelect from '@/components/VSelect.vue'
+import VRow from '@/components/VRow.vue'
+import VCol from '@/components/VCol.vue'
 
 const ui = useUIStore()
 const projects = useProjectsStore()
@@ -131,37 +136,53 @@ watch(showNew, (open) => {
           <X class="w-4 h-4" />
         </button>
         <div class="overline">New project</div>
-        <h2 class="font-serif text-2xl mt-1 mb-5">A new thread to tend</h2>
+        <h2 class="font-serif text-2xl mt-1 mb-5">Something else</h2>
         
-        <div class="v-field-group mb-4">
-          <input ref="newTitleInput" v-model="newTitle" placeholder=" " class="v-field-input text-base font-semibold" id="new-project-title" required data-testid="new-project-title" />
-          <label for="new-project-title" class="v-field-label text-sm">Project Title *</label>
-        </div>
+        <VRow dense class="mb-4">
+          <VCol cols="12" dense>
+            <VInput
+              ref="newTitleInput"
+              v-model="newTitle"
+              label="Project Title *"
+              id="new-project-title"
+              required
+              class="font-semibold"
+              data-testid="new-project-title"
+            />
+          </VCol>
 
-        <div class="v-field-group mb-4">
-          <textarea v-model="newDesc" placeholder=" " rows="2" class="v-field-input py-3 resize-none font-sans text-xs leading-relaxed" id="new-project-desc" data-testid="new-project-desc"></textarea>
-          <label for="new-project-desc" class="v-field-label text-sm">A line of context (optional)</label>
-        </div>
+          <VCol cols="12" dense>
+            <VTextarea
+              v-model="newDesc"
+              label="A line of context (optional)"
+              id="new-project-desc"
+              :rows="2"
+              data-testid="new-project-desc"
+            />
+          </VCol>
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
-          <div class="v-field-group relative">
-            <select v-model="newArea" @focus="focusedFields.newArea = true" @blur="focusedFields.newArea = false" class="v-field-select text-xs">
-              <option :value="null">-</option>
-              <option v-for="a in areas.items" :key="a.id" :value="a.id">{{ a.name }}</option>
-            </select>
-            <span class="v-field-arrow">▼</span>
-            <label :class="['v-field-label text-xs', (newArea !== null || focusedFields.newArea) ? 'v-field-label--floating' : '']">Area</label>
-          </div>
+          <VCol cols="12" sm="6" dense>
+            <VSelect
+              v-model="newArea"
+              label="Area"
+              id="new-project-area"
+              :options="areas.items"
+              option-value="id"
+              option-label="name"
+            />
+          </VCol>
 
-          <div class="v-field-group relative">
-            <select v-model="newGoal" @focus="focusedFields.newGoal = true" @blur="focusedFields.newGoal = false" class="v-field-select text-xs">
-              <option :value="null">-</option>
-              <option v-for="g in goals.items" :key="g.id" :value="g.id">{{ g.title }}</option>
-            </select>
-            <span class="v-field-arrow">▼</span>
-            <label :class="['v-field-label text-xs', (newGoal !== null || focusedFields.newGoal) ? 'v-field-label--floating' : '']">Goal</label>
-          </div>
-        </div>
+          <VCol cols="12" sm="6" dense>
+            <VSelect
+              v-model="newGoal"
+              label="Goal"
+              id="new-project-goal"
+              :options="goals.items"
+              option-value="id"
+              option-label="title"
+            />
+          </VCol>
+        </VRow>
 
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="closeNewProject">Cancel</button>

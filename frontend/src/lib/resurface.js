@@ -11,7 +11,9 @@ export const RESURFACE = {
 
 export function isSnoozed(task) {
   if (!task?.snoozedUntil) return false;
-  return new Date(task.snoozedUntil) > new Date();
+  const until = new Date(task.snoozedUntil); until.setHours(0, 0, 0, 0);
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  return until > now;
 }
 
 export function isTaskOpen(task) {

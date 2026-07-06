@@ -7,7 +7,7 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
-import { Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Quote, Code, Minus, Link2 } from 'lucide-vue-next'
+import { Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Quote, Code, Minus, Link2, HelpCircle } from 'lucide-vue-next'
 import { useNotesStore } from '@/stores/notes'
 
 const props = defineProps({
@@ -29,6 +29,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const notesStore = useNotesStore()
 const editor = shallowRef(null)
+let isInternalUpdate = false
 
 // Dropdown State
 const showSlashMenu = ref(false)
@@ -42,6 +43,7 @@ const wikiIdx = ref(0)
 const wikiRange = ref({ from: 0, to: 0 })
 
 const dropdownPos = ref({ top: 0, left: 0 })
+const showHelpModal = ref(false)
 
 // HTML -> Markdown conversion
 const turndown = new TurndownService({
@@ -207,7 +209,7 @@ onMounted(() => {
     ],
     editorProps: {
       attributes: {
-        class: 'prose-soft focus:outline-none min-h-[400px] h-full outline-none max-w-none text-ink'
+        class: 'focus:outline-none min-h-[400px] h-full outline-none max-w-none text-ink prose-soft'
       },
       handleKeyDown(view, event) {
         if (showSlashMenu.value) {
@@ -234,7 +236,11 @@ onMounted(() => {
       checkMenus()
       const html = editor.getHTML()
       const markdown = turndown.turndown(html)
+      isInternalUpdate = true
       emit('update:modelValue', markdown)
+      nextTick(() => {
+        isInternalUpdate = false
+      })
     },
     onSelectionUpdate() {
       checkMenus()
@@ -256,6 +262,12 @@ const handleOutsideClick = (e) => {
 
 watch(() => props.modelValue, (newVal) => {
   if (!editor.value) return
+  if (isInternalUpdate) {
+    isInternalUpdate = false
+    return
+  }
+  // If the user is currently typing, the editor is the source of truth. Bypassing prevents cursor jumping.
+  if (editor.value.isFocused) return
   const currentHTML = editor.value.getHTML()
   const expectedHTML = marked.parse(newVal || '')
   if (currentHTML !== expectedHTML) {
@@ -274,6 +286,14 @@ onUnmounted(() => {
 <template>
   <div @click="editor?.commands.focus()"
     :class="['relative w-full border border-line bg-surface/30 rounded-2xl p-6 flex flex-col transition-all focus-within:border-pri-strategic focus-within:bg-surface/50', heightClass]">
+
+    <!-- Help Button -->
+    <button @click.stop="showHelpModal = true" type="button"
+      class="absolute top-3.5 right-3.5 w-6 h-6 rounded-full flex items-center justify-center border border-line bg-surface text-ink-3 hover:text-ink hover:bg-canvas hover:border-line-2 shadow-sm transition-all cursor-pointer z-10"
+      title="Formatting Help">
+      <HelpCircle class="w-3.5 h-3.5" />
+    </button>
+
     <EditorContent :editor="editor" class="editor-content flex-1 overflow-y-auto" />
 
     <!-- Slash command popup -->
@@ -322,6 +342,72 @@ onUnmounted(() => {
         <span><span class="kbd">↵</span> Select</span>
       </div>
     </div>
+
+    <!-- Help Modal Overlay -->
+    <div v-if="showHelpModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click="showHelpModal = false"></div>
+      <div
+        class="bg-surface border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl relative z-10 animate-rise-in font-sans">
+        <div class="flex items-center justify-between border-b border-line pb-3 mb-4">
+          <h3 class="text-sm uppercase tracking-wider font-bold text-ink flex items-center gap-2">
+            <HelpCircle class="w-4 h-4 text-pri-strategic" />
+            Editor Formatting Guide
+          </h3>
+          <button @click="showHelpModal = false" type="button" class="text-ink-3 hover:text-ink transition-colors">
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+
+        <div class="space-y-4 text-xs leading-relaxed text-ink-2 overflow-y-auto max-h-[70vh] pr-1">
+          <!-- Commands -->
+          <div>
+            <h4 class="font-bold text-ink uppercase tracking-wide text-[10px] mb-1 text-ink-3">Slash Commands</h4>
+            <p>Type <kbd class="kbd">/</kbd> on a new line to select block elements: Headings, Bullet Lists, Numbered
+              Lists, Checklists, Quote Blocks, Code Blocks, or Dividers.</p>
+          </div>
+
+          <!-- Wiki Links -->
+          <div>
+            <h4 class="font-bold text-ink uppercase tracking-wide text-[10px] mb-1 text-ink-3">Wiki Links</h4>
+            <p>Type <kbd class="kbd">[[</kbd> to search for other notes. Select one to link them together in your
+              directory.</p>
+          </div>
+
+          <!-- Shortcuts -->
+          <div>
+            <h4 class="font-bold text-ink uppercase tracking-wide text-[10px] mb-1.5 text-ink-3">Markdown Shortcuts
+              (While typing)</h4>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 bg-canvas/50 border border-line/50 p-2.5 rounded-xl">
+              <div><span class="font-mono text-ink"># + Space</span> Heading 1</div>
+              <div><span class="font-mono text-ink">## + Space</span> Heading 2</div>
+              <div><span class="font-mono text-ink">---</span> Divider</div>
+              <div><span class="font-mono text-ink">- or *</span> Bullet List</div>
+              <div><span class="font-mono text-ink">1.</span> Numbered List</div>
+              <div><span class="font-mono text-ink">[ ]</span> Checklist</div>
+              <div><span class="font-mono text-ink">></span> Quote</div>
+              <div><span class="font-mono text-ink">`code`</span> Inline Code</div>
+              <div><span class="font-mono text-ink">```</span> Code Block</div>
+              <div><span class="font-mono text-ink">**bold**</span> Bold</div>
+              <div><span class="font-mono text-ink">*italics*</span> Italics</div>
+            </div>
+          </div>
+
+          <!-- Shortcuts -->
+          <div>
+            <h4 class="font-bold text-ink uppercase tracking-wide text-[10px] mb-1 text-ink-3">Keyboard Shortcuts</h4>
+            <ul class="list-disc pl-4 space-y-1">
+              <li><kbd class="kbd">⌘ B</kbd> / <kbd class="kbd">Ctrl B</kbd>: Bold</li>
+              <li><kbd class="kbd">⌘ I</kbd> / <kbd class="kbd">Ctrl I</kbd>: Italic</li>
+              <li><kbd class="kbd">⌘ U</kbd> / <kbd class="kbd">Ctrl U</kbd>: Underline</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-3 border-t border-line flex justify-end">
+          <button @click="showHelpModal = false" class="btn-primary text-xs !py-1.5 !px-4">Got it</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -343,6 +429,7 @@ onUnmounted(() => {
   flex: 1 1 0%;
   min-height: 0;
 }
+
 .ProseMirror {
   flex: 1 1 0%;
   min-height: 0;

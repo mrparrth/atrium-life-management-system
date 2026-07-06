@@ -5,6 +5,7 @@ import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { Plus, Trash2, ListChecks, Edit3, GripVertical, X, Sparkles } from 'lucide-vue-next'
+import VCheckbox from '@/components/VCheckbox.vue'
 
 const nextSteps = useNextStepsStore()
 const ui = useUIStore()
@@ -171,11 +172,10 @@ async function onDrop(targetId) {
             :class="{ 'opacity-55': it.done }"
             :data-testid="`ns-item-${it.id}`"
           >
-            <input
-              type="checkbox"
-              :checked="it.done"
-              @change="nextSteps.toggleItem(sec.id, it.id)"
-              class="ns-checkbox shrink-0"
+            <VCheckbox
+              :modelValue="it.done"
+              @update:modelValue="nextSteps.toggleItem(sec.id, it.id)"
+              class="shrink-0"
               :id="`ns-item-cb-${it.id}`"
               :data-testid="`ns-item-toggle-${it.id}`"
             />

@@ -7,6 +7,8 @@ import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { Plus, X, Trash2 } from 'lucide-vue-next'
+import VInput from '@/components/VInput.vue'
+import VTextarea from '@/components/VTextarea.vue'
 
 const areas = useAreasStore()
 const projects = useProjectsStore()
@@ -86,14 +88,12 @@ watch(showNew, (open) => {
         </button>
         <div class="overline">New area</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A part of life to tend</h2>
-        <div class="v-field-group mb-4">
-          <input ref="newNameInput" v-model="newName" placeholder=" " class="v-field-input text-base font-semibold" id="new-area-name" required
+        <div class="mb-4">
+          <VInput ref="newNameInput" v-model="newName" label="Area Name *" id="new-area-name" required
             data-testid="new-area-name" />
-          <label for="new-area-name" class="v-field-label text-sm">Area Name *</label>
         </div>
-        <div class="v-field-group mb-6">
-          <textarea v-model="newDesc" placeholder=" " rows="2" class="v-field-input py-3 resize-none font-sans text-xs leading-relaxed" id="new-area-desc" />
-          <label for="new-area-desc" class="v-field-label text-sm">Why it matters (optional)</label>
+        <div class="mb-6">
+          <VTextarea v-model="newDesc" label="Why it matters (optional)" id="new-area-desc" :rows="2" />
         </div>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showNew = false">Cancel</button>

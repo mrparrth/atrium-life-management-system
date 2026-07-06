@@ -122,13 +122,14 @@ input[type="number"] {
   @apply inline-flex items-center justify-center gap-2 text-ink-2 hover:text-ink hover:bg-elevated rounded-xl px-3 py-2 text-sm font-medium transition-all duration-300;
 }
 .input-soft {
-  @apply bg-transparent border-b border-line focus:border-pri-strategic px-0 py-2 text-ink placeholder:text-ink-3 outline-none transition-colors duration-300 w-full;
+  @apply bg-transparent border-0 border-b border-line focus:ring-0 focus:border-0 focus:border-b focus:border-pri-strategic shadow-none focus:shadow-none px-0 py-2 text-ink placeholder:text-ink-3 outline-none focus:outline-none transition-colors duration-300 w-full;
 }
 .input-block {
   @apply bg-surface border border-line rounded-xl px-3 py-2 text-ink placeholder:text-ink-3 outline-none focus:border-pri-strategic transition-colors duration-300 w-full;
 }
 .overline {
   @apply text-xs uppercase tracking-overline font-medium text-ink-3;
+  text-decoration: none !important;
 }
 .kbd {
   @apply inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-md bg-elevated border border-line text-xs text-ink-2 font-medium;
@@ -141,11 +142,17 @@ input[type="number"] {
 }
 
 /* Focus rings - subtle, calm (using green strategic color) */
-:where(button, a, input, textarea, [tabindex]):focus-visible {
+:where(button, a, [tabindex]):focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgb(var(--canvas)), 0 0 0 4px rgb(var(--pri-strategic) / 0.6);
   border-radius: 0.6rem;
 }
+
+/* :where(input:not([type="checkbox"]):not([type="radio"]), textarea, select):focus {
+  outline: none;
+  border-color: rgb(var(--pri-strategic)) !important;
+  box-shadow: 0 0 0 3px rgb(var(--pri-strategic) / 0.15) !important;
+} */
 
 /* Disable ProseMirror inner focus rings to avoid double borders */
 .ProseMirror:focus, .ProseMirror:focus-visible {
@@ -227,15 +234,13 @@ input[type="number"] {
   color: rgb(var(--pri-strategic));
 }
 
-/* Notched Outline Floating Label Input (v-field-group) used in client creator popup */
+/* Notched Outline Floating Label Input (v-field-group) */
 .v-field-group {
   position: relative;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
   width: 100%;
 }
 
-.v-field-input, .v-field-select {
+.v-field-input, .v-field-select, .v-field-textarea {
   width: 100%;
   background-color: rgb(var(--surface));
   border: 1px solid rgb(var(--line));
@@ -245,7 +250,27 @@ input[type="number"] {
   color: rgb(var(--ink));
   outline: none;
   transition: all 0.2s ease;
+}
+
+.v-field-input, .v-field-select {
   min-height: 48px;
+}
+
+.v-field-textarea {
+  min-height: 80px;
+  resize: none;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.v-field-input--mono {
+  font-family: var(--font-mono, monospace);
+  color: rgb(var(--ink-2));
+}
+
+.v-field-input--small-text {
+  font-size: 0.75rem;
 }
 
 .v-field-select {
@@ -265,7 +290,7 @@ input[type="number"] {
   pointer-events: none;
 }
 
-.v-field-input:focus, .v-field-select:focus {
+.v-field-input:focus, .v-field-select:focus, .v-field-textarea:focus {
   border-color: rgb(var(--pri-strategic));
   box-shadow: 0 0 0 2px rgb(var(--pri-strategic) / 0.1);
 }
@@ -284,8 +309,15 @@ input[type="number"] {
   transform-origin: top left;
 }
 
+.v-field-group textarea ~ .v-field-label {
+  top: 1.25rem;
+  transform: translateY(-50%);
+}
+
 .v-field-input:focus ~ .v-field-label,
-.v-field-input:not(:placeholder-shown) ~ .v-field-label {
+.v-field-input:not(:placeholder-shown) ~ .v-field-label,
+.v-field-textarea:focus ~ .v-field-label,
+.v-field-textarea:not(:placeholder-shown) ~ .v-field-label {
   top: 0;
   transform: translateY(-50%) scale(0.8);
   font-size: 0.75rem;
@@ -296,7 +328,8 @@ input[type="number"] {
   letter-spacing: 0.05em;
 }
 
-.v-field-input:focus ~ .v-field-label {
+.v-field-input:focus ~ .v-field-label,
+.v-field-textarea:focus ~ .v-field-label {
   color: rgb(var(--pri-strategic));
 }
 

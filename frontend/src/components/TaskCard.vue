@@ -85,7 +85,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="!singleLine" class="card p-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
+  <div v-if="!singleLine"
+    class="card p-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
     :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
     :data-testid="`task-card-${task.id}`">
 
@@ -133,11 +134,10 @@ onUnmounted(() => {
           <PriorityBadge :important="task.important" :urgent="task.urgent" :compact="false" />
         </div>
 
-        <h4 class="font-medium text-ink text-sm leading-snug"
-          :class="{ 'line-through text-ink-3': isDone }">
+        <h4 class="font-medium text-ink text-sm leading-snug" :class="{ 'line-through text-ink-3': isDone }">
           {{ task.title }}
         </h4>
-        
+
         <p v-if="task.description && !compact" class="text-xs text-ink-2 mt-1 line-clamp-1">
           {{ task.description }}
         </p>
@@ -147,7 +147,8 @@ onUnmounted(() => {
           <span v-if="task.scheduledDate" class="flex items-center gap-1 text-ink-2 font-medium">
             <Calendar class="w-3.5 h-3.5" /> {{ inFuture(task.scheduledDate) }}
           </span>
-          <span v-if="task.dueDate" class="flex items-center gap-1 text-ink-2 font-medium" :class="{ 'text-pri-critical font-bold': isOverdue }">
+          <span v-if="task.dueDate" class="flex items-center gap-1 text-ink-2 font-medium"
+            :class="{ 'text-pri-critical font-bold': isOverdue }">
             <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
             <Clock v-else class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
           </span>
@@ -171,12 +172,12 @@ onUnmounted(() => {
       <div class="relative group">
         <button @click.stop="toggle"
           class="text-ink-3 hover:text-ink shrink-0 transition-colors mr-1 cursor-pointer flex items-center justify-center"
-          :data-testid="`task-toggle-${task.id}`" 
-          :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
+          :data-testid="`task-toggle-${task.id}`" :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
           <CheckCircle2 v-if="isDone" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
           <Circle v-else class="w-5 h-5" />
         </button>
-        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
+        <div
+          class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
           {{ isDone ? 'Mark incomplete' : 'Mark complete' }}
         </div>
       </div>
@@ -188,7 +189,8 @@ onUnmounted(() => {
           :data-testid="`task-snooze-${task.id}`">
           <BellOff class="w-4 h-4" />
         </button>
-        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
+        <div
+          class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
           Snooze task (1 day)
         </div>
       </div>
@@ -205,9 +207,11 @@ onUnmounted(() => {
           <button @click.stop="snooze(1)"
             class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">Tomorrow</button>
           <button @click.stop="snooze(3)"
-            class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">3 Days</button>
+            class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">3
+            Days</button>
           <button @click.stop="snooze(7)"
-            class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">1 Week</button>
+            class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">1
+            Week</button>
           <div class="border-t border-line my-1"></div>
           <button @click.stop="ui.openTaskEdit(task); emit('open', task); showMenu = false"
             class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-1.5">
@@ -223,22 +227,18 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div v-else class="card py-1.5 px-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
+  <div v-else
+    class="card py-1.5 px-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
     :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
     :data-testid="`task-card-${task.id}`">
 
     <div class="flex items-center gap-3 flex-1 min-w-0">
       <!-- Clickable Title & Details for Edit Modal -->
-      <div class="min-w-0 flex-1 flex items-center gap-3 cursor-pointer" @click="ui.openTaskEdit(task); emit('open', task)">
-        
+      <div class="min-w-0 flex-1 flex items-center gap-3 cursor-pointer"
+        @click="ui.openTaskEdit(task); emit('open', task)">
+
         <!-- Labels row inline -->
         <div class="flex items-center gap-2 shrink-0">
-          <!-- Project Tag -->
-          <span v-if="showProject && project"
-            class="text-[10px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-2 py-0.5 rounded-full"
-            data-testid="task-project-tag">
-            {{ project.title }}
-          </span>
           <!-- Status Tag with Dropdown Menu -->
           <div class="relative inline-block">
             <button @click.stop="showStatusMenu = !showStatusMenu"
@@ -274,22 +274,20 @@ onUnmounted(() => {
         </div>
 
         <!-- Title -->
-        <h4 class="font-medium text-ink text-sm leading-snug truncate"
-          :class="{ 'line-through text-ink-3': isDone }">
+        <h4 class="font-medium text-ink text-sm leading-snug truncate" :class="{ 'line-through text-ink-3': isDone }">
           {{ task.title }}
         </h4>
 
-        <!-- Description (subtle inline if exists) -->
-        <span v-if="task.description && !compact" class="text-xs text-ink-3 truncate hidden md:inline max-w-[200px]">
-          — {{ task.description }}
-        </span>
-
         <!-- Metrics & Meta (inline right-aligned in main area) -->
         <div class="flex items-center gap-3 text-[11px] text-ink-3 shrink-0 ml-auto mr-2">
-          <span v-if="task.scheduledDate" class="flex items-center gap-1 font-medium">
-            <Calendar class="w-3.5 h-3.5" /> {{ inFuture(task.scheduledDate) }}
+          <!-- Project Tag -->
+          <span v-if="showProject && project"
+            class="text-[10px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-2 py-0.5 rounded-full"
+            data-testid="task-project-tag">
+            {{ project.title }}
           </span>
-          <span v-if="task.dueDate" class="flex items-center gap-1 font-medium" :class="isOverdue ? 'text-pri-critical font-bold' : 'text-ink-3'">
+          <span v-if="task.dueDate" class="flex items-center gap-1 font-medium"
+            :class="isOverdue ? 'text-pri-critical font-bold' : 'text-ink-3'">
             <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
             <Clock v-else class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
           </span>
@@ -314,12 +312,12 @@ onUnmounted(() => {
       <div class="relative group">
         <button @click.stop="toggle"
           class="text-ink-3 hover:text-ink shrink-0 transition-colors mr-1 cursor-pointer flex items-center justify-center"
-          :data-testid="`task-toggle-${task.id}`" 
-          :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
+          :data-testid="`task-toggle-${task.id}`" :aria-label="isDone ? 'Mark incomplete' : 'Mark complete'">
           <CheckCircle2 v-if="isDone" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
           <Circle v-else class="w-5 h-5" />
         </button>
-        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
+        <div
+          class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
           {{ isDone ? 'Mark incomplete' : 'Mark complete' }}
         </div>
       </div>
@@ -331,7 +329,8 @@ onUnmounted(() => {
           :data-testid="`task-snooze-${task.id}`">
           <BellOff class="w-3.5 h-3.5" />
         </button>
-        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
+        <div
+          class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
           Snooze task (1 day)
         </div>
       </div>

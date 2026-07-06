@@ -103,7 +103,7 @@ export const useFinanceStore = defineStore('finance', () => {
     const p = {
       id: newId(),
       month: payload.month || new Date().toISOString().slice(0, 7),
-      entries: (payload.entries || []).filter(e => +e.value !== 0).map(e => ({ category: e.category, type: e.type, value: +e.value })),
+      entries: (payload.entries || []).filter(e => +e.value !== 0 || (e.note && e.note.trim() !== '')).map(e => ({ category: e.category, type: e.type, value: +e.value, note: e.note || '' })),
       note: payload.note || '',
       createdAt: now(), updatedAt: now(),
     }
@@ -114,6 +114,11 @@ export const useFinanceStore = defineStore('finance', () => {
   }
   async function updateCashflowPeriod(id, patch) {
     const p = cashflowPeriods.value.find(x => x.id === id); if (!p) return
+    if (patch.entries) {
+      patch.entries = patch.entries
+        .filter(e => +e.value !== 0 || (e.note && e.note.trim() !== ''))
+        .map(e => ({ category: e.category, type: e.type, value: +e.value, note: e.note || '' }))
+    }
     Object.assign(p, patch, { updatedAt: now() })
     await db.finance_cashflow_periods.put(plain(p))
     cashflowPeriods.value.sort((a, b) => b.month.localeCompare(a.month))

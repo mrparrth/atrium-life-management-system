@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
 import EmptyState from '@/components/EmptyState.vue'
+import VTooltip from '@/components/VTooltip.vue'
 import { inr } from '@/lib/money'
 import { Plus, Edit3, Trash2, ArrowDownToLine, ArrowUpFromLine, PiggyBank, Wallet, ChevronDown, ChevronRight, Copy } from 'lucide-vue-next'
 
@@ -31,6 +32,10 @@ function formatMonth(m) {
 }
 
 function label(s) { return (s || '').replace(/_/g, ' ') }
+
+function entryNotesCount(p) {
+  return (p.entries || []).filter(e => e.note && e.note.trim() !== '').length
+}
 
 function filterEntries(p, scope) {
   if (!p || !p.entries) return []
@@ -86,9 +91,9 @@ function filterEntries(p, scope) {
     </div>
 
     <div v-if="finance.cashflowPeriods.length" class="space-y-4">
-      <div v-for="p in finance.cashflowPeriods" :key="p.id" class="card overflow-hidden" :data-testid="`cf-period-${p.id}`">
+      <div v-for="p in finance.cashflowPeriods" :key="p.id" class="card overflow-visible" :data-testid="`cf-period-${p.id}`">
         <!-- Header Toggle Area -->
-        <div class="p-5 cursor-pointer select-none hover:bg-canvas/10 transition-colors" @click="togglePeriod(p.id)">
+        <div class="p-5 cursor-pointer select-none hover:bg-canvas/10 transition-colors rounded-t-2xl" @click="togglePeriod(p.id)">
           <div class="flex items-center justify-between gap-4">
             <div class="flex-1 flex flex-col md:flex-row md:items-center gap-x-6 gap-y-2 min-w-0">
               <!-- Month Name with Chevron -->
@@ -122,30 +127,60 @@ function filterEntries(p, scope) {
               <!-- Note inline if present -->
               <p v-if="p.note" class="text-xs text-ink-3 italic font-sans truncate flex-1 md:border-l md:border-line/30 md:pl-4 min-w-0" :title="p.note">{{ p.note }}</p>
             </div>
-            <div class="flex gap-1 shrink-0" @click.stop>
-              <button class="btn-ghost !p-1.5 hover:text-pri-strategic" @click="emit('open-cf', p, true)" :data-testid="`cf-copy-${p.id}`" title="Copy Month">
-                <Copy class="w-4 h-4" />
-              </button>
-              <button class="btn-ghost !p-1.5" @click="emit('open-cf', p)" :data-testid="`cf-edit-${p.id}`">
-                <Edit3 class="w-4 h-4" />
-              </button>
-              <button class="btn-ghost !p-1.5 hover:text-pri-critical" @click="deleteCf(p)"
-                :data-testid="`cf-delete-${p.id}`">
-                <Trash2 class="w-4 h-4" />
-              </button>
+            <div class="flex items-center gap-1 shrink-0" @click.stop>
+              <!-- Comment Count Badge -->
+              <VTooltip v-if="entryNotesCount(p) > 0" position="top">
+                <div class="btn-ghost !p-1.5 flex items-center gap-1 text-ink-2 select-none cursor-help mr-1">
+                  <svg class="w-4 h-4 fill-current text-ink-3" viewBox="0 0 24 24">
+                    <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+                  </svg>
+                  <span class="text-xs font-semibold font-mono">{{ entryNotesCount(p) }}</span>
+                </div>
+                <template #content>
+                  <div class="text-left font-sans">
+                    <div class="font-bold border-b border-canvas/20 pb-0.5 mb-1">Item Notes</div>
+                    <div class="space-y-1">
+                      <div v-for="e in p.entries.filter(x => x.note)" :key="e.category" class="text-[10px]">
+                        <span class="font-semibold text-canvas/80 capitalize">{{ label(e.category) }}:</span> {{ e.note }}
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </VTooltip>
+              <VTooltip text="Copy Month" position="top">
+                <button class="btn-ghost !p-1.5 hover:text-pri-strategic" @click="emit('open-cf', p, true)" :data-testid="`cf-copy-${p.id}`">
+                  <Copy class="w-4 h-4" />
+                </button>
+              </VTooltip>
+              <VTooltip text="Edit Month" position="top">
+                <button class="btn-ghost !p-1.5" @click="emit('open-cf', p)" :data-testid="`cf-edit-${p.id}`">
+                  <Edit3 class="w-4 h-4" />
+                </button>
+              </VTooltip>
+              <VTooltip text="Delete Month" position="top">
+                <button class="btn-ghost !p-1.5 hover:text-pri-critical" @click="deleteCf(p)"
+                  :data-testid="`cf-delete-${p.id}`">
+                  <Trash2 class="w-4 h-4" />
+                </button>
+              </VTooltip>
             </div>
           </div>
         </div>
 
         <!-- Collapsible Details Grid ordered like the form -->
-        <div v-show="expanded[p.id]" class="px-6 pb-6 pt-4 border-t border-line bg-canvas/5 animate-fade-in">
+        <div v-show="expanded[p.id]" class="px-6 pb-6 pt-4 border-t border-line bg-canvas/5 animate-fade-in rounded-b-2xl">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Income column -->
             <div class="space-y-3">
               <div class="text-[10px] uppercase tracking-wider font-bold text-pri-strategic border-b border-line/40 pb-1 mb-2">Income</div>
               <div class="space-y-1">
                 <div v-for="e in filterEntries(p, 'income')" :key="e.category" class="flex items-baseline justify-between py-1 border-b border-line/10 last:border-b-0">
-                  <span class="text-xs text-ink-2 capitalize">{{ label(e.category) }}</span>
+                  <span class="text-xs text-ink-2 capitalize flex items-center gap-1.5 min-w-0">
+                    <span class="truncate">{{ label(e.category) }}</span>
+                    <VTooltip v-if="e.note" :text="e.note" position="top">
+                      <span class="w-1.5 h-1.5 rounded-full bg-ink-3/60 cursor-help shrink-0"></span>
+                    </VTooltip>
+                  </span>
                   <span class="text-xs font-mono font-semibold text-pri-strategic">{{ e.value < 0 ? `-${inr(Math.abs(e.value))}` : `+${inr(e.value)}` }}</span>
                 </div>
                 <div v-if="!filterEntries(p, 'income').length" class="text-xs text-ink-3/40 italic">No income entries</div>
@@ -157,7 +192,12 @@ function filterEntries(p, scope) {
               <div class="text-[10px] uppercase tracking-wider font-bold text-pri-interruptive border-b border-line/40 pb-1 mb-2">Investment</div>
               <div class="space-y-1">
                 <div v-for="e in filterEntries(p, 'investment')" :key="e.category" class="flex items-baseline justify-between py-1 border-b border-line/10 last:border-b-0">
-                  <span class="text-xs text-ink-2 capitalize">{{ label(e.category) }}</span>
+                  <span class="text-xs text-ink-2 capitalize flex items-center gap-1.5 min-w-0">
+                    <span class="truncate">{{ label(e.category) }}</span>
+                    <VTooltip v-if="e.note" :text="e.note" position="top">
+                      <span class="w-1.5 h-1.5 rounded-full bg-ink-3/60 cursor-help shrink-0"></span>
+                    </VTooltip>
+                  </span>
                   <span class="text-xs font-mono font-semibold text-pri-interruptive">{{ e.value < 0 ? `+${inr(Math.abs(e.value))}` : `-${inr(e.value)}` }}</span>
                 </div>
                 <div v-if="!filterEntries(p, 'investment').length" class="text-xs text-ink-3/40 italic">No investment entries</div>
@@ -169,7 +209,12 @@ function filterEntries(p, scope) {
               <div class="text-[10px] uppercase tracking-wider font-bold text-pri-critical border-b border-line/40 pb-1 mb-2">Expenses</div>
               <div class="space-y-1">
                 <div v-for="e in filterEntries(p, 'expense')" :key="e.category" class="flex items-baseline justify-between py-1 border-b border-line/10 last:border-b-0">
-                  <span class="text-xs text-ink-2 capitalize">{{ label(e.category) }}</span>
+                  <span class="text-xs text-ink-2 capitalize flex items-center gap-1.5 min-w-0">
+                    <span class="truncate">{{ label(e.category) }}</span>
+                    <VTooltip v-if="e.note" :text="e.note" position="top">
+                      <span class="w-1.5 h-1.5 rounded-full bg-ink-3/60 cursor-help shrink-0"></span>
+                    </VTooltip>
+                  </span>
                   <span class="text-xs font-mono font-semibold text-pri-critical">{{ e.value < 0 ? `+${inr(Math.abs(e.value))}` : `-${inr(e.value)}` }}</span>
                 </div>
                 <div v-if="!filterEntries(p, 'expense').length" class="text-xs text-ink-3/40 italic">No expense entries</div>

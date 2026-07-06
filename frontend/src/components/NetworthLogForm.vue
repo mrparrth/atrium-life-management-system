@@ -592,8 +592,7 @@ const scopeMeta = {
   gap: 0.75rem;
   padding: 0.3rem 0.5rem;
   cursor: text;
-  transition: background 0.15s ease, border-left-color 0.15s ease;
-  border-left: 3px solid transparent;
+  transition: background 0.15s ease;
   border-bottom: 1px solid rgb(var(--line) / 0.12);
 }
 
@@ -604,20 +603,16 @@ const scopeMeta = {
 /* ── Themed hover & focus-within states ── */
 .nw-row-hover-asset:hover {
   background: rgb(var(--pri-strategic) / 0.04);
-  border-left-color: rgb(var(--pri-strategic));
 }
 .nw-row-hover-asset:focus-within {
   background: rgb(var(--pri-strategic) / 0.06);
-  border-left-color: rgb(var(--pri-strategic));
 }
 
 .nw-row-hover-liability:hover {
   background: rgb(var(--pri-critical) / 0.04);
-  border-left-color: rgb(var(--pri-critical));
 }
 .nw-row-hover-liability:focus-within {
   background: rgb(var(--pri-critical) / 0.06);
-  border-left-color: rgb(var(--pri-critical));
 }
 
 .nw-row-single:hover .nw-row-label {
@@ -681,7 +676,13 @@ const scopeMeta = {
 
 .nw-input:focus {
   border-bottom-color: rgb(var(--ink-2));
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
   color: rgb(var(--ink));
+  outline: 2px solid transparent !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
 }
 
 .nw-input::placeholder {

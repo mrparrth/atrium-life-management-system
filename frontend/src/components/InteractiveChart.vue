@@ -38,10 +38,29 @@ const activeSeries = computed(() => {
   return []
 })
 
-const labels = computed(() => {
-  if (!activeSeries.value.length) return []
-  return activeSeries.value[0].data.map(d => d.label)
-})
+function parseLabel(label) {
+  if (!label) return 0
+  const str = String(label).trim()
+  
+  // Case 1: Pure year (e.g., "2020")
+  if (/^\d{4}$/.test(str)) {
+    return new Date(parseInt(str, 10), 0, 1).getTime()
+  }
+  
+  // Case 2: Standard short date string like "Dec 2020", "Mar 2021"
+  const parsed = Date.parse(`1 ${str}`)
+  if (!isNaN(parsed)) {
+    return parsed
+  }
+  
+  // Case 3: ISO like "2020-12" or similar
+  const parsedISO = Date.parse(str)
+  if (!isNaN(parsedISO)) {
+    return parsedISO
+  }
+  
+  return 0
+}
 
 function hexToRgba(hex, alpha) {
   if (!hex || !hex.startsWith('#')) return hex
@@ -61,10 +80,12 @@ function hexToRgba(hex, alpha) {
 
 const chartData = computed(() => {
   return {
-    labels: labels.value,
     datasets: activeSeries.value.map(s => ({
       label: s.name,
-      data: s.data.map(d => d.value),
+      data: s.data.map(d => ({
+        x: parseLabel(d.label),
+        y: d.value
+      })),
       borderColor: s.color || props.color,
       backgroundColor: hexToRgba(s.color || props.color, 0.08),
       fill: activeSeries.value.length === 1,
@@ -111,9 +132,22 @@ const chartOptions = computed(() => {
         borderColor: 'rgba(255,255,255,0.1)',
         borderWidth: 1,
         callbacks: {
+          title: function (context) {
+            if (!context.length) return ''
+            const value = context[0].parsed.x
+            const d = new Date(value)
+            if (isNaN(d.getTime())) return ''
+            const allYears = activeSeries.value.every(s => 
+              s.data.every(d => /^\d{4}$/.test(String(d.label).trim()))
+            )
+            if (allYears) {
+              return d.getFullYear().toString()
+            }
+            return d.toLocaleString('en-US', { month: 'short', year: 'numeric' })
+          },
           label: function (context) {
             const label = context.dataset.label || ''
-            const val = context.raw
+            const val = context.raw.y !== undefined ? context.raw.y : context.raw
             return ` ${label}: ${inr(val)}`
           },
           labelTextColor: function () {
@@ -124,12 +158,24 @@ const chartOptions = computed(() => {
     },
     scales: {
       x: {
+        type: 'linear',
         grid: {
           display: false
         },
         ticks: {
           color: 'var(--color-ink-3, #8E8D8A)',
-          font: { family: 'monospace', size: 10 }
+          font: { family: 'monospace', size: 10 },
+          callback: function (value) {
+            const d = new Date(value)
+            if (isNaN(d.getTime())) return value
+            const allYears = activeSeries.value.every(s => 
+              s.data.every(d => /^\d{4}$/.test(String(d.label).trim()))
+            )
+            if (allYears) {
+              return d.getFullYear().toString()
+            }
+            return d.toLocaleString('en-US', { month: 'short', year: 'numeric' })
+          }
         }
       },
       y: {

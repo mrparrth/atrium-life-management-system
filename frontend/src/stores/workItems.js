@@ -5,8 +5,23 @@ import { db, newId, now, plain } from '@/db'
 export const useWorkItemsStore = defineStore('workItems', () => {
   const items = ref([])
 
+  function sortWorkItems(list) {
+    list.sort((a, b) => {
+      // 1. Items WITH a due date come first, sorted ascending by due date (soonest first).
+      // 2. Items WITHOUT a due date come next, sorted by createdAt descending (newest first).
+      if (a.dueDate && b.dueDate) {
+        return a.dueDate.localeCompare(b.dueDate)
+      }
+      if (a.dueDate) return -1
+      if (b.dueDate) return 1
+      return b.createdAt.localeCompare(a.createdAt)
+    })
+    return list
+  }
+
   async function load() {
-    items.value = await db.work_items.toArray()
+    const raw = await db.work_items.toArray()
+    items.value = sortWorkItems(raw)
   }
 
   async function add(payload) {
@@ -32,6 +47,7 @@ export const useWorkItemsStore = defineStore('workItems', () => {
     }
     await db.work_items.add(item)
     items.value.push(item)
+    sortWorkItems(items.value)
     return item
   }
 
@@ -48,6 +64,7 @@ export const useWorkItemsStore = defineStore('workItems', () => {
     }
     Object.assign(item, patch, { updatedAt: now() })
     await db.work_items.put(plain(item))
+    sortWorkItems(items.value)
   }
 
   async function remove(id) {

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
 import { inr, inrShort } from '@/lib/money'
@@ -21,17 +21,20 @@ const note = ref(props.initial?.note || '')
 // ── Values ─────────────────────────────────────────────────────
 const valuesMap = ref({})
 const displayValues = ref({})
+const notesMap = ref({})
 function makeKey(type, category) { return `${type}::${category}` }
 
 function initValues() {
   const map = {}
   const dispMap = {}
+  const nMap = {}
   for (const scope of ['income', 'investment', 'expense']) {
     for (const cat of finance.visibleCategoriesForScope(scope, props.initial)) {
       const key = makeKey(scope, cat.name)
       const def = cat.defaultValue ? +cat.defaultValue : 0
       map[key] = def
       dispMap[key] = def === 0 ? '0' : inrShort(def)
+      nMap[key] = ''
     }
   }
   if (props.initial?.entries) {
@@ -39,10 +42,12 @@ function initValues() {
       const key = makeKey(e.type, e.category)
       map[key] = +e.value
       dispMap[key] = inrShort(e.value)
+      nMap[key] = e.note || ''
     }
   }
   valuesMap.value = map
   displayValues.value = dispMap
+  notesMap.value = nMap
 }
 initValues()
 watch(() => finance.categories.length, initValues)
@@ -137,14 +142,49 @@ watch(valuesMap, () => {
 
 function toggleGroup(key) { collapsed.value[key] = !collapsed.value[key] }
 
+// ── Note Popover Helpers ─────────────────────────────────────────
+const activeNoteKey = ref(null)
+const activeNoteVal = ref('')
+
+function openNoteEditor(scope, catName) {
+  const key = makeKey(scope, catName)
+  activeNoteKey.value = key
+  activeNoteVal.value = notesMap.value[key] || ''
+}
+
+function saveNote() {
+  if (activeNoteKey.value) {
+    notesMap.value[activeNoteKey.value] = activeNoteVal.value
+  }
+  activeNoteKey.value = null
+}
+
+function onDocumentClick(e) {
+  if (activeNoteKey.value) {
+    const isClickInside = e.target.closest('.cf-note-container') || e.target.closest('.cf-note-editor')
+    if (!isClickInside) {
+      saveNote()
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocumentClick)
+})
+
 // ── Save / close ────────────────────────────────────────────────
 async function save() {
   const entries = []
   for (const [k, v] of Object.entries(valuesMap.value)) {
     const num = +v
-    if (!num) continue
+    const entryNote = notesMap.value[k] || ''
+    if (!num && !entryNote.trim()) continue
     const [type, category] = k.split('::')
-    entries.push({ type, category, value: num })
+    entries.push({ type, category, value: num, note: entryNote.trim() })
   }
   if (!entries.length) { ui.showToast('Add at least one value', 'error'); return }
 
@@ -320,15 +360,56 @@ const scopeMeta = {
 
                 <!-- Rows — single-column stacked list -->
                 <div v-show="!collapsed[`${scope}::${group.name}`]" class="cf-rows-list">
-                  <label v-for="c in group.cats" :key="c.id" class="cf-row-single" :class="`cf-row-hover-${scope}`"
+                  <div v-for="c in group.cats" :key="c.id" class="cf-row-single group/row relative" :class="`cf-row-hover-${scope}`"
                     :data-testid="`cf-input-${scope}-${c.name}`">
                     <span class="cf-row-label">{{ label(c.name) }}</span>
-                    <input type="text" :value="displayValues[makeKey(scope, c.name)]"
-                      @focus="onFocus(scope, c.name, $event)" @input="onInput(scope, c.name, $event.target.value)"
-                      @blur="onBlur(scope, c.name)" class="cf-input"
-                      :class="(+valuesMap[makeKey(scope, c.name)] || 0) !== 0 ? 'cf-input-filled' : 'cf-input-empty'"
-                      placeholder="0" />
-                  </label>
+                    
+                    <div class="relative flex items-center gap-2" @mouseleave="saveNote">
+                      <!-- Note bubble (visible if note exists, or on hover of the row) -->
+                      <button 
+                        type="button"
+                        class="btn-ghost !p-1 transition-colors cf-note-container"
+                        :class="[
+                          notesMap[makeKey(scope, c.name)] 
+                            ? '!text-ink-2' 
+                            : '!text-ink-3/30 hover:!text-ink-3 opacity-0 group-hover/row:opacity-100'
+                        ]"
+                        @mouseenter="openNoteEditor(scope, c.name)"
+                        @click.stop="openNoteEditor(scope, c.name)"
+                        title="Add/Edit Note"
+                        tabindex="-1"
+                      >
+                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+                        </svg>
+                      </button>
+
+                      <div class="relative flex items-center">
+                        <input type="text" :value="displayValues[makeKey(scope, c.name)]"
+                          @focus="onFocus(scope, c.name, $event)" @input="onInput(scope, c.name, $event.target.value)"
+                          @blur="onBlur(scope, c.name)" class="cf-input"
+                          :class="(+valuesMap[makeKey(scope, c.name)] || 0) !== 0 ? 'cf-input-filled' : 'cf-input-empty'"
+                          placeholder="0" />
+                      </div>
+
+                      <!-- Floating Note Editor Popover -->
+                      <div v-if="activeNoteKey === makeKey(scope, c.name)" 
+                        class="absolute right-0 top-full mt-1.5 w-64 p-3 bg-surface border border-line rounded-xl shadow-xl z-50 animate-rise-in text-left cf-note-editor"
+                        @click.stop
+                      >
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-ink-3 mb-1.5">Note for {{ label(c.name) }}</div>
+                        <textarea 
+                          v-model="activeNoteVal" 
+                          placeholder="Write a note..."
+                          class="w-full bg-canvas border border-line rounded-lg p-2 text-xs outline-none focus:border-pri-strategic font-sans placeholder-ink-3 resize-none text-ink"
+                          rows="3"
+                          autofocus
+                          @keydown.enter.prevent="saveNote"
+                          @keydown.esc.stop="activeNoteKey = null"
+                        ></textarea>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

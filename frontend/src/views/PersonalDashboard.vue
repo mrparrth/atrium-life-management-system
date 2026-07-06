@@ -10,7 +10,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { useReviewsStore } from '@/stores/reviews'
 import { useYearsStore } from '@/stores/years'
 import { useUIStore } from '@/stores/ui'
-import { useFollowsStore } from '@/stores/follows'
+import { useFollowsStore, BRAND_SVG_PATHS, getPlatformStyles } from '@/stores/follows'
 import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing } from '@/lib/resurface'
 import { fromNow } from '@/lib/date'
 import { inr } from '@/lib/money'
@@ -184,6 +184,12 @@ const memory = computed(() => {
   return memoryResurfacing(notes.items, bookmarks.items)
 })
 
+const clickedMemoryItems = ref(new Set())
+function markClicked(id) {
+  clickedMemoryItems.value.add(id)
+  clickedMemoryItems.value = new Set(clickedMemoryItems.value)
+}
+
 const lastWeeklyReview = computed(() => reviews.items.find(r => r.type === 'weekly'))
 
 async function openDailyJournal() {
@@ -214,8 +220,7 @@ async function openDailyJournal() {
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="dashboard">
-    <PageHeader :overline="todayDate" :title="`${greeting}.`"
-      :sub="currentYear?.theme || 'A quiet system for the things that matter.'">
+    <PageHeader :overline="todayDate" :title="`${greeting}.`" :sub="'Clear today. Start tomorrow lighter.'">
       <template #right>
         <button class="btn-ghost" @click="openDailyJournal" data-testid="dash-journal-btn">
           <BookOpen class="w-4 h-4" /> Journal <span class="kbd ml-1.5 select-none">⌘2</span>
@@ -239,7 +244,7 @@ async function openDailyJournal() {
           <SectionHeader overline="Today" title="Today focus"
             :hint="sortedToday.length ? 'A few quiet things to attend to.' : 'Nothing scheduled - the day is open.'">
             <template #right>
-              <RouterLink to="/today" class="btn-ghost text-sm">Open today ({{ todayCount }})
+              <RouterLink to="/today" class="btn-ghost text-sm">Open today ({{ todayCount }} tasks)
                 <ArrowRight class="w-3 h-3 ml-1" />
               </RouterLink>
             </template>
@@ -255,13 +260,13 @@ async function openDailyJournal() {
           <SectionHeader overline="Coming up" title="Coming up"
             :hint="sortedUpcoming.length ? 'The next seven days.' : 'A clear horizon.'">
             <template #right>
-              <RouterLink to="/tasks" class="btn-ghost text-sm">All tasks ({{ upcomingCount }})
+              <RouterLink to="/tasks" class="btn-ghost text-sm">All tasks ({{ upcomingCount }} tasks)
                 <ArrowRight class="w-3 h-3 ml-1" />
               </RouterLink>
             </template>
           </SectionHeader>
           <div v-if="sortedUpcoming.length" class="space-y-3">
-            <TaskCard v-for="t in sortedUpcoming" :key="t.id" :task="t" :single-line="true" :show-project="false" />
+            <TaskCard v-for="t in sortedUpcoming.slice(0, 2)" :key="t.id" :task="t" :single-line="true" :show-project="false" />
           </div>
           <EmptyState v-else title="A clear horizon" hint="Plan when ready." />
         </section>
@@ -301,7 +306,7 @@ async function openDailyJournal() {
               <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
               <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
                 fromNow(lastWeeklyReview.createdAt)
-                }}</p>
+              }}</p>
             </div>
             <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
           </div>
@@ -322,19 +327,39 @@ async function openDailyJournal() {
           <div class="space-y-4 mt-5">
             <!-- Daily Inspiration Creator Follow Resurfacing -->
             <a v-for="rf in resurfacedFollows" :key="rf.id" :href="rf.url" target="_blank"
+              @click="markClicked(rf.id)"
               class="card p-4 block hover:border-line-2 transition-all duration-300 bg-amber-500/5 hover:!border-amber-500/50"
-              :class="rf.important ? 'border-amber-500 ring-1 ring-amber-500' : 'border-amber-500/20'"
+              :class="[
+                clickedMemoryItems.has(rf.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : '',
+                rf.important && !clickedMemoryItems.has(rf.id) ? 'border-amber-500 ring-1 ring-amber-500' : 'border-amber-500/20'
+              ]"
               :data-testid="`resurface-follow-${rf.id}`">
-              <div class="flex items-center gap-2">
-                <Compass class="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
-                <span
-                  class="overline text-amber-600 dark:text-amber-400 font-semibold tracking-wider flex items-center gap-1.5">
-                  <span>Creator Inspiration</span>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <Compass class="w-3.5 h-3.5" :class="clickedMemoryItems.has(rf.id) ? 'text-ink-3 fill-ink-3/10' : 'text-amber-500 fill-amber-500/20'" />
+                  <span
+                    class="overline font-semibold tracking-wider flex items-center gap-1.5"
+                    :class="clickedMemoryItems.has(rf.id) ? 'text-ink-3' : 'text-amber-600 dark:text-amber-400'">
+                    <span>Radar</span>
+                  </span>
+                </div>
+                <span v-if="rf.category"
+                  class="text-[9px] uppercase tracking-wider font-semibold border px-1.5 py-0.5 rounded-full capitalize"
+                  :class="clickedMemoryItems.has(rf.id) ? 'text-ink-3 bg-canvas/30 border-line/30' : 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'">
+                  {{ rf.category }}
                 </span>
               </div>
               <div class="font-serif text-lg mt-1.5 flex items-center gap-1.5">
                 <span>{{ rf.name }}</span>
-                <span class="text-xs text-ink-3 font-normal font-sans">({{ rf.platform }})</span>
+                <span v-if="rf.platform"
+                  class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all ml-1"
+                  :class="getPlatformStyles(rf.platform)" :title="rf.platform.toUpperCase()">
+                  <svg v-if="BRAND_SVG_PATHS[rf.platform]" class="w-2 h-2 fill-current" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path :d="BRAND_SVG_PATHS[rf.platform]" />
+                  </svg>
+                  <span v-else class="text-[8px] font-sans font-semibold uppercase">{{ rf.platform }}</span>
+                </span>
               </div>
               <p v-if="rf.reason" class="text-sm text-ink-2 mt-1 line-clamp-3 leading-relaxed">{{
                 rf.reason }}</p>
@@ -342,11 +367,13 @@ async function openDailyJournal() {
 
             <!-- Notes (up to 3) -->
             <RouterLink v-for="n in memory.notes.slice(0, 3)" :key="n.id" :to="`/notes/${n.id}`"
+              @click="markClicked(n.id)"
               class="card p-4 block hover:border-line-2 transition-all duration-300"
+              :class="clickedMemoryItems.has(n.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
               :data-testid="`resurface-note-${n.id}`">
               <div class="flex items-center gap-2">
                 <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
-                  }}</span>
+                }}</span>
               </div>
               <div class="font-serif text-lg mt-1.5 leading-snug">{{ n.title }}</div>
               <p class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ n.body }}</p>
@@ -354,11 +381,20 @@ async function openDailyJournal() {
 
             <!-- Bookmarks (up to 3) -->
             <a v-for="b in memory.bookmarks.slice(0, 3)" :key="b.id" :href="b.url" target="_blank"
+              @click="markClicked(b.id)"
               class="card p-4 block hover:border-line-2 transition-all duration-300"
+              :class="clickedMemoryItems.has(b.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
               :data-testid="`resurface-bookmark-${b.id}`">
-              <div class="flex items-center gap-2">
-                <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{ fromNow(b.lastViewedAt)
-                  }}</span>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{
+                    fromNow(b.lastViewedAt)
+                    }}</span>
+                </div>
+                <span v-if="b.category"
+                  class="text-[9px] uppercase tracking-wider text-ink-3 font-semibold bg-canvas border border-line px-1.5 py-0.5 rounded-full capitalize">
+                  {{ b.category }}
+                </span>
               </div>
               <div class="font-serif text-lg mt-1.5 leading-snug">{{ b.title }}</div>
               <p class="text-sm text-ink-2 mt-1 truncate">{{ b.url }}</p>

@@ -6,6 +6,13 @@ import { useUIStore } from '@/stores/ui'
 import { X, CheckCircle2, Star, Clock, Calendar, CheckCircle } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import Combobox from '@/components/Combobox.vue'
+import DateField from '@/components/DateField.vue'
+import VInput from '@/components/VInput.vue'
+import VUrlInput from '@/components/VUrlInput.vue'
+import VSelect from '@/components/VSelect.vue'
+import VTextarea from '@/components/VTextarea.vue'
+import VRow from '@/components/VRow.vue'
+import VCol from '@/components/VCol.vue'
 
 const props = defineProps({
   // If editing, pass the work item object. If creating, leave null/undefined.
@@ -239,121 +246,62 @@ onUnmounted(() => {
         <!-- Body (Tight Spacing, Floating Dropdowns) -->
         <div class="flex-1 overflow-y-visible py-4 space-y-3.5 pr-1">
 
-          <!-- Row 1: Title -->
-          <div class="v-field-group">
-            <input ref="titleEl" v-model="title" placeholder=" " class="v-field-input text-lg font-bold" id="item-title" required />
-            <label for="item-title" class="v-field-label text-base font-semibold">Task Title *</label>
-          </div>
+          <VInput ref="titleEl" v-model="title" label="Task Title *" id="item-title" required />
 
           <!-- Row 2: Client + Status -->
-          <div class="grid grid-cols-2 gap-4">
-            <Combobox :options="clientOptions" v-model="clientId" label="Client Association" is-field />
+          <VRow>
+            <VCol cols="12" sm="6">
+              <VSelect v-model="clientId" label="Client Association" id="item-client"
+                :options="clientsStore.items.filter(c => c.status !== 'inactive' || (item && c.id === item.clientId))"
+                option-value="id" option-label="name" searchable placeholder="---none---" />
+            </VCol>
+            <VCol cols="12" sm="6">
+              <VSelect v-model="status" label="Status" id="item-status" :options="[
+                { key: 'critical', label: 'Critical' },
+                { key: 'in_progress', label: 'In Progress' },
+                { key: 'waiting_feedback', label: 'Waiting For Feedback' },
+                { key: 'on_hold', label: 'On Hold' },
+                { key: 'ask_milestone', label: 'Ask For Next Milestone' },
+                { key: 'pending_closure', label: 'Pending Closure' },
+                { key: 'complete', label: 'Complete' },
+                { key: 'dropped', label: 'Dropped' }
+              ]" option-value="key" option-label="label" />
+            </VCol>
+          </VRow>
 
-            <div class="v-field-group relative">
-              <button type="button" @click.stop="showStatusDropdown = !showStatusDropdown"
-                class="w-full text-left text-sm bg-surface border border-line rounded-xl px-4 py-3 min-h-[48px] text-ink flex items-center justify-between focus:outline-none focus:border-pri-strategic transition-all cursor-pointer">
-                <div class="flex items-center gap-2 font-semibold">
-                  <span class="w-2.5 h-2.5 rounded-full" :class="STATUS_MAP[status]?.dotColor || 'bg-ink-3'"></span>
-                  <span class="text-xs">{{ getStatusLabel(status) }}</span>
-                </div>
-                <span class="text-ink-3 text-[8px] pointer-events-none">▼</span>
-              </button>
-
-              <!-- Floating label -->
-              <label class="v-field-label v-field-label--floating v-field-label--floating-focused"
-                style="background-color: rgb(var(--surface)); z-index: 10; padding: 0 4px;">Status</label>
-
-              <!-- Click catcher -->
-              <div v-if="showStatusDropdown" class="fixed inset-0 z-40" @click.stop="showStatusDropdown = false">
-              </div>
-
-              <!-- Custom Popover Menu -->
-              <div v-if="showStatusDropdown"
-                class="absolute left-0 right-0 mt-1 rounded-xl bg-surface border border-line p-1 shadow-lg z-50 animate-rise-in font-sans max-h-60 overflow-y-auto">
-
-                <!-- To-do Group -->
-                <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1">To-do</div>
-                <button v-for="st in statusGroups.to_do" :key="st.key" type="button"
-                  @click.stop="status = st.key; showStatusDropdown = false"
-                  class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
-                  {{ st.label }}
-                </button>
-
-                <!-- In Progress Group -->
-                <div
-                  class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
-                  In progress</div>
-                <button v-for="st in statusGroups.in_progress" :key="st.key" type="button"
-                  @click.stop="status = st.key; showStatusDropdown = false"
-                  class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
-                  {{ st.label }}
-                </button>
-
-                <!-- Complete Group -->
-                <div
-                  class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
-                  Complete</div>
-                <button v-for="st in statusGroups.complete" :key="st.key" type="button"
-                  @click.stop="status = st.key; showStatusDropdown = false"
-                  class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
-                  {{ st.label }}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Row 3: Scope Description -->
-          <div class="v-field-group">
-            <textarea v-model="description" placeholder=" "
-              class="v-field-input h-14 py-2 resize-none font-sans text-xs leading-relaxed" id="item-desc"></textarea>
-            <label for="item-desc" class="v-field-label text-xs">Scope Description</label>
-          </div>
+          <VTextarea v-model="description" label="Scope Description" id="item-desc" autogrow />
 
           <!-- Row 4: Due Date + Est Hours + Charged -->
-          <div class="grid grid-cols-3 gap-4">
-            <div class="v-field-group">
-              <input type="date" v-model="dueDate" placeholder=" " class="v-field-input text-xs text-ink-2 font-mono"
-                id="item-duedate" />
-              <label for="item-duedate" class="v-field-label text-xs">Due Date</label>
-            </div>
+          <VRow>
+            <VCol cols="12" sm="6">
+              <DateField v-model="dueDate" label="Due Date" id="item-duedate" />
+            </VCol>
+            <VCol cols="12" sm="3">
+              <VInput type="number" v-model="estimatedHours" min="0" step="0.5" label="Est. Hours" id="item-esthours" />
+            </VCol>
+            <VCol cols="12" sm="3">
+              <VInput type="number" v-model="charged" min="0" label="Charged ($)" id="item-charged" />
+            </VCol>
+          </VRow>
 
-            <div class="v-field-group">
-              <input type="number" v-model="estimatedHours" min="0" step="0.5" placeholder=" "
-                class="v-field-input text-xs" id="item-esthours" />
-              <label for="item-esthours" class="v-field-label text-xs">Est. Hours</label>
-            </div>
-
-            <div class="v-field-group">
-              <input type="number" v-model="charged" min="0" step="1" placeholder=" " class="v-field-input text-xs"
-                id="item-charged" />
-              <label for="item-charged" class="v-field-label text-xs">Charged ($)</label>
-            </div>
-          </div>
-
-          <!-- Row 5: Billing Type + Drive Folder URL -->
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <select v-model="billingType" @focus="focusedFields.billingType = true"
-                @blur="focusedFields.billingType = false" class="v-field-select text-xs">
-                <option value="fixed">Fixed-price milestone</option>
-                <option value="hourly">Hourly Contract</option>
-                <option value="none">Non-billable (admin)</option>
-              </select>
-              <span class="v-field-arrow">▼</span>
-              <label
-                :class="['v-field-label text-xs', (billingType || focusedFields.billingType) ? 'v-field-label--floating' : '', focusedFields.billingType ? 'v-field-label--floating-focused' : '']">Billing
-                Setup</label>
-            </div>
-
-            <div class="v-field-group">
-              <input v-model="driveFolderId" placeholder=" " class="v-field-input text-xs font-mono text-ink-3"
-                id="item-drive" />
-              <label for="item-drive" class="v-field-label text-xs text-ink-3">Drive Folder ID/URL</label>
-            </div>
-          </div>
+          <!-- Row 5: Billing Setup + Actual Hours (if editing) -->
+          <VRow>
+            <VCol cols="12" sm="6">
+              <VSelect v-model="billingType" label="Billing Setup" id="item-billing" :options="[
+                { key: 'fixed', label: 'Fixed-price milestone' },
+                { key: 'hourly', label: 'Hourly/Time-based' },
+                { key: 'retainer', label: 'Retainer inclusion' },
+                { key: 'internal', label: 'Internal / Non-billable' }
+              ]" option-value="key" option-label="label" />
+            </VCol>
+            <VCol cols="12" sm="6" v-if="isEdit">
+              <VInput type="number" v-model="actualHours" min="0" step="0.5" label="Actual Hours Logged"
+                id="item-actualhours" />
+            </VCol>
+            <VCol cols="12" :sm="isEdit ? 12 : 6">
+              <VUrlInput v-model="driveFolderId" label="Drive Folder ID/URL" id="item-drive" />
+            </VCol>
+          </VRow>
 
           <!-- Separator Line -->
           <hr v-if="isEdit" class="border-line/30 my-4" />
@@ -365,12 +313,8 @@ onUnmounted(() => {
             <div class="grid gap-4 items-center"
               :class="itemsStore.isCompleted(status) ? 'grid-cols-3' : 'grid-cols-1 max-w-xs'">
               <!-- Closed Date -->
-              <div v-if="itemsStore.isCompleted(status)" class="v-field-group">
-                <input type="date" v-model="closedDate" placeholder=" "
-                  class="v-field-input font-mono text-xs text-pri-strategic" id="item-closeddate" />
-                <label for="item-closeddate" class="v-field-label v-field-label--floating text-xs"
-                  style="color: var(--color-pri-strategic)">Closed Date</label>
-              </div>
+              <DateField v-if="itemsStore.isCompleted(status)" v-model="closedDate" label="Closed Date"
+                id="item-closeddate" />
 
               <!-- Rating -->
               <div v-if="itemsStore.isCompleted(status)" class="v-field-group relative">

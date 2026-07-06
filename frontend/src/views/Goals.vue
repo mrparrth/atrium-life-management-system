@@ -7,6 +7,12 @@ import { useTasksStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import VInput from '@/components/VInput.vue'
+import VTextarea from '@/components/VTextarea.vue'
+import VSelect from '@/components/VSelect.vue'
+import VCheckbox from '@/components/VCheckbox.vue'
+import VRow from '@/components/VRow.vue'
+import VCol from '@/components/VCol.vue'
 import { Plus, X, Target, Trash2, Folder, CheckSquare, Check } from 'lucide-vue-next'
 
 const goals = useGoalsStore()
@@ -17,6 +23,8 @@ const ui = useUIStore()
 
 const showNew = ref(false)
 const selectedGoal = ref(null)
+
+const formattedYears = computed(() => years.items.map(y => ({ id: y.id, label: `${y.year} - ${y.theme}` })))
 
 // Creation form states
 const newTitle = ref('')
@@ -215,7 +223,8 @@ watch(selectedGoal, (goal) => {
     <PageHeader overline="Horizon" title="Goals" sub="The few large things this year is for.">
       <template #right>
         <button class="btn-primary" @click="showNew = true" data-testid="new-goal-btn">
-          <Plus class="w-4 h-4" /> New goal <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
+          <Plus class="w-4 h-4" /> New goal <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
@@ -228,7 +237,7 @@ watch(selectedGoal, (goal) => {
           <div class="flex-1 min-w-0 pr-4">
             <div class="flex items-center gap-2 text-ink-3 text-xs">
               <Target class="w-3 h-3" />
-              <span class="overline">{{ yearsOf(g).map(y => y.year).join(', ') || '-' }}</span>
+              <span class="overline">{{yearsOf(g).map(y => y.year).join(', ') || '-'}}</span>
             </div>
             <div class="font-serif text-2xl mt-1.5 truncate">{{ g.title }}</div>
             <p v-if="g.description" class="text-ink-2 mt-2 line-clamp-2 leading-relaxed">{{ g.description }}</p>
@@ -258,62 +267,66 @@ watch(selectedGoal, (goal) => {
     <EmptyState v-else title="No goals yet" hint="A goal can be a quiet promise." />
 
     <!-- Create Goal Modal -->
-    <div v-if="showNew" @keydown.window.esc="showNew = false" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div v-if="showNew" @keydown.window.esc="showNew = false"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNew = false"></div>
-      <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create" class="relative w-full max-w-md card p-8 animate-rise-in">
+      <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create"
+        class="relative w-full max-w-md card p-8 animate-rise-in">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">New goal</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">Something worth pursuing</h2>
-        
-        <div class="v-field-group mb-4">
-          <input ref="newTitleInput" v-model="newTitle" placeholder=" " class="v-field-input text-base font-semibold" id="new-goal-title" required data-testid="new-goal-title" />
-          <label for="new-goal-title" class="v-field-label text-sm">Goal Title *</label>
-        </div>
 
-        <div class="v-field-group mb-4">
-          <textarea v-model="newDesc" placeholder=" " rows="2" class="v-field-input py-3 resize-none font-sans text-xs leading-relaxed" id="new-goal-desc" />
-          <label for="new-goal-desc" class="v-field-label text-sm">Why it matters (optional)</label>
-        </div>
-        
-        <div class="v-field-group relative mb-6">
-          <button type="button" @click.stop="showCreateYearDropdown = !showCreateYearDropdown"
-            class="w-full text-left text-sm bg-surface border border-line rounded-xl px-4 py-3 min-h-[48px] text-ink flex items-center justify-between focus:outline-none focus:border-pri-strategic transition-all cursor-pointer">
-            <span class="truncate text-xs font-semibold text-ink-2">{{ newYearsLabel }}</span>
-            <span class="text-ink-3 text-[8px] pointer-events-none">▼</span>
-          </button>
-          
-          <label class="v-field-label v-field-label--floating v-field-label--floating-focused"
-            style="background-color: rgb(var(--surface)); z-index: 10; padding: 0 4px;">Years Assigned</label>
+        <VRow dense class="mb-4">
+          <VCol cols="12" dense>
+            <VInput 
+              ref="newTitleInput" 
+              v-model="newTitle" 
+              label="Goal Title" 
+              id="new-goal-title" 
+              required 
+              class="font-semibold"
+              data-testid="new-goal-title" 
+            />
+          </VCol>
 
-          <div v-if="showCreateYearDropdown" class="fixed inset-0 z-40" @click.stop="showCreateYearDropdown = false"></div>
-          <div v-if="showCreateYearDropdown"
-            class="absolute left-0 right-0 top-full mt-1 w-full bg-surface border border-line rounded-xl shadow-lg z-50 p-2 space-y-1 animate-fade-in max-h-48 overflow-y-auto">
-            <label v-for="y in years.items" :key="y.id"
-              class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-canvas/50 rounded-lg cursor-pointer text-xs text-ink select-none">
-              <input type="checkbox" :checked="newYearIds.includes(y.id)" @change="toggleNewYear(y.id)"
-                class="rounded border-line text-ink focus:ring-ink/20 cursor-pointer" />
-              <span>{{ y.year }} - {{ y.theme }}</span>
-            </label>
-            <div v-if="!years.items.length" class="text-xs text-ink-3 italic p-2 text-center">
-              No years created yet.
-            </div>
-          </div>
-        </div>
+          <VCol cols="12" dense>
+            <VTextarea 
+              v-model="newDesc" 
+              label="Why it matters (optional)" 
+              id="new-goal-desc" 
+              :rows="2"
+            />
+          </VCol>
+
+          <VCol cols="12" dense>
+            <VSelect
+              v-model="newYearIds"
+              label="Years Assigned"
+              id="new-goal-years"
+              :options="formattedYears"
+              option-value="id"
+              option-label="label"
+              multiple
+              placeholder="Select years..."
+            />
+          </VCol>
+        </VRow>
 
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showNew = false">Cancel</button>
           <button type="submit" class="btn-primary" data-testid="new-goal-save">
-            Create <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Create <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </form>
     </div>
 
     <!-- Goal Details Modal (Wider split layout) -->
-    <div v-if="selectedGoal" @keydown.window.esc="selectedGoal = null" class="fixed inset-0 z-50 flex items-center justify-center p-4"
-      data-testid="goal-detail-modal">
+    <div v-if="selectedGoal" @keydown.window.esc="selectedGoal = null"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="goal-detail-modal">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="selectedGoal = null"></div>
       <div class="relative w-full max-w-5xl card p-8 animate-rise-in shadow-2xl bg-surface"
         @keydown.meta.enter.prevent="saveGoalEdits" @keydown.ctrl.enter.prevent="saveGoalEdits">
@@ -321,86 +334,61 @@ watch(selectedGoal, (goal) => {
           <X class="w-4 h-4" />
         </button>
 
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
           <!-- Left Column: Goal parameters -->
-          <div class="md:col-span-3 space-y-6">
-            <div>
-              <span class="overline text-[10px] text-ink-3 block mb-1">Goal details</span>
-              <input ref="editTitleInput" v-model="editTitle" placeholder="Title..." class="input-soft text-2xl font-serif font-semibold text-ink" />
-            </div>
+          <div class="space-y-6 md:pr-4">
+            <h2 class="font-serif text-2xl font-bold text-ink mb-2">Edit Goal</h2>
+            <VInput ref="editTitleInput" v-model="editTitle" label="Goal Details" id="goal-details-title"
+              class="font-serif text-lg" />
+            <VTextarea v-model="editDesc" label="Why it matters" id="goal-details-desc" :rows="4" />
 
-            <div>
-              <span class="overline text-[10px] text-ink-3 block mb-1">Why it matters</span>
-              <textarea v-model="editDesc" placeholder="Why it matters..." rows="5" class="input-soft text-sm resize-none text-ink-2" />
-            </div>
-
-            <div class="relative">
-              <span class="overline text-[10px] text-ink-3 block mb-2">Years Assigned</span>
-              <button type="button" @click.stop="showEditYearDropdown = !showEditYearDropdown"
-                class="input-soft text-left text-xs text-ink-2 font-semibold flex items-center justify-between w-full focus:outline-none hover:bg-canvas/60 transition-all cursor-pointer">
-                <span class="truncate">{{ editYearsLabel }}</span>
-                <span class="text-[8px] text-ink-3">▼</span>
-              </button>
-              <div v-if="showEditYearDropdown" class="fixed inset-0 z-40" @click.stop="showEditYearDropdown = false"></div>
-              <div v-if="showEditYearDropdown"
-                class="absolute left-0 right-0 top-full mt-1 w-full bg-surface border border-line rounded-xl shadow-lg z-50 p-2 space-y-1 animate-fade-in max-h-48 overflow-y-auto">
-                <label v-for="y in years.items" :key="y.id"
-                  class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-canvas/50 rounded-lg cursor-pointer text-xs text-ink select-none">
-                  <input type="checkbox" :checked="editYearIds.includes(y.id)" @change="toggleEditYear(y.id)"
-                    class="rounded border-line text-ink focus:ring-ink/20 cursor-pointer" />
-                  <span>{{ y.year }} - {{ y.theme }}</span>
-                </label>
-                <div v-if="!years.items.length" class="text-xs text-ink-3 italic p-2 text-center">
-                  No years created yet.
-                </div>
-              </div>
-            </div>
+            <VSelect v-model="editYearIds" label="Years Assigned" id="goal-years" :options="formattedYears"
+              option-value="id" option-label="label" multiple placeholder="Select years..." />
 
             <!-- Numeric progress tracking -->
-            <div class="space-y-3 pt-2">
-              <div class="flex items-center justify-between">
-                <span class="text-xs uppercase tracking-wider text-ink-3 font-semibold font-mono">Numeric tracking</span>
+            <div :class="(!editUseNumeric) ? 'space-y-3 pt-2' : 'bg-canvas/30 rounded-xl border border-line/50 p-4'">
+              <div class="flex items-center justify-between ml-1">
+                <span class="text-xs uppercase tracking-wider text-ink-3 font-semibold font-mono">Numeric
+                  tracking</span>
                 <button type="button"
                   class="w-10 h-6 rounded-full p-1 transition-colors duration-200 focus:outline-none"
-                  :class="editUseNumeric ? 'bg-ink' : 'bg-line'"
-                  @click="editUseNumeric = !editUseNumeric">
+                  :class="editUseNumeric ? 'bg-ink' : 'bg-line'" @click="editUseNumeric = !editUseNumeric">
                   <div class="bg-canvas w-4 h-4 rounded-full shadow-md transform transition-transform duration-200"
                     :class="editUseNumeric ? 'translate-x-4' : 'translate-x-0'"></div>
                 </button>
               </div>
 
-              <div v-if="editUseNumeric" class="grid grid-cols-2 gap-3 p-3 bg-canvas/30 rounded-xl border border-line/50">
-                <div>
-                  <label class="overline text-[9px] text-ink-3 block mb-1">Target Number</label>
-                  <input type="number" v-model="editTargetNumber" class="input-soft !text-sm" placeholder="e.g. 100" />
-                </div>
-                <div>
-                  <label class="overline text-[9px] text-ink-3 block mb-1">Achieved Number</label>
-                  <input type="number" v-model="editAchievedNumber" class="input-soft !text-sm" placeholder="e.g. 45" />
-                </div>
+              <div v-if="editUseNumeric" class="grid grid-cols-2 gap-4 mt-4">
+                <VInput type="number" v-model.number="editTargetNumber" label="Target Number" id="goal-target"
+                  placeholder="e.g. 100" />
+                <VInput type="number" v-model.number="editAchievedNumber" label="Achieved Number" id="goal-achieved"
+                  placeholder="e.g. 45" />
               </div>
             </div>
 
             <div class="flex items-center justify-between border-t border-line/40 pt-4">
               <div class="flex flex-col">
                 <span class="overline text-[9px] text-ink-3">Current Progress</span>
-                <span class="font-serif text-2xl font-bold mt-0.5 text-pri-strategic">{{ tempCalculatedProgress }}%</span>
+                <span class="font-serif text-2xl font-bold mt-0.5 text-pri-strategic">{{ tempCalculatedProgress
+                  }}%</span>
               </div>
               <button class="btn-primary !text-xs !py-2 !px-4" @click="saveGoalEdits">
-                Save changes <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+                Save changes <span
+                  class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
               </button>
             </div>
           </div>
 
           <!-- Right Column: Associations -->
-          <div class="md:col-span-2 space-y-6 md:border-l md:border-line/40 md:pl-8">
+          <div class="space-y-6 md:border-l md:border-line/40 md:pl-8">
             <!-- Linked Projects -->
             <div>
               <div class="flex items-center gap-1.5 mb-2">
                 <Folder class="w-3.5 h-3.5 text-ink-3" />
                 <span class="overline text-[10px] text-ink-3">Linked Projects</span>
               </div>
-              <div v-if="getGoalProjectsList(selectedGoal.id).length" class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              <div v-if="getGoalProjectsList(selectedGoal.id).length"
+                class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                 <div v-for="proj in getGoalProjectsList(selectedGoal.id)" :key="proj.id"
                   class="p-2.5 bg-canvas/40 rounded-xl border border-line/50 flex flex-col gap-1.5">
                   <div class="flex items-center justify-between gap-2">
@@ -408,7 +396,8 @@ watch(selectedGoal, (goal) => {
                       class="font-serif text-sm font-semibold text-ink hover:text-ink-2 hover:underline min-w-0 truncate">
                       {{ proj.title }}
                     </RouterLink>
-                    <span class="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border border-line bg-surface text-ink-3">
+                    <span
+                      class="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border border-line bg-surface text-ink-3">
                       {{ proj.status }}
                     </span>
                   </div>
@@ -438,22 +427,17 @@ watch(selectedGoal, (goal) => {
                 <div v-for="t in goalTasksList" :key="t.id"
                   class="flex items-center justify-between gap-3 p-2 bg-canvas/30 border border-line/40 rounded-xl hover:bg-canvas/50 transition-colors">
                   <div class="flex items-center gap-2 min-w-0">
-                    <button @click="tasks.toggleComplete(t.id)"
-                      class="w-4 h-4 rounded border flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-                      :class="t.status === 'done' ? 'bg-ink border-ink' : 'border-line hover:border-ink'">
-                      <svg v-if="t.status === 'done'" class="w-2.5 h-2.5 text-canvas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                    <span @click="ui.openTaskEdit(t)"
-                      class="text-xs truncate cursor-pointer hover:underline"
+                    <VCheckbox :modelValue="t.status === 'done'" @update:modelValue="tasks.toggleComplete(t.id)"
+                      class="shrink-0" />
+                    <span @click="ui.openTaskEdit(t)" class="text-xs truncate cursor-pointer hover:underline"
                       :class="t.status === 'done' ? 'line-through text-ink-3' : 'text-ink-2 hover:text-ink'">
                       {{ t.title }}
                     </span>
                   </div>
-                  <span v-if="t.projectId" class="text-[8px] uppercase tracking-wider font-semibold text-ink-3 px-1.5 py-0.5 bg-elevated rounded border border-line shrink-0 max-w-[80px] truncate"
+                  <span v-if="t.projectId"
+                    class="text-[8px] uppercase tracking-wider font-semibold text-ink-3 px-1.5 py-0.5 bg-elevated rounded border border-line shrink-0 max-w-[80px] truncate"
                     :title="projects.items.find(p => p.id === t.projectId)?.title">
-                    {{ projects.items.find(p => p.id === t.projectId)?.title }}
+                    {{projects.items.find(p => p.id === t.projectId)?.title}}
                   </span>
                 </div>
               </div>
@@ -461,7 +445,8 @@ watch(selectedGoal, (goal) => {
 
               <!-- Quick Add Task -->
               <form @submit.prevent="addTaskToGoal" class="flex gap-2 pt-1">
-                <input v-model="newTaskTitle" placeholder="Add task directly..." class="input-soft !text-xs py-1.5 flex-1" required />
+                <input v-model="newTaskTitle" placeholder="Add task directly..."
+                  class="input-soft !text-xs py-1.5 flex-1" required />
                 <button type="submit" class="btn-primary !text-[11px] !py-1 !px-2.5 shrink-0">Add</button>
               </form>
             </div>

@@ -6,8 +6,15 @@ import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import VInput from '@/components/VInput.vue'
+import VUrlInput from '@/components/VUrlInput.vue'
+import VSelect from '@/components/VSelect.vue'
+import VTagSelect from '@/components/VTagSelect.vue'
+import VRow from '@/components/VRow.vue'
+import VTextarea from '@/components/VTextarea.vue'
 import { fromNow } from '@/lib/date'
-import { ArrowLeft, Plus, X, ExternalLink, Trash2, Edit3, Save, Bookmark as BookmarkIcon, PenLine } from 'lucide-vue-next'
+import { getTagStyle } from '@/lib/tags'
+import { ArrowLeft, Plus, X, ExternalLink, Trash2, Edit3, Save, Bookmark as BookmarkIcon, PenLine, Layers } from 'lucide-vue-next'
 import { onKeyStroke } from '@vueuse/core'
 
 const props = defineProps({ id: String })
@@ -23,7 +30,7 @@ const showNewBm = ref(false)
 const newBm = ref({ title: '', url: '', description: '', category: 'work', tags: '' })
 
 const editing = ref(false)
-const draft = ref({ title: '', description: '', emoji: '', tags: '' })
+const draft = ref({ title: '', description: '', emoji: '', tags: [] })
 
 const showEditBm = ref(false)
 const editBmId = ref(null)
@@ -73,6 +80,41 @@ function submitCustomCategory() {
   showCustomCategoryPrompt.value = false
 }
 
+function onCategoryChange(e, type) {
+  const val = e.target.value
+  if (val === 'custom-add') {
+    newCategoryInputVal.value = ''
+    showCustomCategoryPrompt.value = true
+    if (type === 'new') {
+      newBm.value.category = 'work'
+    } else {
+      editBmForm.value.category = 'work'
+    }
+  }
+}
+
+const favoriteTagsList = computed(() => {
+  const tagsStr = settingsStore.get('favorite_bookmark_tags', '')
+  return tagsStr
+    ? tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+    : ['work', 'personal', 'inspiration', 'resource', 'reading']
+})
+
+const tagColorsMap = computed(() => settingsStore.get('bookmark_tag_colors', {}))
+
+function toggleTagInForm(form, tag) {
+  const currentTags = form.tags
+    ? form.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+    : []
+
+  if (currentTags.includes(tag)) {
+    form.tags = currentTags.filter(t => t !== tag).join(', ')
+  } else {
+    currentTags.push(tag)
+    form.tags = currentTags.join(', ')
+  }
+}
+
 function handleGlobalClick(e) {
   if (categoryDropdownOpen.value && !e.target.closest('.category-select-container-new')) {
     categoryDropdownOpen.value = false
@@ -97,7 +139,7 @@ function startEdit() {
     title: page.value.title,
     description: page.value.description || '',
     emoji: page.value.emoji || '◗',
-    tags: (page.value.tags || []).join(', '),
+    tags: page.value.tags || [],
   }
   editing.value = true
 }
@@ -106,7 +148,7 @@ async function saveEdit() {
     title: draft.value.title.trim() || page.value.title,
     description: draft.value.description,
     emoji: draft.value.emoji || '◗',
-    tags: draft.value.tags.split(',').map(t => t.trim()).filter(Boolean),
+    tags: draft.value.tags,
   })
   editing.value = false
   ui.showToast('Collection updated', 'success')
@@ -190,7 +232,7 @@ const filteredList = computed(() => {
   let res = list.value
   const q = searchQuery.value.trim().toLowerCase()
   if (q) {
-    res = res.filter(b => 
+    res = res.filter(b =>
       (b.title || '').toLowerCase().includes(q) ||
       (b.url || '').toLowerCase().includes(q) ||
       (b.description || '').toLowerCase().includes(q) ||
@@ -243,6 +285,70 @@ watch(showEditBm, (open) => {
     })
   }
 })
+
+// ── Bulk import ──────────────────────────────────────────────
+const showBulkModal = ref(false)
+const bulkText = ref('')
+const bulkLoading = ref(false)
+const bulkTextareaRef = ref(null)
+
+watch(showBulkModal, (open) => {
+  if (open) {
+    bulkText.value = ''
+    nextTick(() => bulkTextareaRef.value?.focus())
+  }
+})
+
+function parseBulkEntries(raw) {
+  const urlRegex = /https?:\/\/[^\s,;|→]+/g
+  const results = []
+
+  const lines = raw.split(/\n/).map(s => s.trim()).filter(Boolean)
+
+  for (const line of lines) {
+    const urls = [...line.matchAll(urlRegex)].map(m => m[0])
+    if (!urls.length) {
+      // Maybe comma/semicolon separated plain URLs within a single line
+      continue
+    }
+    if (urls.length === 1) {
+      const url = urls[0]
+      // Strip the URL and any separator chars → | : – — from the remainder
+      const title = line
+        .replace(url, '')
+        .replace(/[→|:–—]+/g, '')
+        .trim()
+      results.push({ url, title })
+    } else {
+      // Multiple URLs on same line — no title for any
+      for (const url of urls) results.push({ url, title: '' })
+    }
+  }
+
+  // Fallback: if line-split found nothing, try splitting on comma/semicolon/whitespace
+  if (!results.length) {
+    raw.split(/[\n,;]+|\s+/).map(s => s.trim()).forEach(s => {
+      try { if (s && new URL(s)) results.push({ url: s, title: '' }) } catch { }
+    })
+  }
+
+  return results
+}
+
+async function submitBulk() {
+  const entries = parseBulkEntries(bulkText.value)
+  if (!entries.length) return
+  bulkLoading.value = true
+  const added = []
+  for (const { url, title } of entries) {
+    const bm = await bookmarks.add({ url, title, description: '', tags: [], pageId: props.id })
+    if (bm) added.push(bm)
+  }
+  bulkLoading.value = false
+  showBulkModal.value = false
+  ui.showToast(`Added ${added.length} bookmark${added.length !== 1 ? 's' : ''}`, 'success')
+  if (added.length > 0) startEditBookmark(added[0])
+}
 </script>
 
 <template>
@@ -252,21 +358,33 @@ watch(showEditBm, (open) => {
     </button>
 
     <template v-if="editing">
-      <div class="card p-7 mb-8" data-testid="page-edit-card">
-        <div class="flex gap-3 mb-3">
-          <input v-model="draft.emoji" maxlength="2" class="input-soft text-3xl !w-16 text-center"
-            data-testid="page-edit-emoji" />
-          <input v-model="draft.title" class="input-soft flex-1 text-2xl font-serif" data-testid="page-edit-title" />
+      <div class="card overflow-hidden mb-6" data-testid="page-edit-card">
+        <!-- Row 1: Icon + Title + Actions -->
+        <div class="flex items-center gap-3 px-4 py-3">
+          <div style="width: 52px; flex-shrink: 0">
+            <VInput v-model="draft.emoji" label="Icon" id="page-edit-emoji" data-testid="page-edit-emoji"
+              maxlength="2" />
+          </div>
+          <div class="flex-1">
+            <VInput v-model="draft.title" label="Title" id="page-edit-title" data-testid="page-edit-title" />
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button class="btn-ghost text-sm" @click="editing = false">Cancel</button>
+            <button class="btn-primary text-sm" @click="saveEdit" data-testid="page-save">
+              <Save class="w-3.5 h-3.5" /> Save
+            </button>
+          </div>
         </div>
-        <textarea v-model="draft.description" rows="2" class="input-soft resize-none mb-3" placeholder="Description…"
-          data-testid="page-edit-desc" />
-        <input v-model="draft.tags" placeholder="Tags (comma separated)" class="input-soft mb-4"
-          data-testid="page-edit-tags" />
-        <div class="flex justify-end gap-2">
-          <button class="btn-ghost" @click="editing = false">Cancel</button>
-          <button class="btn-primary" @click="saveEdit" data-testid="page-save">
-            <Save class="w-4 h-4" /> Save
-          </button>
+        <!-- Row 2: Description | Tags -->
+        <div class="flex">
+          <div class="flex-1 px-4 py-3">
+            <VTextarea v-model="draft.description" label="Description" id="page-edit-desc" data-testid="page-edit-desc"
+              :rows="1" autogrow />
+          </div>
+          <div class="flex-1 px-4 py-3">
+            <VTagSelect v-model="draft.tags" :available-tags="favoriteTagsList" label="Collection Tags"
+              id="page-edit-tags" data-testid="page-edit-tags" />
+          </div>
         </div>
       </div>
     </template>
@@ -280,7 +398,8 @@ watch(showEditBm, (open) => {
             <p v-if="page.description" class="text-ink-2 mt-3 max-w-xl">{{ page.description }}</p>
             <div v-if="page.tags?.length" class="flex flex-wrap gap-1 mt-3">
               <span v-for="t in page.tags" :key="t"
-                class="text-[11px] px-2 py-0.5 rounded-full bg-elevated text-ink-2">{{ t }}</span>
+                class="text-[11px] font-semibold px-2 py-0.5 rounded-xl border select-none" :style="getTagStyle(t, tagColorsMap)">#{{
+                t }}</span>
             </div>
           </div>
         </div>
@@ -291,133 +410,163 @@ watch(showEditBm, (open) => {
           <button class="btn-ghost !text-pri-critical" @click="removePage" data-testid="page-delete">
             <Trash2 class="w-4 h-4" />
           </button>
+          <button class="btn-ghost" @click="showBulkModal = true" data-testid="page-bulk-add">
+            <Layers class="w-4 h-4" /> Add in bulk
+          </button>
           <button class="btn-primary" @click="showNewBm = true" data-testid="page-add-bookmark">
-            <Plus class="w-4 h-4" /> Add bookmark <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
+            <Plus class="w-4 h-4" /> Add bookmark <span
+              class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
           </button>
         </div>
       </header>
     </template>
 
-    <!-- FILTER BAR -->
-    <div v-if="list.length" class="mb-4 flex flex-wrap gap-3 items-center justify-between" data-testid="bm-filter-bar">
-      <input v-model="searchQuery" placeholder="Search in collection..." 
-        class="input-soft max-w-xs !py-1.5 !px-3 text-xs" data-testid="bm-filter-search" />
-      <div v-if="allTagsInCollection.length" class="flex flex-wrap gap-1 items-center">
-        <span class="text-[10px] overline text-ink-3 mr-1">Tags:</span>
-        <button v-for="t in allTagsInCollection" :key="t" 
-          @click="toggleTagFilter(t)"
-          class="text-[10px] px-2 py-0.5 rounded transition-all select-none"
-          :class="selectedTagFilter === t ? 'bg-ink text-canvas border border-ink' : 'bg-elevated hover:bg-line text-ink-2 border border-line/40'">
-          #{{ t }}
-        </button>
-      </div>
-    </div>
-
     <!-- SINGLE-LINE LIST VIEW -->
-    <div v-if="filteredList.length" class="card divide-y divide-line/60 overflow-hidden" data-testid="page-bookmark-list">
-      <div v-for="b in filteredList" :key="b.id" 
-        class="py-2 px-4 hover:bg-canvas/40 group transition-all duration-300 flex items-center justify-between gap-4"
-        :data-testid="`page-bookmark-${b.id}`">
+    <div v-if="filteredList.length" class="card divide-y divide-line/60" data-testid="page-bookmark-list">
+      <div v-for="b in filteredList" :key="b.id"
+        class="py-2 px-4 hover:bg-canvas/40 transition-all duration-300 flex items-center justify-between gap-4 cursor-pointer"
+        :data-testid="`page-bookmark-${b.id}`" @click.self="startEditBookmark(b)">
         <div class="flex items-start gap-3 min-w-0 flex-1">
           <BookmarkIcon class="w-3.5 h-3.5 text-ink-3 shrink-0 mt-0.5" />
-          <span class="font-serif text-sm font-normal text-ink truncate max-w-[200px] sm:max-w-[300px] shrink-0" 
+          <span class="font-serif text-sm font-normal text-ink truncate max-w-[200px] sm:max-w-[300px] shrink-0"
             :title="b.description ? `${b.title || b.url} — ${b.description}` : (b.title || b.url)">
             {{ b.title || b.url }}
           </span>
           <span class="text-ink-3/40 shrink-0 text-xs mt-0.5">|</span>
-          <a :href="b.url" target="_blank" @click.prevent="openBookmark(b)" 
+          <a :href="b.url" target="_blank" @click.prevent="openBookmark(b)"
             class="text-[11px] text-ink-3 hover:text-pri-strategic truncate hover:underline flex-1 min-w-0 mt-0.5">
             {{ b.url }}
           </a>
           <div v-if="b.tags?.length" class="flex gap-1 shrink-0">
-            <span v-for="t in b.tags" :key="t" 
-              class="text-[9px] font-medium px-1.5 py-0.2 rounded bg-line/60 text-ink-2 border border-line/30 select-none">
+            <span v-for="t in b.tags" :key="t"
+              class="text-[9px] font-medium px-1.5 py-0.2 rounded-xl select-none border" :style="getTagStyle(t, tagColorsMap)">
               #{{ t }}
             </span>
           </div>
         </div>
-        
+
         <div class="flex items-center gap-3 shrink-0">
           <div class="text-[10px] text-ink-3/60 select-none">opened {{ fromNow(b.lastViewedAt) }}</div>
-          <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-            <button class="relative group btn-ghost !p-1" @click="openBookmark(b)" :data-testid="`page-bm-open-${b.id}`">
+          <div class="flex items-center gap-2">
+            <button class="group/btn relative btn-ghost !p-1.5" @click="openBookmark(b)"
+              :data-testid="`page-bm-open-${b.id}`">
               <ExternalLink class="w-3.5 h-3.5" />
-              <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
-                Open Link
-                <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
+              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
+                Open link
               </span>
             </button>
-            <button class="relative group btn-ghost !p-1" @click="startEditBookmark(b)" :data-testid="`page-bm-edit-${b.id}`">
+            <button class="group/btn relative btn-ghost !p-1.5" @click="startEditBookmark(b)"
+              :data-testid="`page-bm-edit-${b.id}`">
               <PenLine class="w-3.5 h-3.5" />
-              <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
+              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
                 Edit
-                <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
               </span>
             </button>
-            <button class="relative group btn-ghost !p-1 text-xs" @click="detach(b)" :data-testid="`page-bm-detach-${b.id}`">
+            <button class="group/btn relative btn-ghost !p-1.5 text-xs leading-none" @click="detach(b)"
+              :data-testid="`page-bm-detach-${b.id}`">
               ↶
-              <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
-                Move out of collection
-                <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
+              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
+                Move out
               </span>
             </button>
-            <button class="relative group btn-ghost !p-1 hover:text-pri-critical" @click="remove(b)" :data-testid="`page-bm-delete-${b.id}`">
+            <button class="group/btn relative btn-ghost !p-1.5 hover:text-pri-critical" @click="remove(b)"
+              :data-testid="`page-bm-delete-${b.id}`">
               <Trash2 class="w-3.5 h-3.5" />
-              <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
+              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
                 Delete
-                <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
               </span>
             </button>
           </div>
         </div>
       </div>
     </div>
-    <div v-else-if="list.length" class="text-center py-8 text-ink-3 text-sm card p-6">No bookmarks match the search/filters.</div>
+    <div v-else-if="list.length" class="text-center py-8 text-ink-3 text-sm card p-6">No bookmarks match the
+      search/filters.
+    </div>
     <EmptyState v-else title="Empty collection" hint="Add a bookmark to begin." />
+
+    <!-- Bulk import modal -->
+    <div v-if="showBulkModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showBulkModal = false"></div>
+      <div class="relative w-full max-w-xl card p-8 animate-rise-in">
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showBulkModal = false">
+          <X class="w-4 h-4" />
+        </button>
+        <div class="overline">Bulk import</div>
+        <h2 class="font-serif text-2xl mt-1 mb-1">Add multiple links</h2>
+        <p class="text-ink-3 text-xs mb-4">
+          One entry per line. Supports <code class="bg-elevated px-1 rounded text-ink-2">Title → URL</code>,
+          <code class="bg-elevated px-1 rounded text-ink-2">Title | URL</code>, or bare URLs.
+          Multiple URLs on one line are split by comma or semicolon.
+        </p>
+        <textarea ref="bulkTextareaRef" v-model="bulkText" rows="7"
+          class="v-field-input resize-none w-full text-sm font-mono mb-4"
+          placeholder="Web design → https://curated.design&#10;Landing pages | https://onepagelove.com&#10;https://example.com, https://another.com" />
+        <!-- Live preview -->
+        <div v-if="parseBulkEntries(bulkText).length" class="mb-4 border border-line rounded-xl overflow-hidden">
+          <div class="bg-elevated px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-3">
+            Preview — {{ parseBulkEntries(bulkText).length }} entr{{ parseBulkEntries(bulkText).length !== 1 ? 'ies' :
+            'y'
+            }} detected
+          </div>
+          <div class="divide-y divide-line/60 max-h-40 overflow-y-auto">
+            <div v-for="(entry, i) in parseBulkEntries(bulkText)" :key="i" class="flex items-center gap-3 px-3 py-2">
+              <span v-if="entry.title" class="text-xs font-semibold text-ink shrink-0 max-w-[160px] truncate">{{
+                entry.title
+                }}</span>
+              <span v-else class="text-[10px] text-ink-3 italic shrink-0">no title</span>
+              <span class="text-ink-3/40 text-xs shrink-0">→</span>
+              <span class="text-[11px] text-ink-3 truncate min-w-0">{{ entry.url }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-ink-3" v-if="!parseBulkEntries(bulkText).length">No valid URLs detected yet</span>
+          <span v-else></span>
+          <div class="flex gap-2">
+            <button class="btn-ghost" @click="showBulkModal = false">Cancel</button>
+            <button class="btn-primary" :disabled="!parseBulkEntries(bulkText).length || bulkLoading"
+              @click="submitBulk">
+              <Layers class="w-4 h-4" />
+              {{ bulkLoading ? 'Adding…' : `Add ${parseBulkEntries(bulkText).length}
+              link${parseBulkEntries(bulkText).length
+              !== 1 ? 's' : ''}` }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- New bookmark modal -->
     <div v-if="showNewBm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNewBm = false"></div>
-      <form @submit.prevent="createBookmark" @keydown.meta.enter.prevent="createBookmark" @keydown.ctrl.enter.prevent="createBookmark" class="relative w-full max-w-md card p-8 animate-rise-in max-h-[90vh] overflow-y-auto">
+      <form @submit.prevent="createBookmark" @keydown.meta.enter.prevent="createBookmark"
+        @keydown.ctrl.enter.prevent="createBookmark"
+        class="relative w-full max-w-md card p-8 animate-rise-in max-h-[90vh] overflow-y-auto">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewBm = false">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">Add to {{ page.title }}</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A new link in this collection</h2>
-        <input ref="newBmUrlInput" v-model="newBm.url" type="url" placeholder="https://…" class="input-soft mb-3" required
-          data-testid="page-new-bm-url" />
-        <input v-model="newBm.title" placeholder="Title (optional)" class="input-soft mb-3"
-          data-testid="page-new-bm-title" />
-        <input v-model="newBm.tags" placeholder="Tags (comma separated)" class="input-soft mb-3" />
+        <div class="space-y-4">
+          <VUrlInput ref="newBmUrlInput" v-model="newBm.url" label="URL *" id="page-new-bookmark-url" required
+            data-testid="page-new-bm-url" />
 
-        <div class="category-select-container-new relative mb-3">
-          <div @click="categoryDropdownOpen = !categoryDropdownOpen"
-            class="input-soft text-sm capitalize flex items-center justify-between cursor-pointer select-none font-semibold text-ink min-h-[38px] py-1.5 px-3">
-            <span>{{ newBm.category || 'work' }}</span>
-            <span class="text-[10px] text-ink-3">▼</span>
-          </div>
-          <div v-if="categoryDropdownOpen"
-            class="absolute left-0 right-0 mt-1 bg-surface border border-line rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto p-1.5 space-y-0.5 text-left">
-            <div v-for="cat in categories" :key="cat"
-              class="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-canvas transition-colors cursor-pointer capitalize"
-              @click="newBm.category = cat; categoryDropdownOpen = false">
-              <span>{{ cat }}</span>
-            </div>
-            <div class="border-t border-line my-1"></div>
-            <div
-              class="px-3 py-2 rounded-lg text-xs hover:bg-canvas transition-colors cursor-pointer text-pri-strategic font-medium flex items-center gap-1.5"
-              @click="newCategoryInputVal = ''; showCustomCategoryPrompt = true; categoryDropdownOpen = false">
-              <Plus class="w-3.5 h-3.5" /> Add Custom...
-            </div>
-          </div>
+          <VInput v-model="newBm.title" label="Title (optional)" id="page-new-bookmark-title"
+            data-testid="page-new-bm-title" />
+
+          <VTagSelect v-model="newBm.tags" :available-tags="favoriteTagsList" label="Tags (comma separated, optional)"
+            id="page-new-bookmark-tags" />
+
+
+
+          <VTextarea v-model="newBm.description" label="Why save it? (optional)" id="page-new-bookmark-desc" />
         </div>
-
-        <textarea v-model="newBm.description" placeholder="Why save it?" rows="2"
-          class="input-soft resize-none mb-5"></textarea>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showNewBm = false">Cancel</button>
           <button type="submit" class="btn-primary" data-testid="page-new-bm-save">
-            Save <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Save <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </form>
@@ -427,53 +576,36 @@ watch(showEditBm, (open) => {
     <div v-if="showEditBm" class="fixed inset-0 z-50 flex items-center justify-center p-4"
       data-testid="edit-bookmark-modal">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="closeEditBookmark"></div>
-      <form @submit.prevent="saveBookmarkEdit" @keydown.meta.enter.prevent="saveBookmarkEdit" @keydown.ctrl.enter.prevent="saveBookmarkEdit" class="relative w-full max-w-md card p-8 animate-rise-in max-h-[90vh] overflow-y-auto">
+      <form @submit.prevent="saveBookmarkEdit" @keydown.meta.enter.prevent="saveBookmarkEdit"
+        @keydown.ctrl.enter.prevent="saveBookmarkEdit"
+        class="relative w-full max-w-md card p-8 animate-rise-in max-h-[90vh] overflow-y-auto">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="closeEditBookmark">
           <X class="w-4 h-4" />
         </button>
         <div class="overline">Edit bookmark</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">Update bookmark</h2>
-        <input ref="editBmUrlInput" v-model="editBmForm.url" type="url" placeholder="https://…" class="input-soft mb-3" required
-          data-testid="edit-bookmark-url" />
-        <input v-model="editBmForm.title" placeholder="Title (optional)" class="input-soft mb-3"
-          data-testid="edit-bookmark-title" />
-        <input v-model="editBmForm.tags" placeholder="Tags (comma separated)" class="input-soft mb-3"
-          data-testid="edit-bookmark-tags" />
+        <div class="space-y-4">
+          <VUrlInput ref="editBmUrlInput" v-model="editBmForm.url" label="URL *" id="page-edit-bookmark-url" required
+            data-testid="edit-bookmark-url" />
 
-        <div class="category-select-container-edit relative mb-3">
-          <div @click="editCategoryDropdownOpen = !editCategoryDropdownOpen"
-            class="input-soft text-sm capitalize flex items-center justify-between cursor-pointer select-none font-semibold text-ink min-h-[38px] py-1.5 px-3">
-            <span>{{ editBmForm.category || 'work' }}</span>
-            <span class="text-[10px] text-ink-3">▼</span>
-          </div>
-          <div v-if="editCategoryDropdownOpen"
-            class="absolute left-0 right-0 mt-1 bg-surface border border-line rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto p-1.5 space-y-0.5 text-left">
-            <div v-for="cat in categories" :key="cat"
-              class="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-canvas transition-colors cursor-pointer capitalize"
-              @click="editBmForm.category = cat; editCategoryDropdownOpen = false">
-              <span>{{ cat }}</span>
-            </div>
-            <div class="border-t border-line my-1"></div>
-            <div
-              class="px-3 py-2 rounded-lg text-xs hover:bg-canvas transition-colors cursor-pointer text-pri-strategic font-medium flex items-center gap-1.5"
-              @click="newCategoryInputVal = ''; showCustomCategoryPrompt = true; editCategoryDropdownOpen = false">
-              <Plus class="w-3.5 h-3.5" /> Add Custom...
-            </div>
-          </div>
+          <VInput v-model="editBmForm.title" label="Title (optional)" id="page-edit-bookmark-title"
+            data-testid="edit-bookmark-title" />
+
+          <VTagSelect v-model="editBmForm.tags" :available-tags="favoriteTagsList"
+            label="Tags (comma separated, optional)" id="page-edit-bookmark-tags" data-testid="edit-bookmark-tags" />
+
+          <VSelect v-model="editBmForm.pageId" label="Collection" id="page-edit-bookmark-page"
+            :options="bookmarks.pages" option-value="id" searchable placeholder="---none---"
+            data-testid="page-edit-bookmark-page" />
+
+          <VTextarea v-model="editBmForm.description" label="Why save it? (optional)" id="page-edit-bookmark-desc"
+            data-testid="edit-bookmark-description" />
         </div>
-
-        <label class="block mb-3"><span class="overline block mb-1">Collection</span>
-          <select v-model="editBmForm.pageId" class="input-block text-sm" data-testid="edit-bookmark-page">
-            <option :value="null">- none (loose) -</option>
-            <option v-for="p in bookmarks.pages" :key="p.id" :value="p.id">{{ p.emoji }} {{ p.title }}</option>
-          </select>
-        </label>
-        <textarea v-model="editBmForm.description" placeholder="Why save it?" rows="2"
-          class="input-soft resize-none mb-5" data-testid="edit-bookmark-description"></textarea>
-        <div class="flex justify-end gap-2">
+        <div class="flex justify-end gap-2 mt-6">
           <button type="button" class="btn-ghost" @click="closeEditBookmark">Cancel</button>
           <button type="submit" class="btn-primary" data-testid="edit-bookmark-save">
-            Save <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Save <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </form>

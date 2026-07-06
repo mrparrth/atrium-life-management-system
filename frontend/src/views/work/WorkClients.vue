@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/stores/settings'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ClientPopup from '@/components/work/ClientPopup.vue'
+import VCheckbox from '@/components/VCheckbox.vue'
 import {
   Plus, User, MessageSquare, Star, Search, LayoutGrid, List,
   SlidersHorizontal
@@ -291,15 +292,13 @@ onUnmounted(() => {
             class="absolute right-0 top-full mt-1.5 w-56 bg-surface border border-line rounded-xl shadow-lg z-50 p-2 space-y-1 animate-fade-in">
             <label
               class="flex items-center gap-2 px-2 py-1.5 hover:bg-canvas/50 rounded-lg cursor-pointer text-xs font-semibold text-ink select-none">
-              <input type="checkbox" :checked="isAllSelected" @change="toggleAllStatuses"
-                class="rounded border-line text-pri-strategic focus:ring-pri-strategic/20 cursor-pointer" />
+              <VCheckbox :modelValue="isAllSelected" @update:modelValue="toggleAllStatuses" />
               <span>All Statuses</span>
             </label>
             <hr class="border-line/45 my-1" />
             <label v-for="(val, key) in clientsStore.STATUS_MAP" :key="key"
               class="flex items-center gap-2 px-2 py-1.5 hover:bg-canvas/50 rounded-lg cursor-pointer text-xs text-ink-2 select-none">
-              <input type="checkbox" :checked="statusFilters.includes(key)" @change="toggleStatusFilter(key)"
-                class="rounded border-line text-pri-strategic focus:ring-pri-strategic/20 cursor-pointer" />
+              <VCheckbox :modelValue="statusFilters.includes(key)" @update:modelValue="toggleStatusFilter(key)" />
               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0" :class="val.color">
                 {{ val.label }}
               </span>

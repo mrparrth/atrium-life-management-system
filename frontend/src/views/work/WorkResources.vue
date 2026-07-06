@@ -4,6 +4,12 @@ import { useWorkResourcesStore } from '@/stores/workResources'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
 import Combobox from '@/components/Combobox.vue'
+import VInput from '@/components/VInput.vue'
+import VTextarea from '@/components/VTextarea.vue'
+import VSelect from '@/components/VSelect.vue'
+import VUrlInput from '@/components/VUrlInput.vue'
+import VRow from '@/components/VRow.vue'
+import VCol from '@/components/VCol.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -22,6 +28,11 @@ const clientOptions = computed(() => {
     ...activeClients.map(c => ({ key: c.id, label: c.name }))
   ]
 })
+
+const typeOptions = [
+  { key: 'url', label: 'Reference Link' },
+  { key: 'credentials', label: 'Credentials / Login' }
+]
 
 function handleGlobalKeydown(e) {
   if (e.key === 'Escape') {
@@ -247,46 +258,67 @@ function deleteResource(id) {
           <h2 class="font-serif text-2xl mt-1">Add details</h2>
         </div>
 
-        <div class="space-y-4 pt-2">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <input ref="addModalFirstInput" v-model="title" placeholder=" " class="v-field-input" id="resource-title" required />
-              <label for="resource-title" class="v-field-label">Resource Title *</label>
-            </div>
-            <div class="v-field-group">
-              <select v-model="type" @focus="focusedFields.type = true" @blur="focusedFields.type = false" class="v-field-select">
-                <option value="url">Reference Link</option>
-                <option value="credentials">Credentials / Login</option>
-              </select>
-              <span class="v-field-arrow">▼</span>
-              <label :class="['v-field-label', (type || focusedFields.type) ? 'v-field-label--floating' : '', focusedFields.type ? 'v-field-label--floating-focused' : '']">Type</label>
-            </div>
-          </div>
+        <VRow dense class="mb-4">
+          <VCol cols="12" sm="6" dense>
+            <VInput
+              ref="addModalFirstInput"
+              v-model="title"
+              label="Resource Title *"
+              id="resource-title"
+              required
+            />
+          </VCol>
 
-          <div class="grid grid-cols-2 gap-4">
+          <VCol cols="12" sm="6" dense>
+            <VSelect
+              v-model="type"
+              label="Type"
+              id="resource-type"
+              :options="typeOptions"
+              option-value="key"
+              option-label="label"
+            />
+          </VCol>
+
+          <VCol cols="12" sm="6" dense>
             <Combobox :options="clientOptions" v-model="clientId" label="Client Workspace" is-field />
-            <div class="v-field-group">
-              <input v-model="url" placeholder=" " class="v-field-input" id="resource-url" />
-              <label for="resource-url" class="v-field-label">URL</label>
-            </div>
-          </div>
+          </VCol>
 
-          <div v-if="type === 'credentials'" class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <input v-model="username" placeholder=" " class="v-field-input" id="resource-username" />
-              <label for="resource-username" class="v-field-label">Username / Key</label>
-            </div>
-            <div class="v-field-group">
-              <input type="text" v-model="password" placeholder=" " class="v-field-input font-mono" id="resource-password" />
-              <label for="resource-password" class="v-field-label">Password / Secret</label>
-            </div>
-          </div>
+          <VCol cols="12" sm="6" dense>
+            <VUrlInput
+              v-model="url"
+              label="URL"
+              id="resource-url"
+            />
+          </VCol>
 
-          <div class="v-field-group">
-            <textarea v-model="notes" placeholder=" " class="v-field-input min-h-[80px] resize-none" id="resource-notes"></textarea>
-            <label for="resource-notes" class="v-field-label">Notes / Description</label>
-          </div>
-        </div>
+          <template v-if="type === 'credentials'">
+            <VCol cols="12" sm="6" dense>
+              <VInput
+                v-model="username"
+                label="Username / Key"
+                id="resource-username"
+              />
+            </VCol>
+            <VCol cols="12" sm="6" dense>
+              <VInput
+                v-model="password"
+                label="Password / Secret"
+                id="resource-password"
+                mono
+              />
+            </VCol>
+          </template>
+
+          <VCol cols="12" dense>
+            <VTextarea
+              v-model="notes"
+              label="Notes / Description"
+              id="resource-notes"
+              :rows="3"
+            />
+          </VCol>
+        </VRow>
 
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddModal = false" class="btn-ghost">Cancel</button>

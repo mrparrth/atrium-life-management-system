@@ -2,7 +2,7 @@ import dayjs from 'dayjs'
 
 export function daysSince(iso) {
   if (!iso) return Infinity
-  return dayjs().diff(dayjs(iso), 'day')
+  return dayjs().startOf('day').diff(dayjs(iso).startOf('day'), 'day')
 }
 export function isOverdue(iso) {
   if (!iso) return false

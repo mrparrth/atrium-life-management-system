@@ -385,7 +385,7 @@ const networthChartOptions = computed(() => {
           callback: function (value) {
             if (!networthChartData.value) return ''
             const histLen = hist.length
-            
+
             // Render specific timeline ticks at Start (0), Now (130), Projected End (200)
             if (value === 0) {
               const label = networthChartData.value.datasets[0].data[0]?.label || ''
@@ -478,7 +478,7 @@ const budgetAlerts = computed(() => {
           proratedBudget,
           pct
         })
-      } else if (actual >= proratedBudget * 0.80) {
+      } else if (actual >= proratedBudget * 0.90) {
         close.push({
           category: c,
           actual,
@@ -548,18 +548,48 @@ function formatMonth(m) {
 
 // ───── Dynamics (Financial Progression)
 const selectedCategory = ref(['net_worth'])
+const chartSelectionMode = ref('multi')
 
 onMounted(async () => {
   await settings.load()
+  const savedMode = settings.get('financeOverviewChartSelectionMode')
+  if (savedMode) {
+    chartSelectionMode.value = savedMode
+  }
   const saved = settings.get('financeOverviewSelectedCategory')
   if (saved) {
-    selectedCategory.value = Array.isArray(saved) ? saved : [saved]
+    if (chartSelectionMode.value === 'multi') {
+      selectedCategory.value = Array.isArray(saved) ? saved : [saved]
+    } else {
+      selectedCategory.value = Array.isArray(saved) ? (saved[0] || 'net_worth') : saved
+    }
   }
+})
+
+watch(chartSelectionMode, (newVal) => {
+  settings.set('financeOverviewChartSelectionMode', newVal)
 })
 
 watch(selectedCategory, (newVal) => {
   settings.set('financeOverviewSelectedCategory', newVal)
 }, { deep: true })
+
+function toggleSelectionMode(mode) {
+  if (chartSelectionMode.value === mode) return
+  chartSelectionMode.value = mode
+  
+  if (mode === 'single') {
+    const first = Array.isArray(selectedCategory.value) 
+      ? (selectedCategory.value[0] || 'net_worth')
+      : (selectedCategory.value || 'net_worth')
+    selectedCategory.value = first
+  } else {
+    const val = Array.isArray(selectedCategory.value)
+      ? selectedCategory.value
+      : [selectedCategory.value].filter(Boolean)
+    selectedCategory.value = val.length ? val : ['net_worth']
+  }
+}
 
 const chartOptions = computed(() => {
   const opts = [
@@ -1004,7 +1034,7 @@ const chartSeries = computed(() => {
               <div
                 class="text-[10px] uppercase font-bold text-pri-interruptive tracking-wider flex items-center gap-1.5">
                 <span class="inline-block w-1.5 h-1.5 rounded-full bg-pri-interruptive"></span>
-                Near Limit (80%+)
+                Near Limit (90%+)
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div v-for="a in budgetAlerts.close" :key="a.category.id"
@@ -1051,9 +1081,31 @@ const chartSeries = computed(() => {
     <section class="mb-10">
       <div class="flex items-center justify-between gap-6 mb-6 flex-wrap">
         <SectionHeader overline="Dynamics" title="Financial Progression" />
-        <div class="flex items-center gap-2">
-          <span class="overline text-[10px]">Select Categories</span>
-          <Combobox :options="chartOptions" v-model="selectedCategory" placeholder="Search categories..." multiple />
+        <div class="flex items-center gap-4 flex-wrap">
+          <!-- Selection Mode Switcher -->
+          <div class="flex bg-canvas/40 p-0.5 rounded-lg border border-line/40 text-[10px] uppercase font-bold tracking-wider select-none shrink-0">
+            <button 
+              type="button"
+              class="px-2.5 py-1 rounded-md transition-all duration-200"
+              :class="chartSelectionMode === 'single' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink-2'"
+              @click="toggleSelectionMode('single')"
+            >
+              Single
+            </button>
+            <button 
+              type="button"
+              class="px-2.5 py-1 rounded-md transition-all duration-200"
+              :class="chartSelectionMode === 'multi' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink-2'"
+              @click="toggleSelectionMode('multi')"
+            >
+              Multi
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="overline text-[10px]">Select Categories</span>
+            <Combobox :options="chartOptions" v-model="selectedCategory" placeholder="Search categories..." :multiple="chartSelectionMode === 'multi'" />
+          </div>
         </div>
       </div>
 

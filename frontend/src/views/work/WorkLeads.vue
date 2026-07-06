@@ -10,6 +10,13 @@ import EmptyState from '@/components/EmptyState.vue'
 import ClientPopup from '@/components/work/ClientPopup.vue'
 import { Plus, Target, DollarSign, Calendar, MessageSquare, Trash, Briefcase, Archive, ArchiveRestore, MoreHorizontal } from 'lucide-vue-next'
 import dayjs from 'dayjs'
+import DateField from '@/components/DateField.vue'
+import VInput from '@/components/VInput.vue'
+import VSelect from '@/components/VSelect.vue'
+import VTextarea from '@/components/VTextarea.vue'
+import VCheckbox from '@/components/VCheckbox.vue'
+import VRow from '@/components/VRow.vue'
+import VCol from '@/components/VCol.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -297,20 +304,23 @@ onUnmounted(() => {
       </div>
       <!-- Filters Card -->
       <div class="bg-surface border border-[#ECE8E2] rounded-xl p-3 flex flex-col justify-center gap-2 min-h-[72px]">
-        <label class="relative inline-flex items-center cursor-pointer select-none">
-          <input type="checkbox" v-model="showEmptyColumns" class="sr-only peer" />
-          <div
-            class="w-8 h-4 bg-canvas border border-line rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[3px] after:left-[4px] after:bg-ink-3 peer-checked:after:bg-pri-strategic after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-pri-strategic/10 peer-checked:border-pri-strategic/30">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="text-sm font-medium text-ink">Show empty columns</label>
+              <p class="text-[11px] text-ink-3">Display stages even if they have no active leads.</p>
+            </div>
+            <VCheckbox v-model="showEmptyColumns" />
           </div>
-          <span class="ml-2 text-[9px] font-bold text-ink-2 uppercase tracking-wide">Show Empty</span>
-        </label>
-        <label class="relative inline-flex items-center cursor-pointer select-none">
-          <input type="checkbox" v-model="showArchivedLeads" class="sr-only peer" />
-          <div
-            class="w-8 h-4 bg-canvas border border-line rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[3px] after:left-[4px] after:bg-ink-3 peer-checked:after:bg-pri-strategic after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-pri-strategic/10 peer-checked:border-pri-strategic/30">
+
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="text-sm font-medium text-ink">Show archived leads</label>
+              <p class="text-[11px] text-ink-3">Include leads marked as archived in the board.</p>
+            </div>
+            <VCheckbox v-model="showArchivedLeads" />
           </div>
-          <span class="ml-2 text-[9px] font-bold text-ink-2 uppercase tracking-wide">Show Archived</span>
-        </label>
+        </div>
       </div>
     </div>
 
@@ -450,62 +460,47 @@ onUnmounted(() => {
           <h2 class="font-serif text-2xl mt-1">Add sales opportunity</h2>
         </div>
 
-        <div class="space-y-4 pt-2">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <input ref="addModalFirstInput" v-model="title" placeholder=" " class="v-field-input" id="lead-title"
-                required />
-              <label for="lead-title" class="v-field-label">Opportunity Title *</label>
-            </div>
-            <div class="v-field-group">
-              <input v-model="clientName" placeholder=" " class="v-field-input" id="lead-client" required />
-              <label for="lead-client" class="v-field-label">Prospect Name *</label>
-            </div>
-          </div>
+        <div>
+          <VRow>
+            <VCol cols="12" sm="6">
+              <VInput v-model="clientName" label="Prospect Name *" id="lead-client" required />
+            </VCol>
+            <VCol cols="12" sm="6">
+              <VInput ref="addModalFirstInput" v-model="title" label="Opportunity Title *" id="lead-title" required />
+            </VCol>
+          </VRow>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <input type="number" v-model="value" min="0" placeholder=" " class="v-field-input" id="lead-value" />
-              <label for="lead-value" class="v-field-label">Est. Deal Value ($)</label>
-            </div>
-            <div class="v-field-group">
-              <input type="number" v-model="hours" min="0" placeholder=" " class="v-field-input" id="lead-hours" />
-              <label for="lead-hours" class="v-field-label">Expected Scoped Hours</label>
-            </div>
-          </div>
+          <VRow>
+            <VCol cols="12" sm="6">
+              <VInput type="number" v-model="value" min="0" label="Est. Deal Value ($)" id="lead-value" />
+            </VCol>
+            <VCol cols="12" sm="6">
+              <VInput type="number" v-model="hours" min="0" label="Expected Scoped Hours" id="lead-hours" />
+            </VCol>
+          </VRow>
 
-          <div class="grid grid-cols-2 gap-4 items-center">
-            <div class="py-1">
-              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{
-                probability }}%)</label>
-              <input type="range" v-model="probability" min="10" max="100" step="5"
-                class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
-            </div>
-            <div class="v-field-group">
-              <input type="date" v-model="followUpDate" placeholder=" " class="v-field-input text-ink-2"
-                id="lead-followup" />
-              <label for="lead-followup" class="v-field-label">Follow-up Target Date</label>
-            </div>
-          </div>
+          <VRow class="items-center">
+            <VCol cols="12" sm="6">
+              <div class="py-1">
+                <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{
+                  probability }}%)</label>
+                <input type="range" v-model="probability" min="10" max="100" step="5"
+                  class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
+              </div>
+            </VCol>
+            <VCol cols="12" sm="6">
+              <DateField v-model="followUpDate" label="Follow-up Target Date" id="lead-followup" />
+            </VCol>
+          </VRow>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <select v-model="status" @focus="focusedFields.status = true" @blur="focusedFields.status = false"
-                class="v-field-select">
-                <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
-              </select>
-              <span class="v-field-arrow">▼</span>
-              <label
-                :class="['v-field-label', (status || focusedFields.status) ? 'v-field-label--floating' : '', focusedFields.status ? 'v-field-label--floating-focused' : '']">Initial
-                Stage</label>
-            </div>
-          </div>
+          <VRow>
+            <VCol cols="12">
+              <VSelect v-model="status" label="Initial Stage" id="lead-status" :options="stages" option-value="key"
+                option-label="name" />
+            </VCol>
+          </VRow>
 
-          <div class="v-field-group">
-            <textarea v-model="notes" placeholder=" " class="v-field-input min-h-[80px] resize-none"
-              id="lead-notes"></textarea>
-            <label for="lead-notes" class="v-field-label">Opportunity Notes</label>
-          </div>
+          <VTextarea v-model="notes" label="Opportunity Notes" id="lead-notes" autogrow />
         </div>
 
         <div class="flex justify-end gap-3 pt-2">
@@ -529,75 +524,53 @@ onUnmounted(() => {
           <h2 class="font-serif text-2xl mt-1">Edit opportunity</h2>
         </div>
 
-        <div class="space-y-4 pt-2">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <input ref="editModalFirstInput" v-model="editForm.title" placeholder=" " class="v-field-input"
+        <div class="pt-2">
+          <VRow>
+            <VCol cols="12" sm="6">
+              <VInput ref="editModalFirstInput" v-model="editForm.title" label="Opportunity Title *"
                 id="edit-lead-title" required />
-              <label for="edit-lead-title" class="v-field-label">Opportunity Title *</label>
-            </div>
-            <div class="v-field-group">
-              <input v-model="editForm.clientName" placeholder=" " class="v-field-input" id="edit-lead-client"
-                required />
-              <label for="edit-lead-client" class="v-field-label">Prospect Name *</label>
-            </div>
-          </div>
+            </VCol>
+            <VCol cols="12" sm="6">
+              <VInput v-model="editForm.clientName" label="Prospect Name *" id="edit-lead-client" required />
+            </VCol>
+          </VRow>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <input type="number" v-model="editForm.estimatedValue" min="0" placeholder=" " class="v-field-input"
+          <VRow>
+            <VCol cols="12" sm="6">
+              <VInput type="number" v-model="editForm.estimatedValue" min="0" label="Est. Deal Value ($)"
                 id="edit-lead-value" />
-              <label for="edit-lead-value" class="v-field-label">Est. Deal Value ($)</label>
-            </div>
-            <div class="v-field-group">
-              <input type="number" v-model="editForm.expectedHours" min="0" placeholder=" " class="v-field-input"
+            </VCol>
+            <VCol cols="12" sm="6">
+              <VInput type="number" v-model="editForm.expectedHours" min="0" label="Expected Scoped Hours"
                 id="edit-lead-hours" />
-              <label for="edit-lead-hours" class="v-field-label">Expected Scoped Hours</label>
-            </div>
-          </div>
+            </VCol>
+          </VRow>
 
-          <div class="grid grid-cols-2 gap-4 items-center">
-            <div class="py-1">
-              <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{
-                editForm.probability }}%)</label>
-              <input type="range" v-model="editForm.probability" min="10" max="100" step="5"
-                class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
-            </div>
-            <div class="v-field-group">
-              <input type="date" v-model="editForm.followUpDate" placeholder=" "
-                class="v-field-input text-ink-2 font-mono" id="edit-lead-followup" />
-              <label for="edit-lead-followup" class="v-field-label">Follow-up Target Date</label>
-            </div>
-          </div>
+          <VRow class="items-center">
+            <VCol cols="12" sm="6">
+              <div class="py-1">
+                <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{
+                  editForm.probability }}%)</label>
+                <input type="range" v-model="editForm.probability" min="10" max="100" step="5"
+                  class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
+              </div>
+            </VCol>
+            <VCol cols="12" sm="6">
+              <DateField v-model="editForm.followUpDate" label="Follow-up Target Date" id="edit-lead-followup" />
+            </VCol>
+          </VRow>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div class="v-field-group">
-              <select v-model="editForm.status" @focus="focusedFields.editStatus = true"
-                @blur="focusedFields.editStatus = false" class="v-field-select font-semibold">
-                <option v-for="stg in stages" :key="stg.key" :value="stg.key">{{ stg.name }}</option>
-                <option value="lost">Lost</option>
-              </select>
-              <span class="v-field-arrow">▼</span>
-              <label
-                :class="['v-field-label', (editForm.status || focusedFields.editStatus) ? 'v-field-label--floating' : '', focusedFields.editStatus ? 'v-field-label--floating-focused' : '']">Pipeline
-                Stage</label>
-            </div>
-            <div class="flex items-center pl-2">
-              <label class="relative inline-flex items-center cursor-pointer select-none">
-                <input type="checkbox" v-model="editForm.archived" class="sr-only peer" />
-                <div
-                  class="w-9 h-5 bg-canvas border border-line rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-ink-3 peer-checked:after:bg-pri-strategic after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-pri-strategic/10 peer-checked:border-pri-strategic/30">
-                </div>
-                <span class="ml-3 text-xs font-semibold text-ink-2">Archived</span>
-              </label>
-            </div>
-          </div>
+          <VRow class="items-center">
+            <VCol cols="12" sm="6">
+              <VSelect v-model="editForm.status" label="Pipeline Stage" id="edit-lead-status"
+                :options="[...stages, { key: 'lost', name: 'Lost' }]" option-value="key" option-label="name" />
+            </VCol>
+            <VCol cols="12" sm="6">
+              <VCheckbox v-model="editForm.archived" label="Archived" class="pl-2" />
+            </VCol>
+          </VRow>
 
-          <div class="v-field-group">
-            <textarea v-model="editForm.notes" placeholder=" " class="v-field-input min-h-[80px] resize-none"
-              id="edit-lead-notes"></textarea>
-            <label for="edit-lead-notes" class="v-field-label">Opportunity Notes</label>
-          </div>
+          <VTextarea v-model="editForm.notes" label="Opportunity Notes" id="edit-lead-notes" autogrow />
         </div>
 
         <div class="flex justify-end gap-3 pt-2">

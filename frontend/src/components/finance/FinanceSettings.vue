@@ -4,6 +4,8 @@ import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
 import SectionHeader from '@/components/SectionHeader.vue'
+import VSelect from '@/components/VSelect.vue'
+import VCheckbox from '@/components/VCheckbox.vue'
 import { DEFAULT_CATEGORIES } from '@/db'
 import { inr } from '@/lib/money'
 import { Plus, Trash2, Edit3, X, RotateCcw, Check, ChevronDown, Archive } from 'lucide-vue-next'
@@ -205,22 +207,20 @@ onUnmounted(() => {
             Define which month starts your financial year. This aligns the month columns and comparison windows in the
             Annual Summary.
           </p>
-          <select v-model="startMonth"
-            class="bg-surface border border-line rounded-xl px-3 py-1.5 text-sm text-ink outline-none focus:border-line-2 font-sans w-full md:w-64"
-            data-testid="settings-start-month">
-            <option value="01">January</option>
-            <option value="02">February</option>
-            <option value="03">March</option>
-            <option value="04">April</option>
-            <option value="05">May</option>
-            <option value="06">June</option>
-            <option value="07">July</option>
-            <option value="08">August</option>
-            <option value="09">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12">December</option>
-          </select>
+          <VSelect v-model="startMonth" :options="[
+            {value: '01', label: 'January'},
+            {value: '02', label: 'February'},
+            {value: '03', label: 'March'},
+            {value: '04', label: 'April'},
+            {value: '05', label: 'May'},
+            {value: '06', label: 'June'},
+            {value: '07', label: 'July'},
+            {value: '08', label: 'August'},
+            {value: '09', label: 'September'},
+            {value: '10', label: 'October'},
+            {value: '11', label: 'November'},
+            {value: '12', label: 'December'}
+          ]" data-testid="settings-start-month" />
         </div>
         <div
           class="border-t md:border-t-0 md:border-l border-line pt-6 md:pt-0 md:pl-8 flex flex-col justify-between">
@@ -231,11 +231,7 @@ onUnmounted(() => {
             </p>
           </div>
           <div class="flex items-center gap-2 mb-1">
-            <label class="relative inline-flex items-center cursor-pointer select-none">
-              <input type="checkbox" v-model="showOnlyActive" class="sr-only peer" />
-              <div class="w-9 h-5 bg-line peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-line after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-pri-strategic"></div>
-              <span class="ml-2 text-xs font-semibold text-ink">Show active categories only</span>
-            </label>
+            <VCheckbox v-model="showOnlyActive" label="Show active categories only" />
           </div>
         </div>
         <div

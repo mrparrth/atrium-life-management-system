@@ -6,7 +6,7 @@ import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, Trash, Eye, EyeOff, Search, FileText, Check, CornerDownLeft, Sparkles, Archive, HelpCircle } from 'lucide-vue-next'
+import { Plus, Trash, Search, FileText, Check, CornerDownLeft, Sparkles, Archive, HelpCircle } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import { marked } from 'marked'
 import MarkdownHelpModal from '@/components/MarkdownHelpModal.vue'
@@ -23,7 +23,6 @@ const selectedNoteId = ref(null)
 const editTitle = ref('')
 const editBody = ref('')
 const editClientId = ref('')
-const previewMode = ref(false)
 const showMarkdownHelp = ref(false)
 
 const clientFilter = ref('')
@@ -318,14 +317,6 @@ const renderedMarkdown = computed(() => {
             </div>
 
             <div class="flex items-center gap-2">
-              <button @click="previewMode = !previewMode" class="relative group btn-ghost !p-2 shrink-0">
-                <EyeOff v-if="previewMode" class="w-4 h-4" />
-                <Eye v-else class="w-4 h-4" />
-                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
-                  {{ previewMode ? 'Edit Mode' : 'Preview Mode' }}
-                  <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
-                </span>
-              </button>
               <button @click="toggleBackburner" class="btn-ghost !py-1 px-3 text-xs flex items-center gap-1">
                 <Archive class="w-3.5 h-3.5 text-ink-3" />
                 {{ activeNote.tags?.includes('backburner') ? 'Make Active' : 'Backburner' }}
@@ -333,11 +324,14 @@ const renderedMarkdown = computed(() => {
               <button @click="saveNoteChanges" class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
                 <Check class="w-3.5 h-3.5" /> Save
               </button>
-              <button @click="deleteNote" class="relative group text-ink-3 hover:text-pri-critical p-2 rounded shrink-0">
+              <button @click="deleteNote"
+                class="relative group text-ink-3 hover:text-pri-critical p-2 rounded shrink-0">
                 <Trash class="w-4 h-4" />
-                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
+                <span
+                  class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
                   Delete Note
-                  <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
+                  <span
+                    class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
                 </span>
               </button>
             </div>
@@ -354,21 +348,14 @@ const renderedMarkdown = computed(() => {
             </div>
           </div>
 
-          <!-- Writer Editor Textarea or Markdown Preview -->
+          <!-- Writer Editor -->
           <div class="flex-1 min-h-0 flex flex-col">
-            <div v-if="previewMode"
-              class="h-full overflow-y-auto prose-soft bg-canvas/20 border border-line rounded-xl p-4"
-              v-html="renderedMarkdown">
-            </div>
-            <TiptapEditor v-else v-model="editBody" heightClass="h-full min-h-[300px]" />
+            <TiptapEditor v-model="editBody" heightClass="h-full min-h-[300px]" />
           </div>
 
           <!-- Bottom keyboard helper -->
           <div class="text-[10px] text-ink-3 flex justify-between pt-2 border-t border-line/40 items-center">
             <span>Word count: {{editBody.split(/\s+/).filter(x => x.length > 0).length}} words</span>
-            <button @click="showMarkdownHelp = true" class="text-ink-3 hover:text-ink transition-colors flex items-center gap-1 font-semibold">
-              <HelpCircle class="w-3.5 h-3.5" /> Markdown Guide
-            </button>
           </div>
 
         </div>
