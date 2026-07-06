@@ -28,17 +28,19 @@ const dateVal = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-function adjustDate(days) {
-  const current = dateVal.value ? dayjs(dateVal.value) : dayjs()
-  dateVal.value = current.add(days, 'day').format('YYYY-MM-DD')
+function setRelativeToToday(days) {
+  dateVal.value = dayjs().add(days, 'day').format('YYYY-MM-DD')
 }
 
 function setToday() {
-  dateVal.value = dayjs().format('YYYY-MM-DD')
+  setRelativeToToday(0)
 }
 
-function clearDate() {
-  dateVal.value = ''
+function setUpcomingMonday() {
+  const todayOfWeek = dayjs().day()
+  let diff = (1 - todayOfWeek + 7) % 7
+  if (diff === 0) diff = 7
+  dateVal.value = dayjs().add(diff, 'day').format('YYYY-MM-DD')
 }
 </script>
 
@@ -49,22 +51,20 @@ function clearDate() {
     <label :for="id" class="v-field-label text-xs">{{ label }}</label>
     <div class="flex items-center gap-1 mt-1.5 flex-wrap">
       <button type="button" @click="setToday"
-        class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
-        title="Set to Today">Today</button>
-      <button type="button" @click="adjustDate(-1)"
-        class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
-        title="Subtract 1 day">-1D</button>
-      <button type="button" @click="adjustDate(1)"
-        class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
-        title="Add 1 day">+1D</button>
-      <button type="button" @click="adjustDate(5)"
-        class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
-        title="Add 5 days">+5D</button>
-      <button type="button" @click="adjustDate(10)"
-        class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
-        title="Add 10 days">+10D</button>
-      <button type="button" @click="clearDate"
-        class="text-[9px] uppercase tracking-wider font-semibold text-ink-3 hover:text-ink ml-auto transition-all">Clear</button>
+        class="text-[9px] tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
+        title="Set to Today">today</button>
+      <button type="button" @click="setRelativeToToday(1)"
+        class="text-[9px] tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
+        title="Add 1 day">T+1D</button>
+      <button type="button" @click="setRelativeToToday(2)"
+        class="text-[9px] tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
+        title="Add 2 days">T+2D</button>
+      <button type="button" @click="setRelativeToToday(5)"
+        class="text-[9px] tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
+        title="Add 5 days">T+5D</button>
+      <button type="button" @click="setUpcomingMonday"
+        class="text-[9px] tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
+        title="Set to Upcoming Monday">Next Mon</button>
     </div>
   </div>
 </template>

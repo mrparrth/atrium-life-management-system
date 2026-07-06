@@ -4,9 +4,10 @@ import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
 import { derivePriority } from '@/lib/priority'
-import { inFuture, fromNow } from '@/lib/date'
+import { inFuture, fromNow, isToday } from '@/lib/date'
 import { isSnoozed } from '@/lib/resurface'
 import PriorityBadge from './PriorityBadge.vue'
+import VSelect from './VSelect.vue'
 import { Calendar, Clock, MoonStar, Trash2, Circle, CheckCircle2, BellOff, MoreVertical, Edit3, AlertCircle } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -14,7 +15,8 @@ const props = defineProps({
   task: Object,
   showProject: { type: Boolean, default: true },
   compact: { type: Boolean, default: false },
-  singleLine: { type: Boolean, default: false }
+  singleLine: { type: Boolean, default: false },
+  priorityNumeric: { type: Boolean, default: false }
 })
 const emit = defineEmits(['open'])
 
@@ -33,6 +35,26 @@ const isOverdue = computed(() => {
   if (isDone.value || !props.task.dueDate) return false
   return dayjs(props.task.dueDate).isBefore(dayjs(), 'day')
 })
+
+const isTodayTask = computed(() => {
+  return (props.task.scheduledDate && isToday(props.task.scheduledDate)) ||
+    (props.task.dueDate && isToday(props.task.dueDate))
+})
+
+const hourOptions = ['7am', '8am', '9am', '10am', '11am', '12pm', '1pm', '2pm', '3pm', '4pm', '5pm', '6pm', '7pm', '8pm']
+
+const selectOptions = computed(() => {
+  return [
+    { value: 'before_hrs', label: 'early hrs' },
+    ...hourOptions.map(h => ({ value: h, label: h })),
+    { value: 'after_hr', label: 'after hr' }
+  ]
+})
+
+async function updateWorkHour(val) {
+  await tasks.update(props.task.id, { workHour: val || null })
+  ui.showToast(val ? `Work hour set to ${val}` : 'Work hour cleared', 'info')
+}
 
 const statusGroups = {
   open: { key: 'open', label: 'Yet to start', color: 'bg-canvas text-ink-2 border-line', dotColor: 'bg-ink-3' },
@@ -94,6 +116,10 @@ onUnmounted(() => {
       <!-- Clickable Title & Details for Edit Modal -->
       <div class="min-w-0 flex-1 cursor-pointer" @click="ui.openTaskEdit(task); emit('open', task)">
         <div class="flex items-center gap-2 flex-wrap mb-1">
+          <!-- Hour Selector Dropdown using VSelect -->
+          <VSelect v-if="!isDone" :modelValue="task.workHour" @update:modelValue="updateWorkHour" label="Hour"
+            placeholder="Hour..." variant="compact" prependIcon="Clock" rounded="rounded-lg" icon-only
+            optionValue="value" optionLabel="label" :options="selectOptions" @click.stop />
           <!-- Project Tag -->
           <span v-if="showProject && project"
             class="text-[10px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-2 py-0.5 rounded-full"
@@ -131,7 +157,8 @@ onUnmounted(() => {
             </div>
           </div>
           <!-- Priority Badge -->
-          <PriorityBadge :important="task.important" :urgent="task.urgent" :compact="false" />
+          <PriorityBadge :important="task.important" :urgent="task.urgent" :compact="false"
+            :numeric="priorityNumeric" />
         </div>
 
         <h4 class="font-medium text-ink text-sm leading-snug" :class="{ 'line-through text-ink-3': isDone }">
@@ -151,6 +178,9 @@ onUnmounted(() => {
             :class="{ 'text-pri-critical font-bold': isOverdue }">
             <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
             <Clock v-else class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
+          </span>
+          <span v-else class="flex items-center gap-1 text-ink-3">
+            <Clock class="w-3.5 h-3.5" /> no due date
           </span>
           <!-- Closed date for completed tasks -->
           <span v-if="isDone && task.completedAt" class="flex items-center gap-1 text-pri-strategic font-semibold">
@@ -228,17 +258,17 @@ onUnmounted(() => {
   </div>
 
   <div v-else
-    class="card py-1.5 px-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
+    class="card py-1.5 px-4 flex items-center justify-between gap-2 border transition-all duration-300 hover:shadow-sm"
     :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
     :data-testid="`task-card-${task.id}`">
 
-    <div class="flex items-center gap-3 flex-1 min-w-0">
+    <div class="flex items-center gap-2 flex-1 min-w-0">
       <!-- Clickable Title & Details for Edit Modal -->
-      <div class="min-w-0 flex-1 flex items-center gap-3 cursor-pointer"
+      <div class="min-w-0 flex-1 flex items-center gap-2 cursor-pointer"
         @click="ui.openTaskEdit(task); emit('open', task)">
 
         <!-- Labels row inline -->
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center gap-1 shrink-0">
           <!-- Status Tag with Dropdown Menu -->
           <div class="relative inline-block">
             <button @click.stop="showStatusMenu = !showStatusMenu"
@@ -270,7 +300,13 @@ onUnmounted(() => {
             </div>
           </div>
           <!-- Priority Badge -->
-          <PriorityBadge :important="task.important" :urgent="task.urgent" :compact="false" />
+          <PriorityBadge :important="task.important" :urgent="task.urgent" :compact="false"
+            :numeric="priorityNumeric" />
+
+          <!-- Hour Selector Dropdown using VSelect -->
+          <VSelect v-if="!isDone" :modelValue="task.workHour" @update:modelValue="updateWorkHour" label="Hour"
+            placeholder="Hour..." variant="compact" prependIcon="Clock" rounded="rounded-full" icon-only
+            optionValue="value" optionLabel="label" :options="selectOptions" @click.stop hide-arrow />
         </div>
 
         <!-- Title -->
@@ -290,6 +326,9 @@ onUnmounted(() => {
             :class="isOverdue ? 'text-pri-critical font-bold' : 'text-ink-3'">
             <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
             <Clock v-else class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
+          </span>
+          <span v-else class="flex items-center gap-1 text-ink-3">
+            <Clock class="w-3.5 h-3.5" /> no due date
           </span>
           <!-- Closed date for completed tasks -->
           <span v-if="isDone && task.completedAt" class="flex items-center gap-1 text-pri-strategic font-semibold">

@@ -151,7 +151,7 @@ function toggleTagInForm(form, tag) {
   const currentTags = form.tags
     ? form.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
     : []
-  
+
   if (currentTags.includes(tag)) {
     form.tags = currentTags.filter(t => t !== tag).join(', ')
   } else {
@@ -368,30 +368,33 @@ const focusedFields = ref({})
       <!-- Left side: Favorite tags -->
       <div class="flex items-center gap-2 flex-wrap shrink-0 relative">
         <span class="text-xs uppercase font-bold tracking-wider text-ink-3">Favorite tags:</span>
-        <button v-for="tag in favoriteTagsList" :key="tag" 
+        <button v-for="tag in favoriteTagsList" :key="tag"
           @click="q = q.includes(tag) ? q.replace(new RegExp('#?' + tag, 'i'), '').trim() : (q + ' #' + tag).trim()"
-          class="text-xs font-semibold px-2.5 py-1 rounded transition-all cursor-pointer border"
-          :class="q.toLowerCase().includes(tag) 
-            ? 'bg-pri-strategic/10 text-pri-strategic border-pri-strategic/30' 
+          class="text-xs font-semibold px-2.5 py-1 rounded transition-all cursor-pointer border" :class="q.toLowerCase().includes(tag)
+            ? 'bg-pri-strategic/10 text-pri-strategic border-pri-strategic/30'
             : 'bg-surface text-ink-2 border-line hover:border-line-2'">
           #{{ tag }}
         </button>
-        
+
         <div class="relative inline-block">
-          <button @click="startConfiguringTags" class="btn-ghost !p-1.5 hover:text-pri-strategic ml-1 flex items-center justify-center rounded-lg border border-transparent hover:border-line" title="Edit Favorite Tags">
+          <button @click="startConfiguringTags"
+            class="btn-ghost !p-1.5 hover:text-pri-strategic ml-1 flex items-center justify-center rounded-lg border border-transparent hover:border-line"
+            title="Edit Favorite Tags">
             <Settings class="w-3.5 h-3.5 text-ink-3" />
           </button>
-          
+
           <!-- Popover Configurator -->
-          <div v-if="isConfiguringTags" 
+          <div v-if="isConfiguringTags"
             class="absolute left-1/2 -translate-x-1/2 mt-2 w-96 card p-4 shadow-xl border border-line z-50 animate-rise-in text-left bg-surface">
             <div class="text-[10px] font-bold uppercase tracking-wider text-ink-3 mb-2">Configure Favorite Tags</div>
-            <input v-model="favoriteTagsInput" 
-              class="w-full bg-canvas border border-line rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-pri-strategic mb-4" 
+            <input v-model="favoriteTagsInput"
+              class="w-full bg-canvas border border-line rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-pri-strategic mb-4"
               placeholder="comma, separated, tags" @keyup.enter="saveFavoriteTags" />
             <div class="flex justify-end gap-1.5">
-              <button type="button" @click="isConfiguringTags = false" class="btn-ghost text-[10px] !py-1 !px-2.5">Cancel</button>
-              <button type="button" @click="saveFavoriteTags" class="btn-primary text-[10px] !py-1 !px-2.5">Save</button>
+              <button type="button" @click="isConfiguringTags = false"
+                class="btn-ghost text-[10px] !py-1 !px-2.5">Cancel</button>
+              <button type="button" @click="saveFavoriteTags"
+                class="btn-primary text-[10px] !py-1 !px-2.5">Save</button>
             </div>
           </div>
         </div>
@@ -410,8 +413,8 @@ const focusedFields = ref({})
       <SectionHeader overline="Search Results" :title="`Found ${allMatchingBookmarks.length} bookmarks`" />
       <div v-if="allMatchingBookmarks.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-12">
         <div v-for="b in allMatchingBookmarks" :key="b.id"
-          class="card p-4 group hover:border-line-2 hover:bg-canvas/20 transition-all duration-300 flex flex-col justify-between"
-          :data-testid="`bookmark-card-${b.id}`">
+          class="card p-4 group hover:border-line-2 hover:bg-canvas/20 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+          :data-testid="`bookmark-card-${b.id}`" @click="startEditBookmark(b)">
           <div class="flex items-start justify-between gap-2 min-w-0">
             <div class="min-w-0 flex-1 space-y-1.5">
               <div class="font-serif text-base font-normal text-ink leading-tight flex items-start gap-1.5">
@@ -421,11 +424,11 @@ const focusedFields = ref({})
               <p v-if="b.description" class="text-xs text-ink-2 line-clamp-1 leading-normal">{{ b.description }}</p>
 
               <div class="flex items-center gap-2 flex-wrap min-w-0">
-                <a :href="b.url" target="_blank" @click.prevent="openBookmark(b)"
+                <a :href="b.url" target="_blank" @click.stop.prevent="openBookmark(b)"
                   class="text-[10px] text-ink-3 hover:text-pri-strategic truncate hover:underline flex-1 min-w-0">
                   {{ b.url }}
                 </a>
-                <div v-if="b.tags?.length" class="flex flex-wrap gap-1 shrink-0">
+                <div v-if="b.tags?.length" class="flex flex-wrap gap-1 shrink-0" @click.stop>
                   <span v-for="t in b.tags" :key="t"
                     class="text-[10px] font-medium px-2 py-0.5 rounded-xl select-none border"
                     :style="getTagStyle(t, tagColorsMap)">
@@ -438,7 +441,8 @@ const focusedFields = ref({})
             </div>
 
             <div
-              class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0 self-start">
+              class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0 self-start"
+              @click.stop>
               <button class="btn-ghost !p-1" @click="openBookmark(b)" :data-testid="`bookmark-open-${b.id}`"
                 title="Open Link">
                 <ExternalLink class="w-3 h-3" />
@@ -463,15 +467,19 @@ const focusedFields = ref({})
           class="card p-3 hover:border-line-2 transition-all duration-300 group flex items-center gap-3.5"
           :data-testid="`bookmark-page-card-${p.id}`">
           <!-- Left side: Emoji icon -->
-          <div class="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center text-xl shadow-sm border border-line/30 shrink-0">
+          <div
+            class="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center text-xl shadow-sm border border-line/30 shrink-0">
             {{ p.emoji || '◌' }}
           </div>
           <!-- Middle: Info stack -->
           <div class="flex-1 min-w-0">
             <div class="flex items-baseline justify-between gap-2">
-              <h3 class="font-serif text-sm text-ink font-semibold truncate leading-tight group-hover:text-pri-strategic transition-colors">{{ p.title }}</h3>
-              <span class="text-[9px] text-ink-3 font-semibold shrink-0 bg-canvas/60 px-1.5 py-0.5 rounded border border-line/20">
-                {{ bookmarks.items.filter(x => x.pageId === p.id).length }} items
+              <h3
+                class="font-serif text-sm text-ink font-normal truncate leading-tight group-hover:text-pri-strategic transition-colors">
+                {{ p.title }}</h3>
+              <span
+                class="text-[9px] text-ink-3 font-semibold shrink-0 bg-canvas/60 px-1.5 py-0.5 rounded border border-line/20">
+                {{bookmarks.items.filter(x => x.pageId === p.id).length}} items
               </span>
             </div>
             <p v-if="p.description" class="text-xs text-ink-3 truncate mt-0.5 leading-normal">{{ p.description }}</p>
@@ -487,22 +495,25 @@ const focusedFields = ref({})
 
     <template v-else>
       <!-- COLLECTIONS -->
-      <SectionHeader v-if="filteredCollections.length" overline="Collections"
-        :title="`${filteredCollections.length} pages`" hint="Curated groups of related bookmarks." />
+      <SectionHeader v-if="filteredCollections.length" overline="Collections" />
       <div v-if="filteredCollections.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
         <RouterLink v-for="p in filteredCollections" :key="p.id" :to="`/bookmarks/page/${p.id}`"
           class="card p-3 hover:border-line-2 transition-all duration-300 group flex items-center gap-3.5"
           :data-testid="`bookmark-page-card-${p.id}`">
           <!-- Left side: Emoji icon -->
-          <div class="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center text-xl shadow-sm border border-line/30 shrink-0">
+          <div
+            class="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center text-xl shadow-sm border border-line/30 shrink-0">
             {{ p.emoji || '◌' }}
           </div>
           <!-- Middle: Info stack -->
           <div class="flex-1 min-w-0">
             <div class="flex items-baseline justify-between gap-2">
-              <h3 class="font-serif text-sm text-ink font-semibold truncate leading-tight group-hover:text-pri-strategic transition-colors">{{ p.title }}</h3>
-              <span class="text-[9px] text-ink-3 font-semibold shrink-0 bg-canvas/60 px-1.5 py-0.5 rounded border border-line/20">
-                {{ bookmarks.items.filter(x => x.pageId === p.id).length }} items
+              <h3
+                class="font-serif text-sm text-ink font-normal truncate leading-tight group-hover:text-pri-strategic transition-colors">
+                {{ p.title }}</h3>
+              <span
+                class="text-[9px] text-ink-3 font-semibold shrink-0 bg-canvas/60 px-1.5 py-0.5 rounded border border-line/20">
+                {{bookmarks.items.filter(x => x.pageId === p.id).length}} items
               </span>
             </div>
             <p v-if="p.description" class="text-xs text-ink-3 truncate mt-0.5 leading-normal">{{ p.description }}</p>
@@ -515,12 +526,11 @@ const focusedFields = ref({})
       </div>
 
       <!-- LOOSE BOOKMARKS -->
-      <SectionHeader overline="Loose" :title="`${filteredLooseBookmarks.length} unfiled`"
-        hint="Bookmarks not yet in a collection." />
+      <SectionHeader overline="Loose" />
       <div v-if="filteredLooseBookmarks.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         <div v-for="b in filteredLooseBookmarks" :key="b.id"
-          class="card p-4 group hover:border-line-2 hover:bg-canvas/20 transition-all duration-300 flex flex-col justify-between"
-          :data-testid="`bookmark-card-${b.id}`">
+          class="card p-4 group hover:border-line-2 hover:bg-canvas/20 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+          :data-testid="`bookmark-card-${b.id}`" @click="startEditBookmark(b)">
           <div class="flex items-start justify-between gap-2 min-w-0">
             <div class="min-w-0 flex-1 space-y-1.5">
               <div class="font-serif text-base font-normal text-ink leading-tight flex items-start gap-1.5">
@@ -530,11 +540,11 @@ const focusedFields = ref({})
               <p v-if="b.description" class="text-xs text-ink-2 line-clamp-1 leading-normal">{{ b.description }}</p>
 
               <div class="flex items-center gap-2 flex-wrap min-w-0">
-                <a :href="b.url" target="_blank" @click.prevent="openBookmark(b)"
+                <a :href="b.url" target="_blank" @click.stop.prevent="openBookmark(b)"
                   class="text-[10px] text-ink-3 hover:text-pri-strategic truncate hover:underline flex-1 min-w-0">
                   {{ b.url }}
                 </a>
-                <div v-if="b.tags?.length" class="flex flex-wrap gap-1 shrink-0">
+                <div v-if="b.tags?.length" class="flex flex-wrap gap-1 shrink-0" @click.stop>
                   <span v-for="t in b.tags" :key="t"
                     class="text-[10px] font-medium px-2 py-0.5 rounded-xl select-none border"
                     :style="getTagStyle(t, tagColorsMap)">
@@ -547,7 +557,8 @@ const focusedFields = ref({})
             </div>
 
             <div
-              class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0 self-start">
+              class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0 self-start"
+              @click.stop>
               <button class="btn-ghost !p-1" @click="openBookmark(b)" :data-testid="`bookmark-open-${b.id}`"
                 title="Open Link">
                 <ExternalLink class="w-3 h-3" />
@@ -581,46 +592,19 @@ const focusedFields = ref({})
         <h2 class="font-serif text-2xl mt-1 mb-5">Preserve this</h2>
 
         <div class="space-y-4">
-          <VUrlInput
-            ref="newBmUrlInput"
-            v-model="newBm.url"
-            label="URL *"
-            id="new-bookmark-url"
-            required
-            data-testid="new-bookmark-url"
-          />
+          <VUrlInput ref="newBmUrlInput" v-model="newBm.url" label="URL *" id="new-bookmark-url" required
+            data-testid="new-bookmark-url" />
 
-          <VInput
-            v-model="newBm.title"
-            label="Title (optional)"
-            id="new-bookmark-title"
-            data-testid="new-bookmark-title"
-          />
+          <VInput v-model="newBm.title" label="Title (optional)" id="new-bookmark-title"
+            data-testid="new-bookmark-title" />
 
-          <VTagSelect
-            v-model="newBm.tags"
-            :available-tags="favoriteTagsList"
-            label="Tags (comma separated, optional)"
-            id="new-bookmark-tags"
-            data-testid="new-bookmark-tags"
-          />
+          <VTagSelect v-model="newBm.tags" :available-tags="favoriteTagsList" label="Tags (comma separated, optional)"
+            id="new-bookmark-tags" data-testid="new-bookmark-tags" />
 
-          <VSelect
-            v-model="newBm.pageId"
-            label="Collection"
-            id="new-bookmark-page"
-            :options="bookmarks.pages"
-            option-value="id"
-            searchable
-            placeholder="---none---"
-            data-testid="new-bookmark-page"
-          />
+          <VSelect v-model="newBm.pageId" label="Collection" id="new-bookmark-page" :options="bookmarks.pages"
+            option-value="id" searchable placeholder="---none---" data-testid="new-bookmark-page" />
 
-          <VTextarea
-            v-model="newBm.description"
-            label="Why save it? (optional)"
-            id="new-bookmark-desc"
-          />
+          <VTextarea v-model="newBm.description" label="Why save it? (optional)" id="new-bookmark-desc" />
         </div>
 
         <div class="flex justify-end gap-2">
@@ -647,47 +631,20 @@ const focusedFields = ref({})
         <h2 class="font-serif text-2xl mt-1 mb-5">Update bookmark</h2>
 
         <div class="space-y-4">
-          <VUrlInput
-            ref="editBmUrlInput"
-            v-model="editBmForm.url"
-            label="URL *"
-            id="edit-bookmark-url"
-            required
-            data-testid="edit-bookmark-url"
-          />
+          <VUrlInput ref="editBmUrlInput" v-model="editBmForm.url" label="URL *" id="edit-bookmark-url" required
+            data-testid="edit-bookmark-url" />
 
-          <VInput
-            v-model="editBmForm.title"
-            label="Title (optional)"
-            id="edit-bookmark-title"
-            data-testid="edit-bookmark-title"
-          />
+          <VInput v-model="editBmForm.title" label="Title (optional)" id="edit-bookmark-title"
+            data-testid="edit-bookmark-title" />
 
-          <VTagSelect
-            v-model="editBmForm.tags"
-            :available-tags="favoriteTagsList"
-            label="Tags (comma separated, optional)"
-            id="edit-bookmark-tags"
-            data-testid="edit-bookmark-tags"
-          />
+          <VTagSelect v-model="editBmForm.tags" :available-tags="favoriteTagsList"
+            label="Tags (comma separated, optional)" id="edit-bookmark-tags" data-testid="edit-bookmark-tags" />
 
-          <VSelect
-            v-model="editBmForm.pageId"
-            label="Collection"
-            id="edit-bookmark-page"
-            :options="bookmarks.pages"
-            option-value="id"
-            searchable
-            placeholder="---none---"
-            data-testid="edit-bookmark-page"
-          />
+          <VSelect v-model="editBmForm.pageId" label="Collection" id="edit-bookmark-page" :options="bookmarks.pages"
+            option-value="id" searchable placeholder="---none---" data-testid="edit-bookmark-page" />
 
-          <VTextarea
-            v-model="editBmForm.description"
-            label="Why save it? (optional)"
-            id="edit-bookmark-desc"
-            data-testid="edit-bookmark-description"
-          />
+          <VTextarea v-model="editBmForm.description" label="Why save it? (optional)" id="edit-bookmark-desc"
+            data-testid="edit-bookmark-description" />
         </div>
 
         <div class="flex justify-end gap-2">
@@ -712,47 +669,31 @@ const focusedFields = ref({})
         <div class="overline">New collection</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">A page of related links</h2>
 
-        <VRow dense class="mb-4">
-          <VCol cols="3" sm="2" dense>
-            <VInput
-              ref="newPageEmojiInput"
-              v-model="newPage.emoji"
-              label="Emoji"
-              id="new-page-emoji"
-              data-testid="new-page-emoji"
-              maxlength="2"
-              class="text-center font-bold text-lg"
-            />
-          </VCol>
-          <VCol cols="9" sm="10" dense>
-            <VInput
-              v-model="newPage.title"
-              label="Collection Title *"
-              id="new-page-title"
-              data-testid="new-page-title"
-              required
-            />
-          </VCol>
+        <div class="flex flex-wrap -mx-2 mb-4">
+          <div class="px-2 py-2 w-1/4 sm:w-1/6 shrink-0">
+            <VInput ref="newPageEmojiInput" v-model="newPage.emoji" label="Emoji" id="new-page-emoji"
+              data-testid="new-page-emoji" maxlength="2" class="text-center font-bold text-lg" />
+            <div class="text-[9px] text-ink-3 mt-1 text-center whitespace-nowrap">
+              <a href="https://emojipedia.org/" target="_blank" class="hover:underline hover:text-pri-strategic">find
+                emojis
+                ↗</a>
+            </div>
+          </div>
+          <div class="px-2 py-2 w-3/4 sm:w-5/6 shrink-0">
+            <VInput v-model="newPage.title" label="Collection Title *" id="new-page-title" data-testid="new-page-title"
+              required />
+          </div>
 
-          <VCol cols="12" dense>
-            <VTextarea
-              v-model="newPage.description"
-              label="What's this collection for? (optional)"
-              id="new-page-desc"
-              data-testid="new-page-desc"
-              :rows="2"
-            />
-          </VCol>
+          <div class="px-2 py-2 w-full shrink-0">
+            <VTextarea v-model="newPage.description" label="What's this collection for? (optional)" id="new-page-desc"
+              data-testid="new-page-desc" :rows="2" />
+          </div>
 
-          <VCol cols="12" dense class="mb-2">
-            <VInput
-              v-model="newPage.tags"
-              label="Tags (comma separated, optional)"
-              id="new-page-tags"
-              data-testid="new-page-tags"
-            />
-          </VCol>
-        </VRow>
+          <div class="px-2 py-2 w-full shrink-0 mb-2">
+            <VTagSelect v-model="newPage.tags" :available-tags="favoriteTagsList" label="Collection Tags (optional)"
+              id="new-page-tags" data-testid="new-page-tags" />
+          </div>
+        </div>
 
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="closeNewCollection">Cancel</button>
@@ -775,13 +716,8 @@ const focusedFields = ref({})
         <h3 class="font-serif text-lg font-semibold mt-1 mb-4">Add Custom Category</h3>
 
         <div class="mb-4">
-          <VInput
-            v-model="newCategoryInputVal"
-            label="Category Name"
-            id="new-custom-cat"
-            required
-            @keydown.enter.prevent="submitCustomCategory"
-          />
+          <VInput v-model="newCategoryInputVal" label="Category Name" id="new-custom-cat" required
+            @keydown.enter.prevent="submitCustomCategory" />
         </div>
 
         <div class="flex justify-end gap-2">

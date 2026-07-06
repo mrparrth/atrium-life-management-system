@@ -53,10 +53,15 @@ const ui = useUIStore()
 
 const greeting = computed(() => {
   const h = new Date().getHours()
-  if (h < 5) return 'Late night coding'
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
+  let greet = 'Good evening'
+  if (h < 5) greet = 'Late night coding'
+  else if (h < 12) greet = 'Good morning'
+  else if (h < 18) greet = 'Good afternoon'
+
+  if (ui.userName && ui.userName.trim()) {
+    return `${greet}, ${ui.userName.trim()}`
+  }
+  return greet
 })
 
 const todayDate = computed(() => dayjs().format('dddd, MMMM D'))
@@ -156,11 +161,11 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto space-y-10" data-testid="work-dashboard">
+  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto space-y-8" data-testid="work-dashboard">
 
     <!-- HEADER -->
     <PageHeader :overline="todayDate" :title="`${greeting}.`"
-      :sub="capacity.burnoutRisk ? '⚠️ Your schedule indicates a high burnout risk. Take it slow.' : 'A focused operational space for your independent work.'">
+      :sub="capacity.burnoutRisk ? '⚠️ Your schedule indicates a high burnout risk. Take it slow.' : 'A focused operational space for your work.'">
       <template #right>
         <button v-if="isGoogleConnected()" class="relative group btn-secondary text-xs flex items-center gap-1.5"
           @click="manualCalendarSync" :disabled="syncingCalendar">
@@ -197,7 +202,7 @@ onMounted(async () => {
 
         <!-- FOCUS ITEMS -->
         <section>
-          <SectionHeader overline="Execution" title="Today Focus" hint="The select tasks guiding your day.">
+          <SectionHeader overline="Execution">
             <template #right>
               <RouterLink to="/work/items" class="btn-ghost text-xs">All items
                 <ChevronRight class="w-3.5 h-3.5" />
@@ -245,7 +250,9 @@ onMounted(async () => {
           <div class="space-y-6">
             <!-- Today's Tasks Section -->
             <div class="space-y-3">
-              <h4 class="text-xs uppercase tracking-wider font-bold text-ink-3">Today's Tasks ({{ todayTasksAll.length }})</h4>
+              <h4 class="text-xs uppercase tracking-wider font-bold text-ink-3">Today's Tasks ({{ todayTasksAll.length
+                }})
+              </h4>
               <div v-if="todayTasksLimit.length" class="space-y-3">
                 <WorkItemCard v-for="item in todayTasksLimit" :key="item.id" :item="item" />
                 <div v-if="todayTasksAll.length > 5" class="mt-2 text-right">
@@ -254,14 +261,17 @@ onMounted(async () => {
                   </RouterLink>
                 </div>
               </div>
-              <div v-else class="text-xs text-ink-3 italic bg-canvas/30 border border-line/45 rounded-xl p-4 text-center">
+              <div v-else
+                class="text-xs text-ink-3 italic bg-canvas/30 border border-line/45 rounded-xl p-4 text-center">
                 No tasks scheduled for today.
               </div>
             </div>
 
             <!-- Tomorrow's Tasks Section -->
             <div class="space-y-3">
-              <h4 class="text-xs uppercase tracking-wider font-bold text-ink-3">Tomorrow's Tasks ({{ tomorrowTasksAll.length }})</h4>
+              <h4 class="text-xs uppercase tracking-wider font-bold text-ink-3">Tomorrow's Tasks ({{
+                tomorrowTasksAll.length
+                }})</h4>
               <div v-if="tomorrowTasksLimit.length" class="space-y-3">
                 <WorkItemCard v-for="item in tomorrowTasksLimit" :key="item.id" :item="item" />
                 <div v-if="tomorrowTasksAll.length > 5" class="mt-2 text-right">
@@ -270,7 +280,8 @@ onMounted(async () => {
                   </RouterLink>
                 </div>
               </div>
-              <div v-else class="text-xs text-ink-3 italic bg-canvas/30 border border-line/45 rounded-xl p-4 text-center">
+              <div v-else
+                class="text-xs text-ink-3 italic bg-canvas/30 border border-line/45 rounded-xl p-4 text-center">
                 No tasks scheduled for tomorrow.
               </div>
             </div>
@@ -323,7 +334,7 @@ onMounted(async () => {
                 <div class="text-[10px] uppercase tracking-wider text-pri-critical">Overdue</div>
                 <div class="font-serif text-lg text-pri-critical font-semibold mt-0.5">${{
                   overdueRevenue.toLocaleString()
-                  }}</div>
+                }}</div>
               </div>
             </div>
           </div>
@@ -337,7 +348,7 @@ onMounted(async () => {
             <div class="text-[11px] text-ink-2 flex justify-between">
               <span>High Confidence:</span>
               <span class="text-pri-strategic font-semibold">${{ Math.round(leadsStore.forecast.high).toLocaleString()
-                }}</span>
+              }}</span>
             </div>
           </div>
         </div>

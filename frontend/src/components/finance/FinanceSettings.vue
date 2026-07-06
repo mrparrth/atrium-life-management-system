@@ -194,7 +194,7 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <SectionHeader overline="Configuration" title="Settings"
+    <SectionHeader overline="Configuration"
       hint="Net worth categories (asset, liability) and cash flow categories (income, expense, investment) are managed here." />
 
     <!-- General Settings Card -->
@@ -208,34 +208,33 @@ onUnmounted(() => {
             Annual Summary.
           </p>
           <VSelect v-model="startMonth" :options="[
-            {value: '01', label: 'January'},
-            {value: '02', label: 'February'},
-            {value: '03', label: 'March'},
-            {value: '04', label: 'April'},
-            {value: '05', label: 'May'},
-            {value: '06', label: 'June'},
-            {value: '07', label: 'July'},
-            {value: '08', label: 'August'},
-            {value: '09', label: 'September'},
-            {value: '10', label: 'October'},
-            {value: '11', label: 'November'},
-            {value: '12', label: 'December'}
+            { value: '01', label: 'January' },
+            { value: '02', label: 'February' },
+            { value: '03', label: 'March' },
+            { value: '04', label: 'April' },
+            { value: '05', label: 'May' },
+            { value: '06', label: 'June' },
+            { value: '07', label: 'July' },
+            { value: '08', label: 'August' },
+            { value: '09', label: 'September' },
+            { value: '10', label: 'October' },
+            { value: '11', label: 'November' },
+            { value: '12', label: 'December' }
           ]" data-testid="settings-start-month" />
         </div>
-        <div
-          class="border-t md:border-t-0 md:border-l border-line pt-6 md:pt-0 md:pl-8 flex flex-col justify-between">
+        <div class="border-t md:border-t-0 md:border-l border-line pt-6 md:pt-0 md:pl-8 flex flex-col justify-between">
           <div>
             <label class="overline block mb-1">Category Filter</label>
             <p class="text-xs text-ink-3 mb-3 leading-relaxed">
-              Toggle category list visibility in settings. Archived categories are hidden from forms but can be managed here.
+              Toggle category list visibility in settings. Archived categories are hidden from forms but can be managed
+              here.
             </p>
           </div>
           <div class="flex items-center gap-2 mb-1">
             <VCheckbox v-model="showOnlyActive" label="Show active categories only" />
           </div>
         </div>
-        <div
-          class="border-t md:border-t-0 md:border-l border-line pt-6 md:pt-0 md:pl-8 flex flex-col justify-between">
+        <div class="border-t md:border-t-0 md:border-l border-line pt-6 md:pt-0 md:pl-8 flex flex-col justify-between">
           <div>
             <label class="overline block mb-1 text-pri-critical font-semibold">Reset Categories & Budgets</label>
             <p class="text-xs text-ink-2 mb-4 leading-relaxed">
@@ -302,8 +301,7 @@ onUnmounted(() => {
                         autofocus />
                     </template>
                     <template v-else>
-                      <span :class="c.archived ? 'line-through text-ink-3' : 'text-ink'"
-                        class="capitalize font-medium">
+                      <span :class="c.archived ? 'line-through text-ink-3' : 'text-ink'" class="capitalize font-medium">
                         {{ label(c.name) }}
                       </span>
                     </template>
@@ -318,25 +316,27 @@ onUnmounted(() => {
                           <span class="truncate pr-2">{{ editingCategoryGroup || 'One-Off' }}</span>
                           <ChevronDown class="w-3.5 h-3.5 text-ink-3 shrink-0" />
                         </button>
-                        
+
                         <!-- Custom Popover Dropdown -->
                         <div v-if="activeRowGroupDropdownId === c.id"
                           class="absolute z-50 left-0 right-0 mt-1 bg-surface border border-line rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto animate-rise-in min-w-[180px]">
                           <div class="p-1 space-y-0.5">
-                            <button v-for="g in existingGroupsForScope(scopeInfo.scope)" :key="g" type="button" 
+                            <button v-for="g in existingGroupsForScope(scopeInfo.scope)" :key="g" type="button"
                               @click="selectRowGroup(g)"
                               class="w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors text-ink-2 hover:bg-elevated/70 hover:text-ink flex items-center justify-between"
                               :class="editingCategoryGroup === g ? 'bg-elevated/50 text-ink font-medium' : ''">
                               <span>{{ g }}</span>
                               <Check v-if="editingCategoryGroup === g" class="w-3 h-3 text-ink shrink-0" />
                             </button>
-                            
+
                             <div class="border-t border-line/40 my-1"></div>
-                            
+
                             <div class="p-1.5 space-y-1" @click.stop>
                               <div class="text-[9px] uppercase tracking-wider text-ink-3 font-mono">Custom group:</div>
-                              <input v-model="editingCategoryGroup" @keydown.enter.prevent="activeRowGroupDropdownId = null" @keydown.esc="editingCategoryId = null"
-                                placeholder="Press enter to apply" autocomplete="off"
+                              <input v-model="editingCategoryGroup"
+                                @keydown.enter.prevent="activeRowGroupDropdownId = null"
+                                @keydown.esc="editingCategoryId = null" placeholder="Press enter to apply"
+                                autocomplete="off"
                                 class="bg-canvas border border-line rounded px-2 py-1.5 text-xs outline-none focus:border-line-2 w-full font-sans text-ink" />
                             </div>
                           </div>
@@ -354,8 +354,8 @@ onUnmounted(() => {
                   <!-- Default Value -->
                   <td class="py-3 px-1">
                     <template v-if="editingCategoryId === c.id">
-                      <input type="number" v-model.number="editingCategoryDefaultValue" @keydown.enter="saveEditCategory(c)"
-                        @keydown.esc="editingCategoryId = null"
+                      <input type="number" v-model.number="editingCategoryDefaultValue"
+                        @keydown.enter="saveEditCategory(c)" @keydown.esc="editingCategoryId = null"
                         class="bg-canvas border border-line rounded px-2.5 py-1.5 text-sm outline-none focus:border-line-2 w-full font-mono text-ink text-right"
                         placeholder="0" />
                     </template>
@@ -458,8 +458,7 @@ onUnmounted(() => {
                         autofocus />
                     </template>
                     <template v-else>
-                      <span :class="c.archived ? 'line-through text-ink-3' : 'text-ink'"
-                        class="capitalize font-medium">
+                      <span :class="c.archived ? 'line-through text-ink-3' : 'text-ink'" class="capitalize font-medium">
                         {{ label(c.name) }}
                       </span>
                     </template>
@@ -474,25 +473,27 @@ onUnmounted(() => {
                           <span class="truncate pr-2">{{ editingCategoryGroup || 'One-Off' }}</span>
                           <ChevronDown class="w-3.5 h-3.5 text-ink-3 shrink-0" />
                         </button>
-                        
+
                         <!-- Custom Popover Dropdown -->
                         <div v-if="activeRowGroupDropdownId === c.id"
                           class="absolute z-50 left-0 right-0 mt-1 bg-surface border border-line rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto animate-rise-in min-w-[180px]">
                           <div class="p-1 space-y-0.5">
-                            <button v-for="g in existingGroupsForScope(scopeInfo.scope)" :key="g" type="button" 
+                            <button v-for="g in existingGroupsForScope(scopeInfo.scope)" :key="g" type="button"
                               @click="selectRowGroup(g)"
                               class="w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors text-ink-2 hover:bg-elevated/70 hover:text-ink flex items-center justify-between"
                               :class="editingCategoryGroup === g ? 'bg-elevated/50 text-ink font-medium' : ''">
                               <span>{{ g }}</span>
                               <Check v-if="editingCategoryGroup === g" class="w-3 h-3 text-ink shrink-0" />
                             </button>
-                            
+
                             <div class="border-t border-line/40 my-1"></div>
-                            
+
                             <div class="p-1.5 space-y-1" @click.stop>
                               <div class="text-[9px] uppercase tracking-wider text-ink-3 font-mono">Custom group:</div>
-                              <input v-model="editingCategoryGroup" @keydown.enter.prevent="activeRowGroupDropdownId = null" @keydown.esc="editingCategoryId = null"
-                                placeholder="Press enter to apply" autocomplete="off"
+                              <input v-model="editingCategoryGroup"
+                                @keydown.enter.prevent="activeRowGroupDropdownId = null"
+                                @keydown.esc="editingCategoryId = null" placeholder="Press enter to apply"
+                                autocomplete="off"
                                 class="bg-canvas border border-line rounded px-2 py-1.5 text-xs outline-none focus:border-line-2 w-full font-sans text-ink" />
                             </div>
                           </div>
@@ -510,8 +511,8 @@ onUnmounted(() => {
                   <!-- Default Value -->
                   <td class="py-3 px-1">
                     <template v-if="editingCategoryId === c.id">
-                      <input type="number" v-model.number="editingCategoryDefaultValue" @keydown.enter="saveEditCategory(c)"
-                        @keydown.esc="editingCategoryId = null"
+                      <input type="number" v-model.number="editingCategoryDefaultValue"
+                        @keydown.enter="saveEditCategory(c)" @keydown.esc="editingCategoryId = null"
                         class="bg-canvas border border-line rounded px-2.5 py-1.5 text-sm outline-none focus:border-line-2 w-full font-mono text-ink text-right"
                         placeholder="0" />
                     </template>
@@ -569,10 +570,11 @@ onUnmounted(() => {
     </div>
 
     <!-- Add Category Popup Modal -->
-    <div v-if="showAddCatForm" @keydown.window.esc="showAddCatForm = false" class="fixed inset-0 z-50 flex items-center justify-center p-4"
-      data-testid="add-category-modal">
+    <div v-if="showAddCatForm" @keydown.window.esc="showAddCatForm = false"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="add-category-modal">
       <div class="fixed inset-0 bg-ink/30 backdrop-blur-sm animate-fade-in" @click="showAddCatForm = false"></div>
-      <form @submit.prevent="submitAddCat" @keydown.meta.enter.prevent="submitAddCat" @keydown.ctrl.enter.prevent="submitAddCat"
+      <form @submit.prevent="submitAddCat" @keydown.meta.enter.prevent="submitAddCat"
+        @keydown.ctrl.enter.prevent="submitAddCat"
         class="relative w-full max-w-sm card p-6 animate-rise-in shadow-2xl bg-surface">
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showAddCatForm = false"
           data-testid="close-add-category-modal">
@@ -602,9 +604,9 @@ onUnmounted(() => {
                   <span>{{ g }}</span>
                   <Check v-if="addCatGroup === g" class="w-3 h-3 text-ink shrink-0" />
                 </button>
-                
+
                 <div class="border-t border-line/40 my-1"></div>
-                
+
                 <div class="p-1.5 space-y-1" @click.stop>
                   <div class="text-[9px] uppercase tracking-wider text-ink-3 font-mono">Custom group:</div>
                   <input v-model="addCatGroup" @keydown.enter.prevent="showGroupSuggestions = false"
@@ -617,21 +619,22 @@ onUnmounted(() => {
 
           <div>
             <label class="text-[10px] uppercase tracking-wider text-ink-3 block mb-1 font-mono">Category Name</label>
-            <input ref="addCatNameInput" v-model="addCatName" placeholder="e.g. gold, school_fees" class="input-soft !text-sm text-ink"
-              required data-testid="new-category-name-modal" />
+            <input ref="addCatNameInput" v-model="addCatName" placeholder="e.g. gold, school_fees"
+              class="input-soft !text-sm text-ink" required data-testid="new-category-name-modal" />
           </div>
 
           <div>
             <label class="text-[10px] uppercase tracking-wider text-ink-3 block mb-1 font-mono">Default Value</label>
-            <input type="number" v-model.number="addCatDefaultValue" placeholder="e.g. 5000" class="input-soft !text-sm text-ink"
-              data-testid="new-category-default-value-modal" />
+            <input type="number" v-model.number="addCatDefaultValue" placeholder="e.g. 5000"
+              class="input-soft !text-sm text-ink" data-testid="new-category-default-value-modal" />
           </div>
         </div>
 
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost !text-xs !py-1.5 !px-3" @click="showAddCatForm = false">Cancel</button>
           <button type="submit" class="btn-primary !text-xs !py-1.5 !px-3" data-testid="new-category-save-modal">
-            Add Category <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Add Category <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </form>

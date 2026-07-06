@@ -53,10 +53,12 @@ const title = ref('')
 const clientName = ref('')
 const value = ref(0)
 const hours = ref(0)
-const probability = ref(50)
+const probability = ref('mid') // 'low', 'mid', 'high'
 const followUpDate = ref(new Date().toISOString().slice(0, 10))
 const notes = ref('')
 const status = ref('lead')
+
+const probMap = { low: 0.2, mid: 0.5, high: 0.8 }
 
 function openAddModalForStage(stageKey) {
   status.value = stageKey
@@ -65,7 +67,6 @@ function openAddModalForStage(stageKey) {
 
 async function createLead() {
   const missing = []
-  if (!title.value.trim()) missing.push('Opportunity Title')
   if (!clientName.value.trim()) missing.push('Prospect Name')
   if (missing.length) {
     ui.showToast(`Please fill in: ${missing.join(', ')}`, 'warning')
@@ -78,7 +79,7 @@ async function createLead() {
     status: status.value,
     estimatedValue: value.value,
     expectedHours: hours.value,
-    probability: probability.value / 100,
+    probability: probMap[probability.value] || 0.5,
     followUpDate: followUpDate.value,
     notes: notes.value,
     archived: false
@@ -88,7 +89,7 @@ async function createLead() {
   clientName.value = ''
   value.value = 0
   hours.value = 0
-  probability.value = 50
+  probability.value = 'mid'
   followUpDate.value = new Date().toISOString().slice(0, 10)
   notes.value = ''
   showAddModal.value = false
@@ -96,11 +97,12 @@ async function createLead() {
 }
 
 const stages = [
-  { key: 'lead', name: 'Lead' },
-  { key: 'discovery', name: 'Discovery' },
-  { key: 'proposal_sent', name: 'Proposal Sent' },
-  { key: 'negotiation', name: 'Negotiation' },
-  { key: 'won', name: 'Won' }
+  { key: 'lead', name: 'Lead', color: 'border-l-slate-400' },
+  { key: 'discovery', name: 'Discovery', color: 'border-l-blue-400' },
+  { key: 'proposal_sent', name: 'Proposal Sent', color: 'border-l-violet-400' },
+  { key: 'negotiation', name: 'Negotiation', color: 'border-l-amber-500' },
+  { key: 'won', name: 'Won', color: 'border-l-emerald-500' },
+  { key: 'lost', name: 'Lost', color: 'border-l-rose-500' }
 ]
 
 const visibleStages = computed(() => {
@@ -165,7 +167,7 @@ const editForm = ref({
   clientName: '',
   estimatedValue: 0,
   expectedHours: 0,
-  probability: 50,
+  probability: 'mid',
   followUpDate: '',
   notes: '',
   status: 'lead',
@@ -179,7 +181,7 @@ function loadLeadForEdit(lead) {
     clientName: lead.clientName || '',
     estimatedValue: lead.estimatedValue || 0,
     expectedHours: lead.expectedHours || 0,
-    probability: Math.round((lead.probability || 0.5) * 100),
+    probability: lead.probability >= 0.8 ? 'high' : lead.probability >= 0.5 ? 'mid' : 'low',
     followUpDate: lead.followUpDate || '',
     notes: lead.notes || '',
     status: lead.status || 'lead',
@@ -195,7 +197,7 @@ async function saveLeadEdit() {
     clientName: editForm.value.clientName.trim(),
     estimatedValue: Number(editForm.value.estimatedValue) || 0,
     expectedHours: Number(editForm.value.expectedHours) || 0,
-    probability: editForm.value.probability / 100,
+    probability: probMap[editForm.value.probability] || 0.5,
     followUpDate: editForm.value.followUpDate,
     notes: editForm.value.notes.trim(),
     status: editForm.value.status,
@@ -273,65 +275,64 @@ onUnmounted(() => {
     </PageHeader>
 
     <!-- METRICS & FILTERS ROW -->
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
       <!-- Estimated Pipeline -->
-      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[72px]">
-        <div class="font-serif text-xl font-extrabold text-ink leading-tight">
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[84px]">
+        <div class="font-serif text-3xl font-extrabold text-ink leading-tight">
           ${{ Math.round(leadsStore.forecast.totalPipeline).toLocaleString() }}
         </div>
-        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">Estimated Pipeline</div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">Estimated Pipeline</div>
       </div>
       <!-- High Confidence -->
-      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[72px]">
-        <div class="font-serif text-xl font-extrabold text-pri-strategic leading-tight">
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[84px]">
+        <div class="font-serif text-3xl font-extrabold text-pri-strategic leading-tight">
           ${{ Math.round(leadsStore.forecast.high).toLocaleString() }}
         </div>
-        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">High Confidence</div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">High Confidence</div>
       </div>
       <!-- Medium Confidence -->
-      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[72px]">
-        <div class="font-serif text-xl font-extrabold text-pri-interruptive leading-tight">
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[84px]">
+        <div class="font-serif text-3xl font-extrabold text-pri-interruptive leading-tight">
           ${{ Math.round(leadsStore.forecast.medium).toLocaleString() }}
         </div>
-        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">Medium Confidence</div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">Medium Confidence</div>
+      </div>
+      <!-- Low Confidence -->
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[84px]">
+        <div class="font-serif text-3xl font-extrabold text-ink-3 leading-tight">
+          ${{ Math.round(leadsStore.forecast.low).toLocaleString() }}
+        </div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">Low Confidence</div>
       </div>
       <!-- Weighted Opportunity -->
-      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[72px]">
-        <div class="font-serif text-xl font-extrabold text-ink leading-tight">
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[84px]">
+        <div class="font-serif text-3xl font-extrabold text-ink leading-tight">
           ${{ Math.round(leadsStore.forecast.total).toLocaleString() }}
         </div>
-        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider">Weighted Forecast</div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">Weighted Forecast</div>
       </div>
       <!-- Filters Card -->
-      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-3 flex flex-col justify-center gap-2 min-h-[72px]">
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium text-ink">Show empty columns</label>
-              <p class="text-[11px] text-ink-3">Display stages even if they have no active leads.</p>
-            </div>
-            <VCheckbox v-model="showEmptyColumns" />
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div>
-              <label class="text-sm font-medium text-ink">Show archived leads</label>
-              <p class="text-[11px] text-ink-3">Include leads marked as archived in the board.</p>
-            </div>
-            <VCheckbox v-model="showArchivedLeads" />
-          </div>
+      <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-center gap-3 min-h-[84px]">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-ink uppercase tracking-wider">Show empty columns</label>
+          <VCheckbox v-model="showEmptyColumns" />
+        </div>
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-ink uppercase tracking-wider">Show archived leads</label>
+          <VCheckbox v-model="showArchivedLeads" />
         </div>
       </div>
     </div>
 
     <!-- PIPELINE COLUMNS BOARD -->
-    <div class="flex gap-4 overflow-x-auto pb-6 px-8 snap-x">
+    <div class="flex gap-4 overflow-x-auto pb-6 snap-x">
       <div v-for="stage in visibleStages" :key="stage.key"
         class="w-80 shrink-0 select-none flex flex-col h-[640px] bg-canvas/60 rounded-2xl border border-line/50 p-2 snap-start">
 
         <!-- Column Header -->
         <div
-          class="flex items-center justify-between p-3.5 mb-4 bg-surface border border-[#ECE8E2] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+          class="flex items-center justify-between p-3.5 mb-4 bg-surface border border-[#ECE8E2] border-l-4 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
+          :class="stage.color">
           <div class="flex flex-col gap-1">
             <h3 class="font-serif text-sm font-semibold text-ink leading-none">{{ stage.name }}</h3>
             <span class="text-[10px] text-ink-3 font-semibold font-mono leading-none">
@@ -423,8 +424,7 @@ onUnmounted(() => {
                   lead.probability >= 0.5 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
                     'bg-rose-500/10 text-rose-600 border-rose-500/20'
               ]">
-                <span>{{ lead.probability >= 0.8 ? '🟢' : lead.probability >= 0.5 ? '🟡' : '🔴' }}</span>
-                <span>{{ Math.round(lead.probability * 100) }}%</span>
+                <span>{{ lead.probability >= 0.8 ? '🟢 High' : lead.probability >= 0.5 ? '🟡 Mid' : '🔴 Low' }}</span>
               </span>
             </div>
 
@@ -453,7 +453,7 @@ onUnmounted(() => {
     <div v-if="showAddModal" @keydown.window.esc="showAddModal = false"
       class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showAddModal = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
+      <div class="relative w-full max-w-xl card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
         @keydown.meta.enter.prevent="createLead" @keydown.ctrl.enter.prevent="createLead">
         <div>
           <div class="overline">New Sales Lead</div>
@@ -466,7 +466,8 @@ onUnmounted(() => {
               <VInput v-model="clientName" label="Prospect Name *" id="lead-client" required />
             </VCol>
             <VCol cols="12" sm="6">
-              <VInput ref="addModalFirstInput" v-model="title" label="Opportunity Title *" id="lead-title" required />
+              <VSelect v-model="status" label="Initial Stage" id="lead-status" :options="stages" option-value="key"
+                option-label="name" />
             </VCol>
           </VRow>
 
@@ -482,21 +483,20 @@ onUnmounted(() => {
           <VRow class="items-center">
             <VCol cols="12" sm="6">
               <div class="py-1">
-                <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{
-                  probability }}%)</label>
-                <input type="range" v-model="probability" min="10" max="100" step="5"
-                  class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
+                <label
+                  class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability</label>
+                <div class="flex gap-2 flex-wrap mt-1">
+                  <button v-for="opt in ['low', 'mid', 'high']" :key="opt" type="button"
+                    class="px-4 py-1.5 rounded-lg border text-xs capitalize transition-all font-medium"
+                    :class="probability === opt ? 'bg-pri-strategic text-white border-pri-strategic shadow-sm' : 'bg-surface text-ink-2 border-line hover:border-line-2'"
+                    @click="probability = opt">
+                    {{ opt }}
+                  </button>
+                </div>
               </div>
             </VCol>
             <VCol cols="12" sm="6">
               <DateField v-model="followUpDate" label="Follow-up Target Date" id="lead-followup" />
-            </VCol>
-          </VRow>
-
-          <VRow>
-            <VCol cols="12">
-              <VSelect v-model="status" label="Initial Stage" id="lead-status" :options="stages" option-value="key"
-                option-label="name" />
             </VCol>
           </VRow>
 
@@ -506,7 +506,7 @@ onUnmounted(() => {
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddModal = false" class="btn-ghost">Cancel</button>
           <button @click="createLead" class="btn-primary">
-            Add Opportunity <span
+            Add Lead <span
               class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
@@ -517,21 +517,30 @@ onUnmounted(() => {
     <div v-if="showEditModal" @keydown.window.esc="showEditModal = false"
       class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showEditModal = false"></div>
-      <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
+      <div class="relative w-full max-w-xl card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
         @keydown.meta.enter.prevent="saveLeadEdit" @keydown.ctrl.enter.prevent="saveLeadEdit">
-        <div>
-          <div class="overline">Modify Sales Lead</div>
-          <h2 class="font-serif text-2xl mt-1">Edit opportunity</h2>
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="overline">Modify Sales Lead</div>
+            <h2 class="font-serif text-2xl mt-1">Edit opportunity</h2>
+          </div>
+          <label
+            class="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-ink-3 uppercase tracking-wider hover:text-ink transition-colors mt-4"
+            data-testid="edit-lead-archive">
+            <input type="checkbox" v-model="editForm.archived"
+              class="rounded border-line text-pri-strategic focus:ring-pri-strategic" />
+            <span>Archive Lead</span>
+          </label>
         </div>
 
         <div class="pt-2">
           <VRow>
             <VCol cols="12" sm="6">
-              <VInput ref="editModalFirstInput" v-model="editForm.title" label="Opportunity Title *"
-                id="edit-lead-title" required />
+              <VInput v-model="editForm.clientName" label="Prospect Name *" id="edit-lead-client" required />
             </VCol>
             <VCol cols="12" sm="6">
-              <VInput v-model="editForm.clientName" label="Prospect Name *" id="edit-lead-client" required />
+              <VSelect v-model="editForm.status" label="Pipeline Stage" id="edit-lead-status" :options="stages"
+                option-value="key" option-label="name" />
             </VCol>
           </VRow>
 
@@ -549,10 +558,16 @@ onUnmounted(() => {
           <VRow class="items-center">
             <VCol cols="12" sm="6">
               <div class="py-1">
-                <label class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability ({{
-                  editForm.probability }}%)</label>
-                <input type="range" v-model="editForm.probability" min="10" max="100" step="5"
-                  class="w-full h-1 bg-line rounded-lg appearance-none cursor-pointer accent-ink" />
+                <label
+                  class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability</label>
+                <div class="flex gap-2 flex-wrap mt-1">
+                  <button v-for="opt in ['low', 'mid', 'high']" :key="opt" type="button"
+                    class="px-4 py-1.5 rounded-lg border text-xs capitalize transition-all font-medium"
+                    :class="editForm.probability === opt ? 'bg-pri-strategic text-white border-pri-strategic shadow-sm' : 'bg-surface text-ink-2 border-line hover:border-line-2'"
+                    @click="editForm.probability = opt">
+                    {{ opt }}
+                  </button>
+                </div>
               </div>
             </VCol>
             <VCol cols="12" sm="6">
@@ -560,15 +575,6 @@ onUnmounted(() => {
             </VCol>
           </VRow>
 
-          <VRow class="items-center">
-            <VCol cols="12" sm="6">
-              <VSelect v-model="editForm.status" label="Pipeline Stage" id="edit-lead-status"
-                :options="[...stages, { key: 'lost', name: 'Lost' }]" option-value="key" option-label="name" />
-            </VCol>
-            <VCol cols="12" sm="6">
-              <VCheckbox v-model="editForm.archived" label="Archived" class="pl-2" />
-            </VCol>
-          </VRow>
 
           <VTextarea v-model="editForm.notes" label="Opportunity Notes" id="edit-lead-notes" autogrow />
         </div>

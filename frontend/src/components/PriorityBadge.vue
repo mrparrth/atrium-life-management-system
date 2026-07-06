@@ -2,7 +2,12 @@
 import { computed } from 'vue'
 import { derivePriority } from '@/lib/priority'
 
-const props = defineProps({ important: Boolean, urgent: Boolean, compact: { type: Boolean, default: false } })
+const props = defineProps({
+  important: Boolean,
+  urgent: Boolean,
+  compact: { type: Boolean, default: false },
+  numeric: { type: Boolean, default: false }
+})
 const p = computed(() => derivePriority(props.important, props.urgent))
 
 const classes = computed(() => {
@@ -41,15 +46,15 @@ const classes = computed(() => {
 </script>
 
 <template>
-  <span v-if="compact" class="inline-flex items-center gap-1.5 text-xs w-[104px] justify-start" :data-testid="`priority-badge-${p.key}`">
+  <span v-if="compact" class="inline-flex items-center gap-1.5 text-xs justify-start" :class="numeric ? 'w-auto' : 'w-[104px]'" :data-testid="`priority-badge-${p.key}`">
     <span class="priority-dot shrink-0" :class="classes.dot"></span>
-    <span :class="classes.text" class="font-medium truncate">{{ p.label }}</span>
+    <span :class="classes.text" class="font-medium truncate">{{ numeric ? p.label.charAt(0) : p.label }}</span>
   </span>
   <span v-else
-    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-medium w-[104px] justify-start"
-    :class="[classes.bg, classes.text, classes.border]"
+    class="inline-flex items-center gap-1.5 py-0.5 rounded-full border text-[11px] font-medium justify-start"
+    :class="[classes.bg, classes.text, classes.border, numeric ? 'w-auto px-2' : 'w-[104px] px-2.5']"
     :data-testid="`priority-badge-${p.key}`">
     <span class="priority-dot shrink-0" :class="classes.dot"></span>
-    <span class="truncate">{{ p.label }}</span>
+    <span class="truncate">{{ numeric ? p.label.charAt(0) : p.label }}</span>
   </span>
 </template>

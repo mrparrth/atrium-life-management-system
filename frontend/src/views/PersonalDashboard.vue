@@ -11,7 +11,7 @@ import { useReviewsStore } from '@/stores/reviews'
 import { useYearsStore } from '@/stores/years'
 import { useUIStore } from '@/stores/ui'
 import { useFollowsStore, BRAND_SVG_PATHS, getPlatformStyles } from '@/stores/follows'
-import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing } from '@/lib/resurface'
+import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, getProjectLastTouched } from '@/lib/resurface'
 import { fromNow } from '@/lib/date'
 import { inr } from '@/lib/money'
 import { derivePriority } from '@/lib/priority'
@@ -123,10 +123,15 @@ const resurfacedFollows = computed(() => {
 
 const greeting = computed(() => {
   const h = currentDate.value.hour()
-  if (h < 5) return 'Late night'
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
+  let greet = 'Good evening'
+  if (h < 5) greet = 'Late night'
+  else if (h < 12) greet = 'Good morning'
+  else if (h < 18) greet = 'Good afternoon'
+
+  if (ui.userName && ui.userName.trim()) {
+    return `${greet}, ${ui.userName.trim()}`
+  }
+  return greet
 })
 
 const todayDate = computed(() => currentDate.value.format('dddd, MMMM D'))
@@ -136,6 +141,11 @@ const todayCount = computed(() => {
   // Access currentDate.value so this computed updates reactively
   currentDate.value
   return todayFocus(tasks.items).length
+})
+
+const todayUnscheduledCount = computed(() => {
+  currentDate.value
+  return todayFocus(tasks.items).filter(t => !t.workHour).length
 })
 
 const upcomingCount = computed(() => {
@@ -152,14 +162,7 @@ const priorityWeight = {
 
 const sortedToday = computed(() => {
   currentDate.value
-  const list = [...todayFocus(tasks.items)]
-  list.sort((a, b) => {
-    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
-    if (a.dueDate) return -1
-    if (b.dueDate) return 1
-    return b.createdAt.localeCompare(a.createdAt)
-  })
-  return list.slice(0, 5)
+  return todayFocus(tasks.items).slice(0, 5)
 })
 
 const sortedUpcoming = computed(() => {
@@ -174,6 +177,24 @@ const sortedUpcoming = computed(() => {
   return list.slice(0, 5)
 })
 
+const todayOverline = computed(() => {
+  const displayed = sortedToday.value.length
+  const total = todayCount.value
+  if (total === 0) return 'Today'
+
+  let str = `Today · Showing ${displayed} of ${total}`
+  if (todayUnscheduledCount.value > 0) {
+    str += ` (${todayUnscheduledCount.value} without assigned time)`
+  }
+  return str
+})
+
+const upcomingOverline = computed(() => {
+  const displayed = sortedUpcoming.value.length
+  const total = upcomingCount.value
+  if (total === 0) return 'Coming up'
+  return `Coming up · Showing ${displayed} of ${total}`
+})
 const stale = computed(() => {
   currentDate.value
   return staleProjects(projects.items, tasks.items).slice(0, 3)
@@ -240,46 +261,30 @@ async function openDailyJournal() {
       <!-- Left Column (70%): Task planning and execution -->
       <div :class="[isSidebarCollapsed ? 'lg:col-span-3' : 'lg:col-span-2', 'space-y-6 transition-all duration-300']">
         <!-- TODAY FOCUS -->
-        <section data-testid="section-today-focus">
-          <SectionHeader overline="Today" title="Today focus"
-            :hint="sortedToday.length ? 'A few quiet things to attend to.' : 'Nothing scheduled - the day is open.'">
-            <template #right>
-              <RouterLink to="/today" class="btn-ghost text-sm">Open today ({{ todayCount }} tasks)
-                <ArrowRight class="w-3 h-3 ml-1" />
-              </RouterLink>
-            </template>
-          </SectionHeader>
+        <section data-testid="section-today-focus" class="mt-4">
+          <SectionHeader :overline="todayOverline"
+            :hint="sortedToday.length ? null : 'Nothing scheduled - the day is open.'" />
           <div v-if="sortedToday.length" class="space-y-3">
-            <TaskCard v-for="t in sortedToday" :key="t.id" :task="t" :single-line="true" :show-project="false" />
+            <TaskCard v-for="t in sortedToday" :key="t.id" :task="t" :single-line="true" :show-project="false"
+              priority-numeric />
           </div>
           <EmptyState v-else title="An open day" hint="Capture something gentle to begin." />
         </section>
 
         <!-- COMING UP -->
         <section data-testid="section-upcoming">
-          <SectionHeader overline="Coming up" title="Coming up"
-            :hint="sortedUpcoming.length ? 'The next seven days.' : 'A clear horizon.'">
-            <template #right>
-              <RouterLink to="/tasks" class="btn-ghost text-sm">All tasks ({{ upcomingCount }} tasks)
-                <ArrowRight class="w-3 h-3 ml-1" />
-              </RouterLink>
-            </template>
-          </SectionHeader>
+          <SectionHeader :overline="upcomingOverline" :hint="sortedUpcoming.length ? null : 'A clear horizon.'" />
           <div v-if="sortedUpcoming.length" class="space-y-3">
-            <TaskCard v-for="t in sortedUpcoming.slice(0, 2)" :key="t.id" :task="t" :single-line="true" :show-project="false" />
+            <TaskCard v-for="t in sortedUpcoming.slice(0, 2)" :key="t.id" :task="t" :single-line="true"
+              :show-project="false" priority-numeric />
           </div>
           <EmptyState v-else title="A clear horizon" hint="Plan when ready." />
         </section>
 
         <!-- STALE PROJECTS -->
         <section data-testid="section-stale">
-          <SectionHeader overline="Drifting" title="Stale projects" hint="Quietly paused - return when you're ready.">
-            <template #right>
-              <RouterLink to="/projects" class="btn-ghost text-sm">All projects
-                <ArrowRight class="w-3 h-3" />
-              </RouterLink>
-            </template>
-          </SectionHeader>
+          <SectionHeader overline="Drifting" hint="Some projects require attention to move forward."
+            :show-all-link="false" />
           <div v-if="stale.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <RouterLink v-for="p in stale" :key="p.id" :to="`/projects/${p.id}`"
               class="card p-5 hover:border-line-2 transition-all duration-300 group"
@@ -289,7 +294,9 @@ async function openDailyJournal() {
               </div>
               <div class="font-serif text-xl text-ink mb-1">{{ p.title }}</div>
               <p v-if="p.description" class="text-sm text-ink-2 line-clamp-2">{{ p.description }}</p>
-              <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(p.lastViewedAt) }} · {{ p.openTaskCount }}
+              <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(getProjectLastTouched(p)) }} · {{
+                p.openTaskCount
+                }}
                 open
                 task<template v-if="p.openTaskCount !== 1">s</template></div>
             </RouterLink>
@@ -299,14 +306,14 @@ async function openDailyJournal() {
 
         <!-- WEEKLY REFLECTION -->
         <section data-testid="section-reflection">
-          <SectionHeader overline="Weekly reflection" title="Pause" hint="A small ritual at the close of the week." />
+          <SectionHeader overline="Weekly reflection" />
           <div class="card p-8 flex items-center justify-between gap-6 flex-wrap">
             <div>
               <div class="font-serif text-2xl">What did this week make of me?</div>
               <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
               <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
                 fromNow(lastWeeklyReview.createdAt)
-              }}</p>
+                }}</p>
             </div>
             <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
           </div>
@@ -316,7 +323,7 @@ async function openDailyJournal() {
       <!-- Right Column (30%): Sticky Memory Resurfacing sidebar -->
       <div v-if="!isSidebarCollapsed" class="lg:sticky lg:top-8 space-y-6">
         <section data-testid="section-memory" class="p-6 bg-surface/30 border border-line rounded-2xl">
-          <SectionHeader overline="Memory" title="Resurfacing" hint="Worth revisiting.">
+          <SectionHeader overline="Resurfacing Memory">
             <template #right>
               <button class="btn-ghost !p-1.5" @click="toggleSidebar" title="Collapse sidebar"
                 data-testid="dash-collapse-sidebar-inner-btn">
@@ -326,19 +333,17 @@ async function openDailyJournal() {
           </SectionHeader>
           <div class="space-y-4 mt-5">
             <!-- Daily Inspiration Creator Follow Resurfacing -->
-            <a v-for="rf in resurfacedFollows" :key="rf.id" :href="rf.url" target="_blank"
-              @click="markClicked(rf.id)"
+            <a v-for="rf in resurfacedFollows" :key="rf.id" :href="rf.url" target="_blank" @click="markClicked(rf.id)"
               class="card p-4 block hover:border-line-2 transition-all duration-300 bg-amber-500/5 hover:!border-amber-500/50"
               :class="[
                 clickedMemoryItems.has(rf.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : '',
                 rf.important && !clickedMemoryItems.has(rf.id) ? 'border-amber-500 ring-1 ring-amber-500' : 'border-amber-500/20'
-              ]"
-              :data-testid="`resurface-follow-${rf.id}`">
+              ]" :data-testid="`resurface-follow-${rf.id}`">
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="flex items-center gap-2">
-                  <Compass class="w-3.5 h-3.5" :class="clickedMemoryItems.has(rf.id) ? 'text-ink-3 fill-ink-3/10' : 'text-amber-500 fill-amber-500/20'" />
-                  <span
-                    class="overline font-semibold tracking-wider flex items-center gap-1.5"
+                  <Compass class="w-3.5 h-3.5"
+                    :class="clickedMemoryItems.has(rf.id) ? 'text-ink-3 fill-ink-3/10' : 'text-amber-500 fill-amber-500/20'" />
+                  <span class="overline font-semibold tracking-wider flex items-center gap-1.5"
                     :class="clickedMemoryItems.has(rf.id) ? 'text-ink-3' : 'text-amber-600 dark:text-amber-400'">
                     <span>Radar</span>
                   </span>
@@ -367,13 +372,12 @@ async function openDailyJournal() {
 
             <!-- Notes (up to 3) -->
             <RouterLink v-for="n in memory.notes.slice(0, 3)" :key="n.id" :to="`/notes/${n.id}`"
-              @click="markClicked(n.id)"
-              class="card p-4 block hover:border-line-2 transition-all duration-300"
+              @click="markClicked(n.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
               :class="clickedMemoryItems.has(n.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
               :data-testid="`resurface-note-${n.id}`">
               <div class="flex items-center gap-2">
                 <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
-                }}</span>
+                  }}</span>
               </div>
               <div class="font-serif text-lg mt-1.5 leading-snug">{{ n.title }}</div>
               <p class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ n.body }}</p>
@@ -381,15 +385,14 @@ async function openDailyJournal() {
 
             <!-- Bookmarks (up to 3) -->
             <a v-for="b in memory.bookmarks.slice(0, 3)" :key="b.id" :href="b.url" target="_blank"
-              @click="markClicked(b.id)"
-              class="card p-4 block hover:border-line-2 transition-all duration-300"
+              @click="markClicked(b.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
               :class="clickedMemoryItems.has(b.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
               :data-testid="`resurface-bookmark-${b.id}`">
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="flex items-center gap-2">
                   <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{
                     fromNow(b.lastViewedAt)
-                    }}</span>
+                  }}</span>
                 </div>
                 <span v-if="b.category"
                   class="text-[9px] uppercase tracking-wider text-ink-3 font-semibold bg-canvas border border-line px-1.5 py-0.5 rounded-full capitalize">

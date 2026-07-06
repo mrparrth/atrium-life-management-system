@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
-import { X, Plus } from 'lucide-vue-next'
+import { X, Plus, CheckCheck } from 'lucide-vue-next'
 import PriorityBadge from './PriorityBadge.vue'
 import dayjs from 'dayjs'
 import DateField from './DateField.vue'
@@ -73,11 +73,30 @@ async function save() {
   }
   emit('close')
 }
+
+async function toggleCompleteAndSave() {
+  status.value = isDone.value ? 'open' : 'done'
+  isDone.value = (status.value === 'done')
+  if (status.value === 'done') {
+    completedAt.value = new Date().toISOString().slice(0, 10)
+  } else {
+    completedAt.value = ''
+  }
+  await save()
+}
 </script>
 
 <template>
-  <form @submit.prevent="save" @keydown.meta.enter.prevent="save" @keydown.ctrl.enter.prevent="save" class="space-y-5"
-    data-testid="task-composer">
+  <form @submit.prevent="save" @keydown.meta.enter.prevent="save" @keydown.ctrl.enter.prevent="save"
+    class="space-y-5 relative" data-testid="task-composer">
+    <!-- Header Quick Toggle Complete -->
+    <div v-if="initialTask"
+      class="absolute -top-[55px] right-0 flex items-center gap-1.5 text-xs font-semibold text-ink-3 hover:text-ink cursor-pointer select-none py-1.5 px-2.5 rounded-lg hover:bg-canvas transition-all"
+      @click="toggleCompleteAndSave">
+      <CheckCheck class="w-4 h-4 text-ink-3" />
+      <span>{{ isDone ? 'Mark Incomplete' : 'Mark Complete' }}</span>
+    </div>
+
     <VInput ref="titleEl" v-model="title" label="What needs to be remembered… *" id="task-title"
       data-testid="task-title-input" required />
 

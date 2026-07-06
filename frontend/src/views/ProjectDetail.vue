@@ -7,7 +7,7 @@ import { useGoalsStore } from '@/stores/goals'
 import { useAreasStore } from '@/stores/areas'
 import { useNotesStore } from '@/stores/notes'
 import { useUIStore } from '@/stores/ui'
-import { isTaskOpen } from '@/lib/resurface'
+import { isTaskOpen, getProjectLastTouched } from '@/lib/resurface'
 import { fromNow } from '@/lib/date'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
@@ -99,31 +99,57 @@ async function deleteNote(idx) {
 
 <template>
   <div v-if="project" class="px-8 md:px-12 py-10 max-w-4xl mx-auto" data-testid="project-detail">
-    <button @click="router.back()" class="btn-ghost mb-4 text-sm" data-testid="project-back"><ArrowLeft class="w-3.5 h-3.5" /> Back</button>
+    <button @click="router.back()" class="btn-ghost mb-4 text-sm" data-testid="project-back">
+      <ArrowLeft class="w-3.5 h-3.5" /> Back
+    </button>
     <PageHeader :overline="area?.name || 'Project'" :title="project.title" :sub="project.description">
       <template #right>
-        <button class="btn-ghost !text-pri-strategic" @click="complete" data-testid="project-complete"><CheckCircle2 class="w-4 h-4" /> Complete</button>
-        <button class="btn-ghost" @click="archive" data-testid="project-archive"><Archive class="w-4 h-4" /> Archive</button>
-        <button class="btn-ghost !text-pri-critical" @click="remove" data-testid="project-delete"><Trash2 class="w-4 h-4" /></button>
+        <button class="btn-ghost !text-pri-strategic" @click="complete" data-testid="project-complete">
+          <CheckCircle2 class="w-4 h-4" /> Complete
+        </button>
+        <button class="btn-ghost" @click="archive" data-testid="project-archive">
+          <Archive class="w-4 h-4" /> Archive
+        </button>
+        <button class="btn-ghost !text-pri-critical" @click="remove" data-testid="project-delete">
+          <Trash2 class="w-4 h-4" />
+        </button>
       </template>
     </PageHeader>
 
     <div class="card p-6 mb-10" data-testid="project-meta">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
-        <div><div class="overline mb-1">Progress</div><div class="font-serif text-2xl">{{ progress }}%</div></div>
-        <div><div class="overline mb-1">Open</div><div class="font-serif text-2xl">{{ openTasks.length }}</div></div>
-        <div><div class="overline mb-1">Done</div><div class="font-serif text-2xl">{{ doneTasks.length }}</div></div>
-        <div><div class="overline mb-1">Last touched</div><div class="font-serif text-lg">{{ fromNow(project.lastViewedAt) }}</div></div>
+        <div>
+          <div class="overline mb-1">Progress</div>
+          <div class="font-serif text-2xl">{{ progress }}%</div>
+        </div>
+        <div>
+          <div class="overline mb-1">Open</div>
+          <div class="font-serif text-2xl">{{ openTasks.length }}</div>
+        </div>
+        <div>
+          <div class="overline mb-1">Done</div>
+          <div class="font-serif text-2xl">{{ doneTasks.length }}</div>
+        </div>
+        <div>
+          <div class="overline mb-1">Last touched</div>
+          <div class="font-serif text-lg">{{ fromNow(getProjectLastTouched(project)) }}</div>
+        </div>
       </div>
       <div class="mt-5 h-1.5 rounded-full bg-elevated overflow-hidden">
         <div class="h-full bg-ink rounded-full transition-all duration-700" :style="{ width: progress + '%' }"></div>
       </div>
-      <div v-if="goal" class="mt-5 text-sm text-ink-2">Toward goal: <span class="text-ink font-medium">{{ goal.title }}</span></div>
+      <div v-if="goal" class="mt-5 text-sm text-ink-2">Toward goal: <span class="text-ink font-medium">{{ goal.title
+      }}</span></div>
     </div>
 
     <section class="mb-10">
-      <SectionHeader overline="Tasks" :title="`${openTasks.length} open`">
-        <template #right><button class="btn-primary" @click="ui.openQuickCapture" data-testid="project-capture"><Plus class="w-4 h-4" /> Capture</button></template>
+      <SectionHeader :overline="`Tasks${openTasks.length ? `. ${openTasks.length} open` : ''}`">
+        <template #right>
+          <button class="btn-primary" @click="ui.openQuickCapture" data-testid="project-capture">
+            <Plus class="w-4 h-4" />
+            Capture
+          </button>
+        </template>
       </SectionHeader>
       <div v-if="openTasks.length" class="space-y-2">
         <TaskCard v-for="t in openTasks" :key="t.id" :task="t" :show-project="false" :single-line="true" />
@@ -132,68 +158,63 @@ async function deleteNote(idx) {
     </section>
 
     <section v-if="doneTasks.length" class="mb-10">
-      <SectionHeader overline="Completed" :title="`${doneTasks.length} done`" />
+      <SectionHeader :overline="`Completed${doneTasks.length ? `. ${doneTasks.length} done` : ''}`" />
       <div class="space-y-2 opacity-70">
-        <TaskCard v-for="t in doneTasks" :key="t.id" :task="t" :show-project="false" :compact="true" :single-line="true" />
+        <TaskCard v-for="t in doneTasks" :key="t.id" :task="t" :show-project="false" :compact="true"
+          :single-line="true" />
       </div>
     </section>
 
     <section class="mb-10">
-      <SectionHeader overline="Review Log" title="Progress Updates" />
+      <SectionHeader overline="Review Log" />
       <div class="relative mb-8 flex items-center">
-        <input 
-          v-model="newProgressNote" 
-          type="text"
-          placeholder="How is this project going?"
+        <input v-model="newProgressNote" type="text" placeholder="How is this project going?"
           class="w-full bg-surface border border-line/50 rounded-2xl py-3.5 pl-5 pr-32 text-sm text-ink outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 transition-all shadow-sm"
-          @keydown.enter="addProgressNote"
-        />
-        <button 
-          class="absolute right-2 btn-primary py-1.5 px-4 text-xs font-semibold shadow-sm" 
-          @click="addProgressNote" 
-          data-testid="add-progress-note"
-          :disabled="!newProgressNote.trim()"
-          :class="{ 'opacity-50 cursor-not-allowed': !newProgressNote.trim() }"
-        >
+          @keydown.enter="addProgressNote" />
+        <button class="absolute right-2 btn-primary py-1.5 px-4 text-xs font-semibold shadow-sm"
+          @click="addProgressNote" data-testid="add-progress-note" :disabled="!newProgressNote.trim()"
+          :class="{ 'opacity-50 cursor-not-allowed': !newProgressNote.trim() }">
           Add Update
         </button>
       </div>
-      
-      <div v-if="project.progressNotes?.length" class="space-y-6 relative pl-3 before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-line/60">
+
+      <div v-if="project.progressNotes?.length"
+        class="space-y-6 relative pl-3 before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-line/60">
         <div v-for="(log, idx) in project.progressNotes" :key="idx" class="relative pl-6 group">
           <!-- Timeline dot -->
-          <div class="absolute left-[-5px] top-1.5 w-3 h-3 rounded-full bg-surface border-2 border-pri-strategic z-10"></div>
-          
+          <div class="absolute left-[-5px] top-1.5 w-3 h-3 rounded-full bg-surface border-2 border-pri-strategic z-10">
+          </div>
+
           <div class="flex items-center justify-between mb-1.5">
             <div class="text-[10px] uppercase tracking-wider text-ink-3 font-mono font-semibold">
               {{ new Date(log.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) }}
               <span v-if="log.editedAt" class="opacity-50 ml-1">(edited)</span>
             </div>
             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <button @click="startEditNote(idx)" class="btn-ghost !p-1 text-ink-3 hover:text-ink hover:bg-canvas rounded" title="Edit">
+              <button @click="startEditNote(idx)"
+                class="btn-ghost !p-1 text-ink-3 hover:text-ink hover:bg-canvas rounded" title="Edit">
                 <Edit2 class="w-3.5 h-3.5" />
               </button>
-              <button @click="deleteNote(idx)" class="btn-ghost !p-1 text-ink-3 hover:text-pri-critical hover:bg-pri-critical-bg rounded" title="Delete">
+              <button @click="deleteNote(idx)"
+                class="btn-ghost !p-1 text-ink-3 hover:text-pri-critical hover:bg-pri-critical-bg rounded"
+                title="Delete">
                 <Trash2 class="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
-          
-          <div v-if="editingNoteIdx === idx" class="card p-4 bg-canvas/50 border border-pri-strategic/30 animate-fade-in mt-2">
-            <VTextarea 
-              v-model="editNoteContent" 
-              :id="`edit-progress-note-${idx}`"
-              :rows="2" 
-              autogrow
-              class="!bg-surface"
-            />
+
+          <div v-if="editingNoteIdx === idx"
+            class="card p-4 bg-canvas/50 border border-pri-strategic/30 animate-fade-in mt-2">
+            <VTextarea v-model="editNoteContent" :id="`edit-progress-note-${idx}`" :rows="2" autogrow
+              class="!bg-surface" />
             <div class="mt-3 flex justify-end gap-2">
               <button class="btn-ghost py-1 px-3 text-xs" @click="cancelEditNote">Cancel</button>
               <button class="btn-primary py-1 px-3 text-xs" @click="saveEditNote(idx)">Save</button>
             </div>
           </div>
-          
-          <div v-else class="text-sm text-ink whitespace-pre-wrap leading-relaxed bg-surface rounded-2xl border border-line/40 p-4 shadow-sm hover:shadow-md transition-shadow">
+
+          <div v-else
+            class="text-sm text-ink whitespace-pre-wrap leading-relaxed bg-surface rounded-2xl border border-line/40 p-4 shadow-sm hover:shadow-md transition-shadow">
             {{ log.note }}
           </div>
         </div>
@@ -203,7 +224,8 @@ async function deleteNote(idx) {
     <section v-if="linkedNotes.length" class="mb-10">
       <SectionHeader overline="Notes" title="Linked notes" />
       <div class="space-y-3">
-        <RouterLink v-for="n in linkedNotes" :key="n.id" :to="`/notes/${n.id}`" class="card p-4 block hover:border-line-2 transition-colors duration-300">
+        <RouterLink v-for="n in linkedNotes" :key="n.id" :to="`/notes/${n.id}`"
+          class="card p-4 block hover:border-line-2 transition-colors duration-300">
           <div class="font-serif text-lg">{{ n.title }}</div>
           <p class="text-sm text-ink-2 mt-1 line-clamp-2">{{ n.body }}</p>
         </RouterLink>

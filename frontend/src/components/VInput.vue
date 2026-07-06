@@ -75,30 +75,10 @@ defineExpose({
 
 <template>
   <div class="v-field-group">
-    <textarea
-      v-if="textarea"
-      ref="inputRef"
-      :id="id"
-      :value="modelValue"
-      :placeholder="placeholder"
-      :required="required"
-      :rows="rows"
-      class="v-field-textarea"
-      v-bind="$attrs"
-      @input="onInput"
-    ></textarea>
-    <input
-      v-else
-      ref="inputRef"
-      :id="id"
-      :type="type"
-      :value="modelValue"
-      :placeholder="placeholder"
-      :required="required"
-      :class="inputClass"
-      v-bind="$attrs"
-      @input="onInput"
-    />
+    <textarea v-if="textarea" ref="inputRef" :id="id" :value="modelValue" :placeholder="placeholder"
+      :required="required" :rows="rows" class="v-field-textarea" v-bind="$attrs" @input="onInput"></textarea>
+    <input v-else ref="inputRef" :id="id" :type="type" :value="modelValue" :placeholder="placeholder"
+      :required="required" :class="inputClass" v-bind="$attrs" @input="onInput" />
     <label :for="id" class="v-field-label text-sm">
       {{ label }}
     </label>

@@ -134,7 +134,7 @@ const alerts = computed(() => {
         id: key,
         type: 'lead',
         targetId: lead.id,
-        title: `Lead follow-up: ${lead.title}`,
+        title: `Lead follow-up: ${lead.clientName}`,
         description: `Follow-up was scheduled for ${dayjs(lead.followUpDate).format('MMM D')} | ${lead.notes ? lead.notes : "Check-in with " + lead.clientName + "."}`,
         actionText: 'Postpone 3d',
         action: () => {

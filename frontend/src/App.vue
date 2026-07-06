@@ -110,6 +110,22 @@ onMounted(async () => {
   setTimeout(() => { autoBackup(); autoOfflineBackup(); }, 5000)
   setInterval(() => { autoBackup(); autoOfflineBackup(); }, 60000) // check every minute, actual backup respects interval setting
 
+  // Check if first run or reset
+  const isFirstRun = localStorage.getItem('atrium.initialized') !== 'true'
+  if (isFirstRun) {
+    localStorage.setItem('atrium.initialized', 'true')
+    setTimeout(async () => {
+      await ui.confirm({
+        title: 'Welcome',
+        message: 'Enter your preferences in Settings',
+        confirmText: 'Go to Settings',
+        cancelText: 'Ignore',
+        isDestructive: false
+      })
+      router.push('/settings')
+    }, 1000)
+  }
+
   window.addEventListener('keydown', (e) => {
     const isClientDetail = route.path && route.path.includes('/work/clients/')
 

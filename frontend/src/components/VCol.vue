@@ -39,16 +39,14 @@ const sizeClasses = {
 }
 
 const colClass = computed(() => {
+  const hasSize = props.cols || props.sm || props.md || props.lg || props.xl
   const classes = [
-    'px-3 py-3 w-full max-w-full shrink-0', // default padding and width
+    'px-3 py-3 max-w-full shrink-0', // default padding
+    !hasSize ? 'w-full flex-1' : '', // default width/grow if no size
     props.dense ? '!px-2 !py-2' : '' // dense override
   ]
 
-  // If no explicit sizes are given, it defaults to flex-grow to fill space.
-  const hasSize = props.cols || props.sm || props.md || props.lg || props.xl
-  if (!hasSize) {
-    classes.push('flex-1')
-  } else {
+  if (hasSize) {
     if (props.cols) classes.push(sizeClasses.cols[props.cols])
     if (props.sm) classes.push(sizeClasses.sm[props.sm])
     if (props.md) classes.push(sizeClasses.md[props.md])

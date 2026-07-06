@@ -6,7 +6,7 @@ import { useTasksStore } from '@/stores/tasks'
 import { useAreasStore } from '@/stores/areas'
 import { useGoalsStore } from '@/stores/goals'
 import { fromNow } from '@/lib/date'
-import { isTaskOpen, staleProjects } from '@/lib/resurface'
+import { isTaskOpen, staleProjects, getProjectLastTouched } from '@/lib/resurface'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { Plus, FolderKanban, X } from 'lucide-vue-next'
@@ -121,7 +121,7 @@ watch(showNew, (open) => {
         </div>
         <div class="mt-auto pt-3 border-t border-line text-xs text-ink-3 flex items-center justify-between">
           <span>{{ openCount(p.id) }} open · {{ p.status }}</span>
-          <span>{{ fromNow(p.lastViewedAt) }}</span>
+          <span>{{ fromNow(getProjectLastTouched(p)) }}</span>
         </div>
       </RouterLink>
     </div>

@@ -53,6 +53,19 @@ async function testNotification() {
 }
 
 
+const isEditingName = ref(!ui.userName.trim())
+const nameInputVal = ref(ui.userName)
+
+function toggleNameEdit() {
+  if (isEditingName.value) {
+    ui.userName = nameInputVal.value.trim()
+    isEditingName.value = false
+    ui.showToast('Greeting name registered', 'success')
+  } else {
+    isEditingName.value = true
+  }
+}
+
 function refresh() {
   clientIdInput.value = getClientId()
   connected.value = !!localStorage.getItem('atrium.drive.connected')
@@ -64,6 +77,10 @@ function refresh() {
   driveFolderInput.value = url || root
 
   checkOfflineFolder()
+  nameInputVal.value = ui.userName
+  if (!ui.userName.trim()) {
+    isEditingName.value = true
+  }
 }
 onMounted(refresh)
 
@@ -130,6 +147,9 @@ async function clearAll() {
     if (t.name === 'settings') continue
     await t.clear()
   }
+  localStorage.removeItem('atrium.initialized')
+  localStorage.removeItem('atrium.user_name')
+  localStorage.removeItem('atrium.use_name_in_greeting')
   location.reload()
 }
 
@@ -245,7 +265,7 @@ function saveOfflineSettings() {
   <div class="px-8 md:px-12 py-10 max-w-3xl mx-auto" data-testid="settings-view">
     <PageHeader overline="Settings" title="Quiet preferences" sub="This system lives in your browser." />
 
-    <SectionHeader overline="Shortcuts" title="Keyboard" />
+    <SectionHeader overline="Shortcuts" />
     <div class="card p-5 mb-10 text-sm space-y-2.5 text-ink-2">
       <div class="flex items-center justify-between"><span>Open command palette</span><span class="flex gap-1"><span
             class="kbd">⌘</span><span class="kbd">K</span></span></div>
@@ -256,7 +276,7 @@ function saveOfflineSettings() {
       <div class="flex items-center justify-between"><span>Close overlay</span><span class="kbd">esc</span></div>
     </div>
 
-    <SectionHeader overline="Appearance" title="Workspace & Theme" />
+    <SectionHeader overline="Appearance" />
     <div class="card p-5 mb-10 space-y-4">
       <div class="flex items-center justify-between">
         <div>
@@ -269,13 +289,31 @@ function saveOfflineSettings() {
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium text-ink">Show Cross-Workspace Alerts</p>
-          <p class="text-xs text-ink-3">Notify me at the top of the screen if I have tasks due today in my other workspace.</p>
+          <p class="text-xs text-ink-3">Notify me at the top of the screen if I have tasks due today in my other
+            workspace.</p>
         </div>
         <VCheckbox v-model="ui.showWorkspaceAlerts" />
       </div>
+      <hr class="border-line/40" />
+      <div class="flex items-center gap-4 flex-wrap md:flex-nowrap">
+        <div class="shrink-0 min-w-[200px]">
+          <p class="text-sm font-medium text-ink">Enter your name</p>
+          <p class="text-xs text-ink-3">It will just be used to greet you</p>
+        </div>
+        <div class="flex-grow flex items-center gap-2 w-full">
+          <input v-model="nameInputVal" :disabled="!isEditingName" placeholder="Your name" id="settings-user-name"
+            data-testid="settings-user-name"
+            class="flex-grow bg-surface border border-line rounded-xl px-4 py-2.5 text-sm text-ink outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed" />
+          <button type="button" class="btn-secondary !p-3 shrink-0" @click="toggleNameEdit"
+            data-testid="settings-toggle-name-edit" :title="isEditingName ? 'Register name' : 'Edit name'">
+            <Check v-if="isEditingName" class="w-4 h-4 text-pri-strategic" />
+            <Edit3 v-else class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
 
-    <SectionHeader overline="Notifications" title="Desktop Alerts" />
+    <SectionHeader overline="Notifications" />
     <div class="card p-5 mb-10 space-y-4">
       <div class="flex items-center justify-between">
         <div>
@@ -303,7 +341,7 @@ function saveOfflineSettings() {
     </div>
 
     <!-- WORK WORKSPACE SETTINGS -->
-    <SectionHeader overline="Work Operations" title="Work Cockpit Preferences" />
+    <SectionHeader overline="Work Operations" />
     <div class="card p-6 mb-10 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="v-input-group flex items-center relative">
@@ -317,7 +355,8 @@ function saveOfflineSettings() {
         </div>
         <div>
           <label class="overline block mb-1">Default Billing Currency</label>
-          <VSelect v-model="defaultCurrencyInput" :options="[{value: 'USD', label: 'USD ($)'}, {value: 'GBP', label: 'GBP (£)'}, {value: 'INR', label: 'INR (₹)'}]" />
+          <VSelect v-model="defaultCurrencyInput"
+            :options="[{ value: 'USD', label: 'USD ($)' }, { value: 'GBP', label: 'GBP (£)' }, { value: 'INR', label: 'INR (₹)' }]" />
         </div>
       </div>
       <p class="text-xs text-ink-3 leading-relaxed">
@@ -335,7 +374,7 @@ function saveOfflineSettings() {
     </div>
 
     <!-- GOOGLE DRIVE -->
-    <SectionHeader overline="Cloud Sync Options" title="Google Drive backup"
+    <SectionHeader overline="Cloud Sync Options"
       hint="Stores a single JSON in a private app-only folder on your Drive (drive.appdata scope)." />
     <div class="card p-6 mb-10 space-y-4" data-testid="drive-section">
       <div>
@@ -367,7 +406,8 @@ function saveOfflineSettings() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="overline block mb-1">Sync Execution Mode</label>
-            <VSelect v-model="syncModeInput" :options="[{value: 'auto', label: 'Automatic Sync (Background)'}, {value: 'manual', label: 'Manual Sync (Only on request)'}]" />
+            <VSelect v-model="syncModeInput"
+              :options="[{ value: 'auto', label: 'Automatic Sync (Background)' }, { value: 'manual', label: 'Manual Sync (Only on request)' }]" />
             <p class="text-[11px] text-ink-3 mt-1.5 leading-relaxed">
               <strong>Automatic:</strong> Runs backup & calendar checks in the background. May prompt Google
               verification
@@ -427,8 +467,8 @@ function saveOfflineSettings() {
     </div>
 
     <!-- OFFLINE DIRECTORY BACKUP -->
-    <SectionHeader overline="Local Backup" title="Offline folder backup"
-      hint="Automatically writes timestamped JSON backups to a directory of your choice using File System Access API." />
+    <SectionHeader overline="Local Backup"
+      hint="Writes timestamped JSON backups to a directory of your choice using File System Access API." />
     <div class="card p-6 mb-10 space-y-4">
       <div class="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -514,7 +554,7 @@ function saveOfflineSettings() {
       </div>
     </div>
 
-    <SectionHeader overline="Manual Backup" title="Local archive" hint="All data lives in IndexedDB on this device." />
+    <SectionHeader overline="Manual Backup" hint="All data lives in IndexedDB on this device." />
     <div class="card p-5 mb-10 flex flex-wrap items-center gap-2">
       <button class="btn-secondary" @click="exportJson" data-testid="export-json">
         <FileDown class="w-4 h-4" /> Export JSON

@@ -13,6 +13,7 @@ export const useUIStore = defineStore("ui", () => {
   const toasts = ref([]);
   const confirmState = ref(null);
   const showWorkspaceAlerts = ref(localStorage.getItem("atrium.show_workspace_alerts") !== "false");
+  const userName = ref(localStorage.getItem("atrium.user_name") || "");
 
   function applyTheme() {
     const root = document.documentElement;
@@ -84,6 +85,9 @@ export const useUIStore = defineStore("ui", () => {
   watch(showWorkspaceAlerts, (val) => {
     localStorage.setItem("atrium.show_workspace_alerts", val ? "true" : "false");
   });
+  watch(userName, (val) => {
+    localStorage.setItem("atrium.user_name", val.trim());
+  });
 
   return {
     theme,
@@ -96,6 +100,7 @@ export const useUIStore = defineStore("ui", () => {
     toasts,
     confirmState,
     showWorkspaceAlerts,
+    userName,
     toggleTheme,
     toggleMode,
     openCommand,

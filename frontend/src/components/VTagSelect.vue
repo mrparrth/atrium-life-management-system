@@ -126,10 +126,10 @@ function submitNewTag() {
         type="button"
         @click="toggleTag(tag)"
         class="text-xs font-semibold px-3 py-1 rounded-xl transition-all cursor-pointer border select-none"
-        :style="{
-          ...getTagStyle(tag, tagColorsMap),
-          opacity: isSelected(tag) ? 1 : 0.6
-        }"
+        :class="isSelected(tag) 
+          ? '' 
+          : 'bg-canvas text-ink-3 border-line opacity-60 hover:opacity-100 hover:bg-canvas-2'"
+        :style="isSelected(tag) ? getTagStyle(tag, tagColorsMap) : {}"
       >
         #{{ tag }}
       </button>

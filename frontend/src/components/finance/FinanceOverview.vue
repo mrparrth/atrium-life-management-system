@@ -577,9 +577,9 @@ watch(selectedCategory, (newVal) => {
 function toggleSelectionMode(mode) {
   if (chartSelectionMode.value === mode) return
   chartSelectionMode.value = mode
-  
+
   if (mode === 'single') {
-    const first = Array.isArray(selectedCategory.value) 
+    const first = Array.isArray(selectedCategory.value)
       ? (selectedCategory.value[0] || 'net_worth')
       : (selectedCategory.value || 'net_worth')
     selectedCategory.value = first
@@ -814,7 +814,7 @@ const chartSeries = computed(() => {
               <div class="flex justify-between items-baseline">
                 <span class="text-xs font-semibold text-ink-2 uppercase tracking-wider">Income</span>
                 <span class="font-serif text-lg text-pri-strategic font-semibold">{{ inr(latestCfTotals.income)
-                }}</span>
+                  }}</span>
               </div>
               <div v-if="latestMonthGroupTotals && latestMonthGroupTotals.income.length" class="mt-1 pl-3 space-y-0.5">
                 <div v-for="g in latestMonthGroupTotals.income" :key="g.name"
@@ -830,7 +830,7 @@ const chartSeries = computed(() => {
               <div class="flex justify-between items-baseline">
                 <span class="text-xs font-semibold text-ink-2 uppercase tracking-wider">Invested</span>
                 <span class="font-serif text-lg text-pri-interruptive font-semibold">{{ inr(latestCfTotals.investment)
-                }}</span>
+                  }}</span>
               </div>
               <div v-if="latestMonthGroupTotals && latestMonthGroupTotals.investment.length"
                 class="mt-1 pl-3 space-y-0.5">
@@ -847,7 +847,7 @@ const chartSeries = computed(() => {
               <div class="flex justify-between items-baseline">
                 <span class="text-xs font-semibold text-ink-2 uppercase tracking-wider">Expense</span>
                 <span class="font-serif text-lg text-pri-critical font-semibold">{{ inr(latestCfTotals.expense)
-                }}</span>
+                  }}</span>
               </div>
               <div v-if="latestMonthGroupTotals && latestMonthGroupTotals.expense.length" class="mt-1 pl-3 space-y-0.5">
                 <div v-for="g in latestMonthGroupTotals.expense" :key="g.name"
@@ -953,8 +953,8 @@ const chartSeries = computed(() => {
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
 
       <!-- HISTORICAL PERIOD AVERAGES (Takes 1 Col) -->
-      <div class="lg:col-span-1 flex flex-col space-y-4">
-        <SectionHeader overline="Averages" title="Historical Performance" />
+      <div class="lg:col-span-1 flex flex-col">
+        <SectionHeader overline="Averages" />
 
         <div class="card p-5 space-y-4 flex-1">
           <div class="flex items-center justify-between pb-3 border-b border-line">
@@ -998,8 +998,8 @@ const chartSeries = computed(() => {
       </div>
 
       <!-- BUDGET ALERTS (Takes 2 Cols) -->
-      <div class="lg:col-span-2 flex flex-col space-y-4">
-        <SectionHeader overline="Budget alerts" title="Prorated YTD Spending" />
+      <div class="lg:col-span-2 flex flex-col">
+        <SectionHeader overline="Budget alerts" />
 
         <div class="card p-5 space-y-4 flex-1 flex flex-col justify-between">
           <div class="flex items-center justify-between pb-3 border-b border-line">
@@ -1063,14 +1063,14 @@ const chartSeries = computed(() => {
     <!-- ASSETS & EXPENSES DONUT CHARTS -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
       <div>
-        <SectionHeader v-if="finance.allocation.length" overline="Distribution" title="Asset allocation" />
+        <SectionHeader v-if="finance.allocation.length" overline="Distribution" />
         <div v-if="finance.allocation.length" class="card p-6">
           <DonutChart :data="finance.allocation" theme="strategic" />
         </div>
       </div>
 
       <div>
-        <SectionHeader v-if="finance.expenseBreakdownLatest.length" overline="Spending shape" title="Latest expenses" />
+        <SectionHeader v-if="finance.expenseBreakdownLatest.length" overline="Spending shape" />
         <div v-if="finance.expenseBreakdownLatest.length" class="card p-6">
           <DonutChart :data="finance.expenseBreakdownLatest" theme="critical" />
         </div>
@@ -1079,32 +1079,28 @@ const chartSeries = computed(() => {
 
     <!-- Financial Progression Charts (Dynamics) -->
     <section class="mb-10">
-      <div class="flex items-center justify-between gap-6 mb-6 flex-wrap">
-        <SectionHeader overline="Dynamics" title="Financial Progression" />
+      <div class="flex items-center justify-between gap-6 flex-wrap mb-2">
+        <SectionHeader overline="Dynamics" />
         <div class="flex items-center gap-4 flex-wrap">
           <!-- Selection Mode Switcher -->
-          <div class="flex bg-canvas/40 p-0.5 rounded-lg border border-line/40 text-[10px] uppercase font-bold tracking-wider select-none shrink-0">
-            <button 
-              type="button"
-              class="px-2.5 py-1 rounded-md transition-all duration-200"
+          <div
+            class="flex bg-canvas/40 p-0.5 rounded-lg border border-line/40 text-[10px] uppercase font-bold tracking-wider select-none shrink-0">
+            <button type="button" class="px-2.5 py-1 rounded-md transition-all duration-200"
               :class="chartSelectionMode === 'single' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink-2'"
-              @click="toggleSelectionMode('single')"
-            >
+              @click="toggleSelectionMode('single')">
               Single
             </button>
-            <button 
-              type="button"
-              class="px-2.5 py-1 rounded-md transition-all duration-200"
+            <button type="button" class="px-2.5 py-1 rounded-md transition-all duration-200"
               :class="chartSelectionMode === 'multi' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink-2'"
-              @click="toggleSelectionMode('multi')"
-            >
+              @click="toggleSelectionMode('multi')">
               Multi
             </button>
           </div>
 
           <div class="flex items-center gap-2">
             <span class="overline text-[10px]">Select Categories</span>
-            <Combobox :options="chartOptions" v-model="selectedCategory" placeholder="Search categories..." :multiple="chartSelectionMode === 'multi'" />
+            <Combobox :options="chartOptions" v-model="selectedCategory" placeholder="Search categories..."
+              :multiple="chartSelectionMode === 'multi'" />
           </div>
         </div>
       </div>

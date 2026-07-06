@@ -69,19 +69,9 @@ onMounted(() => {
 
 <template>
   <div class="v-field-group">
-    <textarea
-      ref="textareaRef"
-      :id="id"
-      :value="modelValue"
-      :placeholder="placeholder"
-      :required="required"
-      :rows="rows"
-      class="v-field-textarea text-sm font-semibold text-ink"
-      :class="{ 'resize-none': autogrow }"
-      :style="autogrow ? { overflowY: 'hidden' } : {}"
-      v-bind="$attrs"
-      @input="onInput"
-    ></textarea>
+    <textarea ref="textareaRef" :id="id" :value="modelValue" :placeholder="placeholder" :required="required"
+      :rows="rows" class="v-field-textarea text-sm text-ink" :class="{ 'resize-none': autogrow }"
+      :style="autogrow ? { overflowY: 'hidden' } : {}" v-bind="$attrs" @input="onInput"></textarea>
     <label :for="id" class="v-field-label text-sm select-none">
       {{ label }}
     </label>

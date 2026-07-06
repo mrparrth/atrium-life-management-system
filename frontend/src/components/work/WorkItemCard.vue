@@ -377,7 +377,7 @@ watch(showEditModal, (isOpen) => {
             <span v-if="isOverran"
               class="text-[9px] px-1 rounded bg-pri-critical-bg text-pri-critical border border-pri-critical-bd shrink-0">Creep</span>
           </span>
-          <span v-if="props.item.snoozedUntil" class="italic text-pri-interruptive">
+          <span v-if="props.item.snoozedUntil && !dayjs(props.item.snoozedUntil).isBefore(dayjs(), 'day')" class="italic text-pri-interruptive">
             Snoozed until {{ dayjs(props.item.snoozedUntil).format('MMM D') }}
           </span>
 

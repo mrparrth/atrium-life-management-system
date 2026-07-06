@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useSettingsStore } from '@/stores/settings'
-import SectionHeader from '@/components/SectionHeader.vue'
 import { inr, inrCompact } from '@/lib/money'
 import { ChevronDown, ChevronRight, Check, TrendingUp, Wallet, Scale } from 'lucide-vue-next'
 
@@ -514,8 +513,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                   <th
                     class="py-2.5 pl-4 pr-3 col-category sticky-col-header font-semibold text-ink-3 border-r border-line/40">
                     Category</th>
-                  <th v-for="m in summaryMonths" :key="m.key"
-                    class="py-2.5 text-right font-mono col-month px-2">
+                  <th v-for="m in summaryMonths" :key="m.key" class="py-2.5 text-right font-mono col-month px-2">
                     {{ m.monthName }}
                   </th>
                   <th class="py-2.5 text-right font-mono col-summary px-3 font-semibold text-ink-3">Total</th>
@@ -530,7 +528,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
           <!-- Cards Stack Container -->
           <div class="flex flex-col gap-5">
             <!-- Card Blocks for cash flow scopes -->
-            <div v-for="group in cashflowMatrix" :key="group.scope" class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
+            <div v-for="group in cashflowMatrix" :key="group.scope"
+              class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
               <table class="w-[1500px] table-fixed text-xs text-left border-separate border-spacing-0">
                 <colgroup>
                   <col class="col-category" />
@@ -570,8 +569,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                       class="py-3 text-right font-mono col-month px-2 text-xs border-b border-line/40">
                       {{ val !== 0 ? inrCompact(val) : '—' }}
                     </td>
-                    <td
-                      class="py-3 text-right font-mono col-summary px-3 text-xs font-bold border-b border-line/40">
+                    <td class="py-3 text-right font-mono col-summary px-3 text-xs font-bold border-b border-line/40">
                       {{ group.grandTotal !== 0 ? inrCompact(group.grandTotal) : '—' }}
                     </td>
                     <td class="py-3 text-right font-mono col-summary px-3 text-xs border-b border-line/40">
@@ -660,7 +658,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
             </div>
 
             <!-- Net Cash Flow block -->
-            <div v-if="cashflowMatrix.length" class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
+            <div v-if="cashflowMatrix.length"
+              class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
               <table class="w-[1500px] table-fixed text-xs text-left border-separate border-spacing-0">
                 <colgroup>
                   <col class="col-category" />
@@ -717,7 +716,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
         <div v-if="networthSummaryMonths.length" class="w-max min-w-full flex flex-col gap-2 p-1">
           <!-- Table Columns Header Card -->
           <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface select-none overflow-clip">
-            <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }" class="table-fixed text-xs text-left border-separate border-spacing-0">
+            <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }"
+              class="table-fixed text-xs text-left border-separate border-spacing-0">
               <colgroup>
                 <col class="col-category" />
                 <col v-for="m in networthSummaryMonths" :key="m.key" class="col-month" />
@@ -742,7 +742,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
             <!-- Card Blocks for assets & liabilities -->
             <div v-for="group in networthMatrix" :key="group.scope"
               class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
-              <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }" class="table-fixed text-xs text-left border-separate border-spacing-0">
+              <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }"
+                class="table-fixed text-xs text-left border-separate border-spacing-0">
                 <colgroup>
                   <col class="col-category" />
                   <col v-for="m in networthSummaryMonths" :key="m.key" class="col-month" />
@@ -795,7 +796,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                         class="py-2.5 text-right font-mono col-month border-b border-line/40"
                         :class="[group.scope === 'liability' && val > 0 ? 'text-rose-600/80' : 'text-ink-2', idx === sub.months.length - 1 ? 'pr-8 pl-2' : 'px-2']">
                         <template v-if="val !== null">{{ (group.scope === 'liability' ? '-' : '') + inrCompact(val)
-                          }}</template>
+                        }}</template>
                         <span v-else class="text-ink-3/20">—</span>
                       </td>
                     </tr>
@@ -812,7 +813,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                         class="py-2 text-right font-mono col-month text-ink-3 border-b border-line/30"
                         :class="[group.scope === 'liability' && val > 0 ? 'text-rose-600/70' : '', idx === row.months.length - 1 ? 'pr-8 pl-2' : 'px-2']">
                         <template v-if="val !== null">{{ (group.scope === 'liability' ? '-' : '') + inrCompact(val)
-                          }}</template>
+                        }}</template>
                         <span v-else class="text-ink-3/20">—</span>
                       </td>
                     </tr>
@@ -823,7 +824,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
 
             <!-- Net Worth block -->
             <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
-              <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }" class="table-fixed text-xs text-left border-separate border-spacing-0">
+              <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }"
+                class="table-fixed text-xs text-left border-separate border-spacing-0">
                 <colgroup>
                   <col class="col-category" />
                   <col v-for="m in networthSummaryMonths" :key="m.key" class="col-month" />

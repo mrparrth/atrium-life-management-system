@@ -398,8 +398,9 @@ async function submitBulk() {
             <p v-if="page.description" class="text-ink-2 mt-3 max-w-xl">{{ page.description }}</p>
             <div v-if="page.tags?.length" class="flex flex-wrap gap-1 mt-3">
               <span v-for="t in page.tags" :key="t"
-                class="text-[11px] font-semibold px-2 py-0.5 rounded-xl border select-none" :style="getTagStyle(t, tagColorsMap)">#{{
-                t }}</span>
+                class="text-[11px] font-semibold px-2 py-0.5 rounded-xl border select-none"
+                :style="getTagStyle(t, tagColorsMap)">#{{
+                  t }}</span>
             </div>
           </div>
         </div>
@@ -425,7 +426,7 @@ async function submitBulk() {
     <div v-if="filteredList.length" class="card divide-y divide-line/60" data-testid="page-bookmark-list">
       <div v-for="b in filteredList" :key="b.id"
         class="py-2 px-4 hover:bg-canvas/40 transition-all duration-300 flex items-center justify-between gap-4 cursor-pointer"
-        :data-testid="`page-bookmark-${b.id}`" @click.self="startEditBookmark(b)">
+        :data-testid="`page-bookmark-${b.id}`" @click="startEditBookmark(b)">
         <div class="flex items-start gap-3 min-w-0 flex-1">
           <BookmarkIcon class="w-3.5 h-3.5 text-ink-3 shrink-0 mt-0.5" />
           <span class="font-serif text-sm font-normal text-ink truncate max-w-[200px] sm:max-w-[300px] shrink-0"
@@ -433,46 +434,51 @@ async function submitBulk() {
             {{ b.title || b.url }}
           </span>
           <span class="text-ink-3/40 shrink-0 text-xs mt-0.5">|</span>
-          <a :href="b.url" target="_blank" @click.prevent="openBookmark(b)"
+          <a :href="b.url" target="_blank" @click.stop.prevent="openBookmark(b)"
             class="text-[11px] text-ink-3 hover:text-pri-strategic truncate hover:underline flex-1 min-w-0 mt-0.5">
             {{ b.url }}
           </a>
-          <div v-if="b.tags?.length" class="flex gap-1 shrink-0">
+          <div v-if="b.tags?.length" class="flex gap-1 shrink-0" @click.stop>
             <span v-for="t in b.tags" :key="t"
-              class="text-[9px] font-medium px-1.5 py-0.2 rounded-xl select-none border" :style="getTagStyle(t, tagColorsMap)">
+              class="text-[9px] font-medium px-1.5 py-0.2 rounded-xl select-none border"
+              :style="getTagStyle(t, tagColorsMap)">
               #{{ t }}
             </span>
           </div>
         </div>
 
-        <div class="flex items-center gap-3 shrink-0">
+        <div class="flex items-center gap-3 shrink-0" @click.stop>
           <div class="text-[10px] text-ink-3/60 select-none">opened {{ fromNow(b.lastViewedAt) }}</div>
           <div class="flex items-center gap-2">
             <button class="group/btn relative btn-ghost !p-1.5" @click="openBookmark(b)"
               :data-testid="`page-bm-open-${b.id}`">
               <ExternalLink class="w-3.5 h-3.5" />
-              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
+              <span
+                class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
                 Open link
               </span>
             </button>
             <button class="group/btn relative btn-ghost !p-1.5" @click="startEditBookmark(b)"
               :data-testid="`page-bm-edit-${b.id}`">
               <PenLine class="w-3.5 h-3.5" />
-              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
+              <span
+                class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
                 Edit
               </span>
             </button>
             <button class="group/btn relative btn-ghost !p-1.5 text-xs leading-none" @click="detach(b)"
               :data-testid="`page-bm-detach-${b.id}`">
               ↶
-              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
+              <span
+                class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
                 Move out
               </span>
             </button>
             <button class="group/btn relative btn-ghost !p-1.5 hover:text-pri-critical" @click="remove(b)"
               :data-testid="`page-bm-delete-${b.id}`">
               <Trash2 class="w-3.5 h-3.5" />
-              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
+              <span
+                class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:block z-40 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap select-none border border-canvas/10">
                 Delete
               </span>
             </button>
@@ -495,7 +501,7 @@ async function submitBulk() {
         <div class="overline">Bulk import</div>
         <h2 class="font-serif text-2xl mt-1 mb-1">Add multiple links</h2>
         <p class="text-ink-3 text-xs mb-4">
-          One entry per line. Supports <code class="bg-elevated px-1 rounded text-ink-2">Title → URL</code>,
+          One entry per line. Supports <code class="bg-elevated px-1 rounded text-ink-2">Title URL</code>,
           <code class="bg-elevated px-1 rounded text-ink-2">Title | URL</code>, or bare URLs.
           Multiple URLs on one line are split by comma or semicolon.
         </p>
@@ -506,14 +512,14 @@ async function submitBulk() {
         <div v-if="parseBulkEntries(bulkText).length" class="mb-4 border border-line rounded-xl overflow-hidden">
           <div class="bg-elevated px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-3">
             Preview — {{ parseBulkEntries(bulkText).length }} entr{{ parseBulkEntries(bulkText).length !== 1 ? 'ies' :
-            'y'
+              'y'
             }} detected
           </div>
           <div class="divide-y divide-line/60 max-h-40 overflow-y-auto">
             <div v-for="(entry, i) in parseBulkEntries(bulkText)" :key="i" class="flex items-center gap-3 px-3 py-2">
               <span v-if="entry.title" class="text-xs font-semibold text-ink shrink-0 max-w-[160px] truncate">{{
                 entry.title
-                }}</span>
+              }}</span>
               <span v-else class="text-[10px] text-ink-3 italic shrink-0">no title</span>
               <span class="text-ink-3/40 text-xs shrink-0">→</span>
               <span class="text-[11px] text-ink-3 truncate min-w-0">{{ entry.url }}</span>
@@ -530,7 +536,7 @@ async function submitBulk() {
               <Layers class="w-4 h-4" />
               {{ bulkLoading ? 'Adding…' : `Add ${parseBulkEntries(bulkText).length}
               link${parseBulkEntries(bulkText).length
-              !== 1 ? 's' : ''}` }}
+                  !== 1 ? 's' : ''}` }}
             </button>
           </div>
         </div>
