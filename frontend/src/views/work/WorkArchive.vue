@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useWorkClientsStore } from '@/stores/workClients'
@@ -19,6 +19,37 @@ const itemsPerPage = 15
 
 watch(activeTab, () => {
   currentPage.value = 1
+})
+
+function handleGlobalKeydown(e) {
+  if (e.altKey && !e.metaKey && !e.ctrlKey && e.code?.startsWith('Digit')) {
+    const idx = parseInt(e.code.replace('Digit', '')) - 1
+    const TABS = ['tasks', 'leads']
+    if (idx >= 0 && idx < TABS.length) {
+      e.preventDefault()
+      activeTab.value = TABS[idx]
+      return
+    }
+  }
+  if (e.altKey && !e.metaKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    const TABS = ['tasks', 'leads']
+    const currentIdx = TABS.indexOf(activeTab.value)
+    if (currentIdx !== -1) {
+      e.preventDefault()
+      const step = e.key === 'ArrowUp' ? -1 : 1
+      const nextIdx = (currentIdx + step + TABS.length) % TABS.length
+      activeTab.value = TABS[nextIdx]
+      return
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
 })
 
 const completedItems = computed(() => {

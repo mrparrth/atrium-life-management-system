@@ -18,13 +18,14 @@ The workspace is organized as a monorepo split into standard client-server direc
 
 ### 1. Dual Work/Personal Modes
 - **Seamless Toggling**: An interactive floating mode toggle fixed at the bottom right allows instantaneous swaps between personal reflections and professional workspaces.
-- **Context Filtering**: Task scopes, notes, search panels, and quick capture capture inputs dynamically update to isolate work metadata from personal backlogs.
+- **Context Filtering**: Task scopes, notes, search panels, and quick capture inputs dynamically update to isolate work metadata from personal backlogs.
 
 ### 2. Work Deliverables & Task Tracker
 - **Status Pipeline**: Tasks are tracked via a direct status tag system (**Waiting for Feedback**, **On Hold**, **Ask for Next Milestone**, **Pending Closure**, **Critical**, and **In Progress**).
 - **Client Local Time Integration**: Work item cards dynamically compute and render target clients' active local times (e.g. `Client · 11:45 AM Local`) to coordinate healthy communication windows.
-- **Drive Link Integration**: One-click Google Drive directory attachments linked directly to specific task deliverables.
+- **Drive Link Integration**: Monochromatic, size-uniform Google Drive SVG utility buttons reside in the header actions bar, featuring dashed border layouts for unlinked states (Initialize Folder) and solid borders for linked states (Open Folder) to keep assets accessible while saving sidebar space.
 - **Client Workspace Filtering**: Client association dropdowns throughout the app (tasks, resources, notes, invoices, etc.) only display active and "do not follow up" clients. Inactive clients are hidden from these selectors; if a client is not visible, navigate to their profile in the Client Directory and make them active (e.g. change status to normal, prospect, or important) first.
+- **Compact Profile KPI Cards**: The top of the Client Profile features compact horizontal stats (Hours, Receivables, Charges, Scope) with strict color hierarchies: zero values are dimmed, non-zero values use neutral primary text, and positive task charges show in green. All toolbar buttons have smooth rich hover tooltips (`VTooltip`).
 
 ### 3. Sales Funnel & Opportunities Funnel
 - **Sales board**: Track potential opportunities across standard stages (Lead, Discovery, Proposal Sent, Negotiation, Won, Lost, Onboarding) defaulting to USD (`$`) indicators.
@@ -40,6 +41,18 @@ The workspace is organized as a monorepo split into standard client-server direc
 ### 5. Workload Capacity Forecasting
 - **Deep Work Buffers**: Model target availability, administrative overhead margins, and active calendar meetings.
 - **Burnout Alerts**: Diagnostics warning when expected task durations exceed weekly capacity.
+
+### 6. Finance Subscriptions & Fixed Obligations Redesign
+- **Obligation Classification**: Replaced the Want/Need parameters with Subscriptions (`SUB`) and Fixed Obligations (`FIXED`) type tags, including full database compatibility adapters.
+- **Compact Outflow Banner**: Consolidated metrics into a single horizontal banner showing Monthly Outflow, Yearly Outflow, and Active commitments, complete with hover tooltips for subscription vs. fixed cost breakdowns.
+- **Tab Badges & Actions**: Filter tabs dynamically show active commitment counts (e.g. `All Commitments (7)`). Editing, deletion, and pause/resume commands are tucked away inside a tidy actions kebab dropdown.
+
+### 7. Chronological Cashflow Navigation
+- **Arrow Switching**: Move between adjacent cashflow logging periods using previous/next arrow navigation buttons inside the edit form.
+- **Auto-Save on Transition**: Automatically commits any unsaved changes when navigating between months, and prompts to discard changes on close only if values or period notes are actually dirty.
+
+### 8. Universal Keyboard Tab Navigation
+- **Alt + Arrow Gestures**: Cycles through tab interfaces using **`Alt + ArrowUp`** and **`Alt + ArrowDown`** (as well as **`Alt + Number`** keys) across all major dashboard views (Finance, Client Profile sections, Work Deliverables, Resources, Archives, and Summary horizons).
 
 ---
 

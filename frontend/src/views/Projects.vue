@@ -31,6 +31,15 @@ const router = useRouter()
 const filter = ref('active')
 const showNew = ref(false)
 const newTitle = ref(''); const newDesc = ref(''); const newArea = ref(null); const newGoal = ref(null)
+const newReviewFrequency = ref('14')
+
+const frequencyOptions = [
+  { label: 'Weekly', value: '7' },
+  { label: 'Bi-weekly', value: '14' },
+  { label: 'Monthly', value: '30' },
+  { label: 'Quarterly', value: '90' },
+  { label: 'Never', value: '0' }
+]
 
 import { onMounted, watch, nextTick } from 'vue'
 
@@ -56,8 +65,14 @@ function areaOf(id) { return areas.items.find(a => a.id === id) }
 
 async function createProject() {
   if (!newTitle.value.trim()) return
-  await projects.add({ title: newTitle.value, description: newDesc.value, areaId: newArea.value, goalId: newGoal.value })
-  newTitle.value = ''; newDesc.value = ''; newArea.value = null; newGoal.value = null; showNew.value = false
+  await projects.add({ 
+    title: newTitle.value, 
+    description: newDesc.value, 
+    areaId: newArea.value, 
+    goalId: newGoal.value,
+    reviewFrequency: newReviewFrequency.value
+  })
+  newTitle.value = ''; newDesc.value = ''; newArea.value = null; newGoal.value = null; newReviewFrequency.value = '14'; showNew.value = false
 }
 
 async function closeNewProject() {
@@ -136,7 +151,7 @@ watch(showNew, (open) => {
           <X class="w-4 h-4" />
         </button>
         <div class="overline">New project</div>
-        <h2 class="font-serif text-2xl mt-1 mb-5">Something else</h2>
+        <h2 class="font-serif text-2xl mt-1 mb-5">Create a new project</h2>
         
         <VRow dense class="mb-4">
           <VCol cols="12" dense>
@@ -163,23 +178,23 @@ watch(showNew, (open) => {
 
           <VCol cols="12" sm="6" dense>
             <VSelect
-              v-model="newArea"
-              label="Area"
-              id="new-project-area"
-              :options="areas.items"
-              option-value="id"
-              option-label="name"
-            />
-          </VCol>
-
-          <VCol cols="12" sm="6" dense>
-            <VSelect
               v-model="newGoal"
               label="Goal"
               id="new-project-goal"
               :options="goals.items"
               option-value="id"
               option-label="title"
+            />
+          </VCol>
+
+          <VCol cols="12" sm="6" dense>
+            <VSelect
+              v-model="newReviewFrequency"
+              label="Review Frequency"
+              id="new-project-frequency"
+              :options="frequencyOptions"
+              option-value="value"
+              option-label="label"
             />
           </VCol>
         </VRow>

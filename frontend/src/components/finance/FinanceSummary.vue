@@ -481,8 +481,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
     <!-- Header Block conforming to the modern visual layout -->
     <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 ml-1 gap-4 px-1 animate-fade-in">
       <div>
-        <div class="overline text-[10px] text-ink-3 tracking-widest uppercase mb-1 font-sans">Annual Overview</div>
-        <h2 class="font-serif text-3xl font-bold text-ink">Cash Flow Summary</h2>
+        <div class="overline">Annual Overview</div>
+        <div class="font-serif text-3xl mt-1">Cash Flow Summary</div>
       </div>
       <!-- Year Selector aligned right in a compact container -->
       <div
@@ -796,7 +796,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                         class="py-2.5 text-right font-mono col-month border-b border-line/40"
                         :class="[group.scope === 'liability' && val > 0 ? 'text-rose-600/80' : 'text-ink-2', idx === sub.months.length - 1 ? 'pr-8 pl-2' : 'px-2']">
                         <template v-if="val !== null">{{ (group.scope === 'liability' ? '-' : '') + inrCompact(val)
-                        }}</template>
+                          }}</template>
                         <span v-else class="text-ink-3/20">—</span>
                       </td>
                     </tr>
@@ -813,7 +813,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                         class="py-2 text-right font-mono col-month text-ink-3 border-b border-line/30"
                         :class="[group.scope === 'liability' && val > 0 ? 'text-rose-600/70' : '', idx === row.months.length - 1 ? 'pr-8 pl-2' : 'px-2']">
                         <template v-if="val !== null">{{ (group.scope === 'liability' ? '-' : '') + inrCompact(val)
-                        }}</template>
+                          }}</template>
                         <span v-else class="text-ink-3/20">—</span>
                       </td>
                     </tr>

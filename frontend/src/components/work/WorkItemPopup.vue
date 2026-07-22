@@ -226,9 +226,7 @@ onUnmounted(() => {
     <div @keydown.window.esc="emit('close')"
       class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-8">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm" @click.stop="emit('close')"></div>
-      <div
-        class="relative w-full max-w-2xl card p-6 shadow-xl bg-surface z-50 animate-rise-in max-h-[90vh] flex flex-col"
-        @click.stop>
+      <div class="relative w-full max-w-2xl card p-6 shadow-xl bg-surface z-50 animate-rise-in" @click.stop>
 
         <!-- Header (Compact OS look) -->
         <div class="flex items-center justify-between pb-2.5 border-b border-line/30 shrink-0">
@@ -244,7 +242,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Body (Tight Spacing, Floating Dropdowns) -->
-        <div class="flex-1 overflow-y-visible py-4 space-y-3.5 pr-1">
+        <div class="py-4 space-y-3.5 pr-1">
 
           <VInput ref="titleEl" v-model="title" label="Task Title *" id="item-title" required />
 
@@ -303,12 +301,9 @@ onUnmounted(() => {
             </VCol>
           </VRow>
 
-          <!-- Separator Line -->
-          <hr v-if="isEdit" class="border-line/30 my-4" />
-
           <!-- Completion & Outcome -->
-          <div v-if="isEdit" class="space-y-3">
-            <h3 class="text-[10px] uppercase tracking-wider font-bold text-ink-3">Completion & Outcome</h3>
+          <div v-if="isEdit" class="">
+            <h3 class="text-[10px] uppercase tracking-wider font-bold text-ink-3 mb-4">Completion & Outcome</h3>
 
             <div class="grid gap-4 items-center"
               :class="itemsStore.isCompleted(status) ? 'grid-cols-3' : 'grid-cols-1 max-w-xs'">
@@ -351,8 +346,8 @@ onUnmounted(() => {
 
         </div>
 
-        <!-- Sticky Footer for Actions -->
-        <div class="pt-3 border-t border-line/30 flex justify-end gap-3 bg-surface z-10 shrink-0">
+        <!-- Footer for Actions -->
+        <div class="pt-4 border-t border-line/30 flex justify-end gap-3">
           <button @click="emit('close')" class="btn-ghost !text-xs !py-1.5 px-3">Cancel</button>
           <button @click="handleSave" class="btn-primary !text-xs !py-1.5 px-4 flex items-center gap-1.5">
             <CheckCircle2 class="w-3.5 h-3.5" />

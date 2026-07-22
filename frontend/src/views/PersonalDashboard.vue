@@ -184,7 +184,7 @@ const todayOverline = computed(() => {
 
   let str = `Today · Showing ${displayed} of ${total}`
   if (todayUnscheduledCount.value > 0) {
-    str += ` (${todayUnscheduledCount.value} without assigned time)`
+    str += ` · ${todayUnscheduledCount.value} without assigned time`
   }
   return str
 })
@@ -232,6 +232,9 @@ async function openDailyJournal() {
 
 **One curiosity**
 
+
+**Today's reflection**
+
 `
   const created = await notes.add({ title, body, tags: ['journal'] })
   ui.showToast('Journal opened', 'success')
@@ -243,8 +246,8 @@ async function openDailyJournal() {
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="dashboard">
     <PageHeader :overline="todayDate" :title="`${greeting}.`" :sub="'Clear today. Start tomorrow lighter.'">
       <template #right>
-        <button class="btn-ghost" @click="openDailyJournal" data-testid="dash-journal-btn">
-          <BookOpen class="w-4 h-4" /> Journal <span class="kbd ml-1.5 select-none">⌘2</span>
+        <button class="btn-ghost" @click="openDailyJournal" title="Open or create today's daily journal entry" data-testid="dash-journal-btn">
+          <BookOpen class="w-4 h-4" /> Today's Journal <span class="kbd ml-1.5 select-none">⌘2</span>
         </button>
 
         <button class="btn-ghost" @click="toggleSidebar" data-testid="dash-toggle-sidebar-btn">
@@ -262,8 +265,7 @@ async function openDailyJournal() {
       <div :class="[isSidebarCollapsed ? 'lg:col-span-3' : 'lg:col-span-2', 'space-y-6 transition-all duration-300']">
         <!-- TODAY FOCUS -->
         <section data-testid="section-today-focus" class="mt-4">
-          <SectionHeader :overline="todayOverline"
-            :hint="sortedToday.length ? null : 'Nothing scheduled - the day is open.'" />
+          <SectionHeader :overline="todayOverline" />
           <div v-if="sortedToday.length" class="space-y-3">
             <TaskCard v-for="t in sortedToday" :key="t.id" :task="t" :single-line="true" :show-project="false"
               priority-numeric />
@@ -273,7 +275,7 @@ async function openDailyJournal() {
 
         <!-- COMING UP -->
         <section data-testid="section-upcoming">
-          <SectionHeader :overline="upcomingOverline" :hint="sortedUpcoming.length ? null : 'A clear horizon.'" />
+          <SectionHeader :overline="upcomingOverline" />
           <div v-if="sortedUpcoming.length" class="space-y-3">
             <TaskCard v-for="t in sortedUpcoming.slice(0, 2)" :key="t.id" :task="t" :single-line="true"
               :show-project="false" priority-numeric />
@@ -283,7 +285,7 @@ async function openDailyJournal() {
 
         <!-- STALE PROJECTS -->
         <section data-testid="section-stale">
-          <SectionHeader overline="Drifting" hint="Some projects require attention to move forward."
+          <SectionHeader overline="Drifting" hint="These projects are drifting. Time to review them to move forward."
             :show-all-link="false" />
           <div v-if="stale.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <RouterLink v-for="p in stale" :key="p.id" :to="`/projects/${p.id}`"
@@ -296,7 +298,7 @@ async function openDailyJournal() {
               <p v-if="p.description" class="text-sm text-ink-2 line-clamp-2">{{ p.description }}</p>
               <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(getProjectLastTouched(p)) }} · {{
                 p.openTaskCount
-                }}
+              }}
                 open
                 task<template v-if="p.openTaskCount !== 1">s</template></div>
             </RouterLink>
@@ -313,7 +315,7 @@ async function openDailyJournal() {
               <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
               <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
                 fromNow(lastWeeklyReview.createdAt)
-                }}</p>
+              }}</p>
             </div>
             <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
           </div>
@@ -377,7 +379,7 @@ async function openDailyJournal() {
               :data-testid="`resurface-note-${n.id}`">
               <div class="flex items-center gap-2">
                 <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
-                  }}</span>
+                }}</span>
               </div>
               <div class="font-serif text-lg mt-1.5 leading-snug">{{ n.title }}</div>
               <p class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ n.body }}</p>
@@ -392,7 +394,7 @@ async function openDailyJournal() {
                 <div class="flex items-center gap-2">
                   <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{
                     fromNow(b.lastViewedAt)
-                  }}</span>
+                    }}</span>
                 </div>
                 <span v-if="b.category"
                   class="text-[9px] uppercase tracking-wider text-ink-3 font-semibold bg-canvas border border-line px-1.5 py-0.5 rounded-full capitalize">

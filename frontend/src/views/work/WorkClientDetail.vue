@@ -12,12 +12,13 @@ import WorkItemCard from '@/components/work/WorkItemCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { createClientDriveFolder, createClientDriveFolderInParent, extractFolderIdFromUrl } from '@/services/drive'
 import ClientPopup from '@/components/work/ClientPopup.vue'
+import VTooltip from '@/components/VTooltip.vue'
 
 import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
   Calendar, Settings, Sparkles, Plus, Clock, MessageSquare,
   HardDrive, ExternalLink, Trash2, Star, Link as LinkIcon, Key,
-  Eye, EyeOff, Copy
+  Eye, EyeOff, Copy, X
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -38,6 +39,8 @@ const activeTab = ref('overview') // overview, work, notes, invoices, reference,
 const TABS = ['overview', 'work', 'notes', 'invoices', 'reference', 'credentials']
 const showAddNoteModal = ref(false)
 const newNoteTitle = ref('')
+
+
 
 const client = computed(() => {
   return clientsStore.items.find(c => c.id === props.id)
@@ -210,6 +213,18 @@ function handleClientKeydown(e) {
     }
   }
 
+  // Alt+ArrowUp/Down → switch tabs
+  if (e.altKey && !e.metaKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    const currentIdx = TABS.indexOf(activeTab.value)
+    if (currentIdx !== -1) {
+      e.preventDefault()
+      const step = e.key === 'ArrowUp' ? -1 : 1
+      const nextIdx = (currentIdx + step + TABS.length) % TABS.length
+      activeTab.value = TABS[nextIdx]
+      return
+    }
+  }
+
   if ((e.metaKey || e.ctrlKey) && e.key === '1') {
     e.preventDefault()
     startEditPrefs()
@@ -244,7 +259,7 @@ function openAddResourceModal(typeVal) {
 
 async function submitNewResource() {
   if (!resourceTitle.value.trim()) return
-  
+
   await resourcesStore.add({
     clientId: props.id,
     type: resourceType.value,
@@ -254,7 +269,7 @@ async function submitNewResource() {
     password: resourcePassword.value.trim(),
     notes: resourceNotes.value.trim()
   })
-  
+
   showAddResourceModal.value = false
   ui.showToast(`${resourceType.value === 'url' ? 'Reference' : 'Credential'} resource added`, 'success')
 }
@@ -338,69 +353,102 @@ watch(showAddResourceModal, (open) => {
         <ArrowLeft class="w-4 h-4" /> Clients directory
       </button>
 
-      <div class="flex items-start justify-between gap-6 flex-wrap">
+      <div class="flex items-center justify-between gap-6 flex-wrap">
         <div>
-          <span class="overline text-ink-3">Workspace Dashboard</span>
-          <h1 class="font-serif text-3xl font-bold text-ink mt-1 flex items-center gap-2">
+          <h1 class="font-serif text-3xl font-bold text-ink flex items-center gap-2">
             {{ client.name }}
             <span v-if="getClientRating"
               class="text-xs font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-0.5 shrink-0"
-              title="Operational Score (Calculated from completed tasks ratio)"
-            >
+              title="Operational Score (Calculated from completed tasks ratio)">
               <Star class="w-3.5 h-3.5 fill-current" /> {{ getClientRating }}
             </span>
             <span v-if="clientLocalTimeText"
               class="text-xs font-semibold px-1.5 py-0.5 rounded bg-canvas border border-line text-ink-2 flex items-center gap-1 shrink-0"
-              title="Client's local time"
-            >
+              title="Client's local time">
               <Clock class="w-3.5 h-3.5 text-ink-3" /> {{ clientLocalTimeText }} Local
             </span>
           </h1>
         </div>
 
-        <div class="flex gap-2">
-          <button @click="deleteClient"
-            class="btn-ghost !text-pri-critical hover:bg-pri-critical-bg font-semibold flex items-center gap-1.5">
-            <Trash2 class="w-4 h-4" /> Delete Client
-          </button>
-          <button @click="startEditPrefs" class="btn-secondary">
-            <User class="w-4 h-4" /> Edit Profile <span class="kbd ml-1.5 font-sans select-none">⌘1</span>
-          </button>
-          <button v-if="activeTab === 'work'"
-            @click="newTaskTitle = ''; ui.showToast('Use quick composer below', 'info')" class="btn-primary">
-            <Plus class="w-4 h-4" /> Add Task
-          </button>
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Google Drive Folder Header Utility Button -->
+          <VTooltip v-if="client.driveFolderId" text="Open Google Drive folder (⌘2)" position="bottom">
+            <a :href="`https://drive.google.com/drive/folders/${client.driveFolderId}`"
+              target="_blank"
+              class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-ink-2 hover:text-ink hover:bg-surface transition-all shrink-0">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <title>Google Drive</title>
+                <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z"/>
+              </svg>
+            </a>
+          </VTooltip>
+          <VTooltip v-else text="Initialize Google Drive folder" position="bottom">
+            <button @click="triggerCreateDriveFolder"
+              class="w-9 h-9 flex items-center justify-center rounded-xl border border-dashed border-line bg-surface/30 text-ink-3 hover:text-ink hover:bg-surface transition-all shrink-0">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <title>Google Drive</title>
+                <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z"/>
+              </svg>
+            </button>
+          </VTooltip>
+
+          <VTooltip text="Delete Client" position="bottom">
+            <button @click="deleteClient"
+              class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-pri-critical hover:bg-pri-critical-bg transition-all shrink-0">
+              <Trash2 class="w-4 h-4" />
+            </button>
+          </VTooltip>
+          <VTooltip text="Edit Profile (⌘1)" position="bottom">
+            <button @click="startEditPrefs"
+              class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-ink-2 hover:text-ink hover:bg-surface transition-all shrink-0">
+              <User class="w-4 h-4" />
+            </button>
+          </VTooltip>
+          <VTooltip v-if="activeTab === 'work'" text="Add Task" position="bottom">
+            <button @click="newTaskTitle = ''; ui.showToast('Use quick composer below', 'info')"
+              class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-pri-strategic hover:bg-surface hover:text-pri-strategic transition-all shrink-0">
+              <Plus class="w-4 h-4" />
+            </button>
+          </VTooltip>
         </div>
       </div>
     </div>
 
     <!-- QUICK STATS -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="card p-4 border bg-surface/50">
-        <div class="overline text-ink-3 flex items-center gap-1.5">
-          <Clock class="w-3.5 h-3.5" /> Total Hours Tracked
+      <div class="card py-1.5 px-3 border bg-surface/50 flex items-center justify-between gap-2.5">
+        <div class="flex items-center gap-1.5 text-ink-3 min-w-0">
+          <Clock class="w-3.5 h-3.5 text-ink-3 shrink-0" />
+          <span class="overline text-[9px] tracking-wider truncate">Hours</span>
         </div>
-        <div class="font-serif text-2xl font-bold mt-1 text-ink">{{ totalTrackedHours.toFixed(1) }}h</div>
+        <span class="font-serif text-lg font-bold shrink-0"
+          :class="totalTrackedHours > 0 ? 'text-ink' : 'text-ink-3'">{{ totalTrackedHours.toFixed(1) }}h</span>
       </div>
-      <div class="card p-4 border bg-surface/50">
-        <div class="overline text-ink-3 flex items-center gap-1.5">
-          <Receipt class="w-3.5 h-3.5" /> Receivables Balance
+      <div class="card py-1.5 px-3 border bg-surface/50 flex items-center justify-between gap-2.5">
+        <div class="flex items-center gap-1.5 text-ink-3 min-w-0">
+          <Receipt class="w-3.5 h-3.5 text-ink-3 shrink-0" />
+          <span class="overline text-[9px] tracking-wider truncate">Receivables</span>
         </div>
-        <div class="font-serif text-2xl font-bold mt-1 text-pri-interruptive">${{ totalPendingAmount.toLocaleString() }}
-        </div>
+        <span class="font-serif text-lg font-bold shrink-0"
+          :class="totalPendingAmount > 0 ? 'text-ink' : 'text-ink-3'">${{ totalPendingAmount.toLocaleString() }}</span>
       </div>
-      <div class="card p-4 border bg-surface/50">
-        <div class="overline text-ink-3 flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
-          <span class="text-xs font-bold font-mono">$</span> Total Task Charges
+      <div class="card py-1.5 px-3 border bg-surface/50 flex items-center justify-between gap-2.5">
+        <div class="flex items-center gap-1.5 min-w-0"
+          :class="totalChargedAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-3'">
+          <span class="text-xs font-black font-mono shrink-0">$</span>
+          <span class="overline text-[9px] tracking-wider truncate font-semibold">Charges</span>
         </div>
-        <div class="font-serif text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">${{
-          totalChargedAmount.toLocaleString() }}</div>
+        <span class="font-serif text-lg font-bold shrink-0"
+          :class="totalChargedAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-3'">${{
+            totalChargedAmount.toLocaleString() }}</span>
       </div>
-      <div class="card p-4 border bg-surface/50">
-        <div class="overline text-ink-3 flex items-center gap-1.5">
-          <FolderKanban class="w-3.5 h-3.5" /> Active Scope Items
+      <div class="card py-1.5 px-3 border bg-surface/50 flex items-center justify-between gap-2.5">
+        <div class="flex items-center gap-1.5 text-ink-3 min-w-0">
+          <FolderKanban class="w-3.5 h-3.5 text-ink-3 shrink-0" />
+          <span class="overline text-[9px] tracking-wider truncate">Scope</span>
         </div>
-        <div class="font-serif text-2xl font-bold mt-1 text-ink">{{ openItems.length }} active</div>
+        <span class="font-serif text-lg font-bold shrink-0" :class="openItems.length > 0 ? 'text-ink' : 'text-ink-3'">{{
+          openItems.length }} active</span>
       </div>
     </div>
 
@@ -427,7 +475,6 @@ watch(showAddResourceModal, (open) => {
         <div class="card p-6 border bg-surface space-y-6">
           <div class="flex items-center justify-between">
             <h3 class="font-serif text-xl font-bold text-ink">Client Memory Profile</h3>
-            <button @click="startEditPrefs" class="btn-ghost !text-xs !py-1 px-2.5">Edit Profile</button>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
@@ -460,7 +507,7 @@ watch(showAddResourceModal, (open) => {
               <p class="font-medium text-ink">{{ client.pricingSensitivity || 'Not specified' }}</p>
             </div>
             <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Acquisition Source</span>
+              <span class="text-xs uppercase tracking-overline text-ink-3">Source</span>
               <p class="font-medium text-ink">{{ client.clientSource || 'Not specified' }}</p>
             </div>
           </div>
@@ -481,8 +528,11 @@ watch(showAddResourceModal, (open) => {
               {{ client.relationshipNotes || `No notes added yet.` }}</p>
           </div>
         </div>
+      </div>
 
-        <!-- Sync Calendar overview -->
+      <!-- Sidebar Column -->
+      <div class="space-y-6">
+        <!-- Associated Calendar Logs -->
         <div class="card p-6 border bg-surface">
           <h3 class="font-serif text-lg font-semibold text-ink mb-4">Associated Calendar Logs</h3>
           <ul v-if="clientMeetings.length" class="space-y-3">
@@ -497,41 +547,6 @@ watch(showAddResourceModal, (open) => {
             </li>
           </ul>
           <p v-else class="text-xs text-ink-3 italic">No meetings synced with keywords matching this client.</p>
-        </div>
-      </div>
-
-      <!-- Quick sidebar suggestions & Google Drive links -->
-      <div class="space-y-6">
-        <!-- Google Drive Widget -->
-        <div class="card p-6 border bg-surface space-y-4">
-          <h3 class="font-serif text-lg font-semibold text-ink flex items-center gap-2">
-            <HardDrive class="w-5 h-5 text-ink-2" /> Google Drive Link
-          </h3>
-          <div v-if="client.driveFolderId" class="space-y-3">
-            <p class="text-xs text-ink-2">Client has a workspace folder linked to this directory context.</p>
-            <a :href="`https://drive.google.com/drive/folders/${client.driveFolderId}`" target="_blank"
-              class="w-full btn-secondary text-center text-xs block py-2">
-              Open Client Folder <span class="kbd ml-1.5 font-sans select-none">⌘2</span>
-            </a>
-          </div>
-          <div v-else class="space-y-3">
-            <p class="text-xs text-ink-3 italic">No Google Drive folder is currently linked to this client workspace.
-            </p>
-            <button @click="triggerCreateDriveFolder"
-              class="w-full btn-primary text-xs flex justify-center items-center gap-1.5">
-              <Plus class="w-3.5 h-3.5" /> Initialize Client Folder
-            </button>
-          </div>
-        </div>
-
-        <div class="card p-6 bg-pri-strategic-bg/30 border border-pri-strategic-bd/50 space-y-3">
-          <span class="overline text-pri-strategic font-bold flex items-center gap-1.5">
-            <Sparkles class="w-3.5 h-3.5" /> Workspace Suggestion
-          </span>
-          <p class="text-xs text-ink-2 leading-relaxed">
-            "Avoid scope creep by logging actual design revisions vs estimates." Check your active work checklist
-            weekly.
-          </p>
         </div>
       </div>
     </div>
@@ -678,15 +693,15 @@ watch(showAddResourceModal, (open) => {
           </div>
         </div>
       </div>
-      <EmptyState v-else title="No reference links"
-        hint="Link references by clicking 'Add Link' above." />
+      <EmptyState v-else title="No reference links" hint="Link references by clicking 'Add Link' above." />
     </div>
 
     <!-- CREDENTIALS TAB -->
     <div v-else-if="activeTab === 'credentials'" class="space-y-6">
       <div class="flex items-center justify-between">
         <h3 class="font-serif text-lg font-semibold text-ink">Credentials Vault</h3>
-        <button @click="openAddResourceModal('credentials')" class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
+        <button @click="openAddResourceModal('credentials')"
+          class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
           <Plus class="w-3.5 h-3.5" /> Add Credential
         </button>
       </div>
@@ -754,12 +769,7 @@ watch(showAddResourceModal, (open) => {
     </div>
 
     <!-- EDIT CLIENT POPUP -->
-    <ClientPopup
-      v-if="isEditingPrefs"
-      :client="client"
-      @close="isEditingPrefs = false"
-      @saved="handleClientSaved"
-    />
+    <ClientPopup v-if="isEditingPrefs" :client="client" @close="isEditingPrefs = false" @saved="handleClientSaved" />
 
     <!-- ADD NOTE MODAL -->
     <div v-if="showAddNoteModal" @keydown.window.esc="showAddNoteModal = false"
@@ -783,7 +793,8 @@ watch(showAddResourceModal, (open) => {
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddNoteModal = false" class="btn-ghost">Cancel</button>
           <button @click="submitNewNote" class="btn-primary">
-            Create Document <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Create Document <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </div>
@@ -805,7 +816,8 @@ watch(showAddResourceModal, (open) => {
         <div class="space-y-4">
           <!-- Title -->
           <div class="v-field-group">
-            <input ref="addResourceFirstInput" type="text" v-model="resourceTitle" placeholder=" " class="v-field-input text-sm" id="resource-title" />
+            <input ref="addResourceFirstInput" type="text" v-model="resourceTitle" placeholder=" "
+              class="v-field-input text-sm" id="resource-title" />
             <label for="resource-title" class="v-field-label text-xs">Title/System Name</label>
           </div>
 
@@ -818,18 +830,21 @@ watch(showAddResourceModal, (open) => {
           <!-- Credential specific fields -->
           <div v-if="resourceType === 'credentials'" class="grid grid-cols-2 gap-4">
             <div class="v-field-group">
-              <input type="text" v-model="resourceUsername" placeholder=" " class="v-field-input text-sm" id="resource-username" />
+              <input type="text" v-model="resourceUsername" placeholder=" " class="v-field-input text-sm"
+                id="resource-username" />
               <label for="resource-username" class="v-field-label text-xs">Username/Email</label>
             </div>
             <div class="v-field-group">
-              <input type="text" v-model="resourcePassword" placeholder=" " class="v-field-input font-mono text-sm" id="resource-password" />
+              <input type="text" v-model="resourcePassword" placeholder=" " class="v-field-input font-mono text-sm"
+                id="resource-password" />
               <label for="resource-password" class="v-field-label text-xs">Password</label>
             </div>
           </div>
 
           <!-- Notes -->
           <div class="v-field-group">
-            <textarea v-model="resourceNotes" placeholder=" " class="v-field-input min-h-[80px] resize-none text-sm" id="resource-notes"></textarea>
+            <textarea v-model="resourceNotes" placeholder=" " class="v-field-input min-h-[80px] resize-none text-sm"
+              id="resource-notes"></textarea>
             <label for="resource-notes" class="v-field-label text-xs">Description/Notes (optional)</label>
           </div>
         </div>
@@ -837,7 +852,8 @@ watch(showAddResourceModal, (open) => {
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddResourceModal = false" class="btn-ghost">Cancel</button>
           <button @click="submitNewResource" class="btn-primary">
-            Add Resource <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Add Resource <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </div>

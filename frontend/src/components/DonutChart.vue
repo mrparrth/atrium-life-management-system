@@ -14,6 +14,10 @@ const props = defineProps({
   theme: {
     type: String,
     default: 'strategic' // 'strategic', 'critical', 'mixed'
+  },
+  size: {
+    type: String,
+    default: 'md' // 'md' | 'lg'
   }
 })
 
@@ -94,11 +98,11 @@ const chartOptions = computed(() => {
 <template>
   <div class="flex flex-col md:flex-row items-center gap-8 py-2">
     <!-- Chart Canvas -->
-    <div class="relative w-44 h-44 shrink-0">
+    <div class="relative shrink-0" :class="size === 'lg' ? 'w-[300px] h-[300px]' : 'w-44 h-44'">
       <Doughnut :data="chartData" :options="chartOptions" />
       <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-        <span class="overline text-[9px] text-ink-3">Total</span>
-        <span class="font-serif text-lg font-semibold text-ink mt-0.5 leading-none">{{ inr(total) }}</span>
+        <span class="overline text-ink-3" :class="size === 'lg' ? 'text-xs' : 'text-[9px]'">Total</span>
+        <span class="font-serif font-semibold text-ink mt-0.5 leading-none" :class="size === 'lg' ? 'text-2xl' : 'text-lg'">{{ inr(total) }}</span>
       </div>
     </div>
 

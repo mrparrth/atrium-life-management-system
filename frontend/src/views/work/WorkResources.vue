@@ -45,6 +45,26 @@ function handleGlobalKeydown(e) {
       type.value = activeTab.value
     }
   }
+  if (e.altKey && !e.metaKey && !e.ctrlKey && e.code?.startsWith('Digit')) {
+    const idx = parseInt(e.code.replace('Digit', '')) - 1
+    const TABS = ['url', 'credentials']
+    if (idx >= 0 && idx < TABS.length) {
+      e.preventDefault()
+      activeTab.value = TABS[idx]
+      return
+    }
+  }
+  if (e.altKey && !e.metaKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    const TABS = ['url', 'credentials']
+    const currentIdx = TABS.indexOf(activeTab.value)
+    if (currentIdx !== -1) {
+      e.preventDefault()
+      const step = e.key === 'ArrowUp' ? -1 : 1
+      const nextIdx = (currentIdx + step + TABS.length) % TABS.length
+      activeTab.value = TABS[nextIdx]
+      return
+    }
+  }
 }
 
 onMounted(() => {

@@ -8,7 +8,7 @@ import DonutChart from '@/components/DonutChart.vue'
 import InteractiveChart from '@/components/InteractiveChart.vue'
 import Combobox from '@/components/Combobox.vue'
 import { inr, inrCompact } from '@/lib/money'
-import { Plus } from 'lucide-vue-next'
+import { Plus, Info } from 'lucide-vue-next'
 import { Line as LineChart } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -86,44 +86,97 @@ const latestMonthGroupTotals = computed(() => {
 // ───── Averages computation for the last X months
 const averages = computed(() => {
   const periods = finance.cashflowPeriods.slice(0, avgMonthsRange.value)
-  if (!periods.length) return { income: 0, activeIncome: 0, passiveIncome: 0, expense: 0, saveRate: 0 }
+  if (!periods.length) return { income: 0, activeIncome: 0, passiveIncome: 0, expense: 0, needExpense: 0, wantExpense: 0, investment: 0, saveRate: 0, leanFireRatio: 0, fatFireRatio: 0 }
 
   let totalIncome = 0
   let totalActiveIncome = 0
   let totalPassiveIncome = 0
   let totalExpense = 0
+  let totalNeedExpense = 0
+  let totalWantExpense = 0
+  let totalInvestment = 0
 
   periods.forEach(p => {
     const t = finance.periodTotals(p)
     totalIncome += t.income
     totalExpense += t.expense
+    totalInvestment += t.investment
 
-      ; (p.entries || []).forEach(e => {
-        if (e.type === 'income') {
-          const cat = finance.categories.find(c => c.scope === 'income' && c.name === e.category)
-          const grp = ((cat && cat.group) || '').toLowerCase()
-          if (grp === 'active') {
-            totalActiveIncome += +e.value
-          } else if (grp === 'passive') {
-            totalPassiveIncome += +e.value
-          }
+    ;(p.entries || []).forEach(e => {
+      if (e.type === 'income') {
+        const cat = finance.categories.find(c => c.scope === 'income' && c.name === e.category)
+        const grp = ((cat && cat.group) || '').toLowerCase()
+        if (grp === 'active') {
+          totalActiveIncome += +e.value
+        } else if (grp === 'passive') {
+          totalPassiveIncome += +e.value
         }
-      })
+      } else if (e.type === 'expense') {
+        const cat = finance.categories.find(c => c.scope === 'expense' && c.name === e.category)
+        const grp = ((cat && cat.group) || '').toLowerCase()
+        if (grp === 'need') {
+          totalNeedExpense += +e.value
+        } else if (grp === 'want') {
+          totalWantExpense += +e.value
+        }
+      }
+    })
   })
 
   const incomeAvg = totalIncome / periods.length
   const activeIncomeAvg = totalActiveIncome / periods.length
   const passiveIncomeAvg = totalPassiveIncome / periods.length
   const expenseAvg = totalExpense / periods.length
+  const needExpenseAvg = totalNeedExpense / periods.length
+  const wantExpenseAvg = totalWantExpense / periods.length
+  const investmentAvg = totalInvestment / periods.length
   const saveRateAvg = incomeAvg > 0 ? ((incomeAvg - expenseAvg) / incomeAvg) * 100 : 0
+  const leanFireRatio = needExpenseAvg > 0 ? (passiveIncomeAvg / needExpenseAvg) * 100 : 0
+  const fatFireRatio = expenseAvg > 0 ? (passiveIncomeAvg / expenseAvg) * 100 : 0
 
   return {
     income: incomeAvg,
     activeIncome: activeIncomeAvg,
     passiveIncome: passiveIncomeAvg,
     expense: expenseAvg,
-    saveRate: saveRateAvg
+    needExpense: needExpenseAvg,
+    wantExpense: wantExpenseAvg,
+    investment: investmentAvg,
+    saveRate: saveRateAvg,
+    leanFireRatio,
+    fatFireRatio
   }
+})
+
+const spendingShapeData = computed(() => {
+  const periods = finance.cashflowPeriods.slice(0, avgMonthsRange.value)
+  if (!periods.length) return []
+
+  const categoryTotals = {}
+  periods.forEach(p => {
+    ;(p.entries || []).forEach(e => {
+      if (e.type === 'expense') {
+        categoryTotals[e.category] = (categoryTotals[e.category] || 0) + +e.value
+      }
+    })
+  })
+
+  const numPeriods = periods.length
+  const data = Object.entries(categoryTotals).map(([key, val]) => {
+    return {
+      key,
+      value: val / numPeriods
+    }
+  })
+
+  const total = data.reduce((s, e) => s + e.value, 0) || 1
+  return data
+    .map(item => ({
+      key: item.key,
+      value: item.value,
+      pct: (item.value / total) * 100
+    }))
+    .sort((a, b) => b.value - a.value)
 })
 
 // ───── Month-over-Month & Year-over-Year Comparative Metrics
@@ -949,11 +1002,11 @@ const chartSeries = computed(() => {
       </div>
     </div>
 
-    <!-- HISTORICAL PERIOD AVERAGES & BUDGET ALERTS (Side-by-side) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+    <!-- AVERAGES & SPENDING SHAPE (Side-by-side) -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
 
-      <!-- HISTORICAL PERIOD AVERAGES (Takes 1 Col) -->
-      <div class="lg:col-span-1 flex flex-col">
+      <!-- HISTORICAL PERIOD AVERAGES (Takes 2 Cols -> 40% width) -->
+      <div class="lg:col-span-2 flex flex-col">
         <SectionHeader overline="Averages" />
 
         <div class="card p-5 space-y-4 flex-1">
@@ -987,6 +1040,21 @@ const chartSeries = computed(() => {
             <span class="font-serif text-lg font-semibold text-pri-critical">{{ inr(averages.expense) }}</span>
           </div>
 
+          <div class="flex justify-between items-center py-1 pl-3 border-t border-line/20 text-xs">
+            <span class="text-ink-3">↳ Need</span>
+            <span class="font-mono text-ink-2">{{ inr(averages.needExpense) }}</span>
+          </div>
+
+          <div class="flex justify-between items-center py-1 pl-3 border-t border-line/20 text-xs">
+            <span class="text-ink-3">↳ Want</span>
+            <span class="font-mono text-ink-2">{{ inr(averages.wantExpense) }}</span>
+          </div>
+
+          <div class="flex justify-between items-center py-1.5 border-t border-line/40">
+            <span class="text-xs font-medium text-ink-2">Avg Investment</span>
+            <span class="font-serif text-lg font-semibold text-pri-strategic">{{ inr(averages.investment) }}</span>
+          </div>
+
           <div class="flex justify-between items-center py-1.5 border-t border-line/40">
             <span class="text-xs font-medium text-ink-2">Avg Save Rate</span>
             <span class="font-serif text-lg font-semibold"
@@ -994,11 +1062,60 @@ const chartSeries = computed(() => {
               {{ averages.saveRate.toFixed(1) }}%
             </span>
           </div>
+
+          <!-- Lean FIRE Ratio -->
+          <div class="flex justify-between items-center py-1.5 border-t border-line/40 text-xs">
+            <span class="text-ink-2 font-medium flex items-center gap-1 group relative">
+              Lean FIRE Ratio
+              <span class="cursor-help text-ink-3 hover:text-ink shrink-0">
+                <Info class="w-3.5 h-3.5" />
+              </span>
+              <span class="absolute bottom-full left-0 mb-1.5 w-60 p-2 bg-surface border border-line text-ink text-[10px] rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10 leading-relaxed font-sans normal-case">
+                Passive Income divided by Need Expenses. Represents baseline financial independence covering only baseline necessities.
+              </span>
+            </span>
+            <span class="font-serif text-sm font-semibold text-pri-strategic">{{ averages.leanFireRatio.toFixed(1) }}%</span>
+          </div>
+
+          <!-- Fat FIRE Ratio -->
+          <div class="flex justify-between items-center py-1.5 border-t border-line/40 text-xs">
+            <span class="text-ink-2 font-medium flex items-center gap-1 group relative">
+              Fat FIRE Ratio
+              <span class="cursor-help text-ink-3 hover:text-ink shrink-0">
+                <Info class="w-3.5 h-3.5" />
+              </span>
+              <span class="absolute bottom-full left-0 mb-1.5 w-60 p-2 bg-surface border border-line text-ink text-[10px] rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10 leading-relaxed font-sans normal-case">
+                Passive Income divided by Total Expenses. Represents full financial independence covering all your current living expenditures.
+              </span>
+            </span>
+            <span class="font-serif text-sm font-semibold text-pri-strategic">{{ averages.fatFireRatio.toFixed(1) }}%</span>
+          </div>
         </div>
       </div>
 
-      <!-- BUDGET ALERTS (Takes 2 Cols) -->
+      <!-- SPENDING SHAPE (Takes 3 Cols -> 60% width) -->
+      <div class="lg:col-span-3 flex flex-col">
+        <SectionHeader v-if="spendingShapeData.length" overline="Spending shape" />
+        <div v-if="spendingShapeData.length" class="card p-6 flex-1 flex flex-col justify-center">
+          <DonutChart :data="spendingShapeData" theme="critical" size="lg" />
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DISTRIBUTION & BUDGET ALERTS (Side-by-side) -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
+
+      <!-- DISTRIBUTION (Takes 2 Cols -> 40% width) -->
       <div class="lg:col-span-2 flex flex-col">
+        <SectionHeader v-if="finance.allocation.length" overline="Assets distribution" />
+        <div v-if="finance.allocation.length" class="card p-6 flex-1 flex flex-col justify-center">
+          <DonutChart :data="finance.allocation" theme="strategic" />
+        </div>
+      </div>
+
+      <!-- BUDGET ALERTS (Takes 3 Cols -> 60% width) -->
+      <div class="lg:col-span-3 flex flex-col">
         <SectionHeader overline="Budget alerts" />
 
         <div class="card p-5 space-y-4 flex-1 flex flex-col justify-between">
@@ -1018,7 +1135,7 @@ const chartSeries = computed(() => {
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div v-for="a in budgetAlerts.over" :key="a.category.id"
-                  class="flex items-center justify-between bg-pri-critical-bg border border-pri-critical-bd rounded-lg p-2 text-xs">
+                   class="flex items-center justify-between bg-pri-critical-bg border border-pri-critical-bd rounded-lg p-2 text-xs">
                   <span class="font-medium capitalize text-ink truncate mr-2">{{ label(a.category.name) }}</span>
                   <div class="text-right flex-shrink-0">
                     <span class="font-semibold text-pri-critical font-mono">{{ inr(a.actual) }}</span>
@@ -1058,23 +1175,6 @@ const chartSeries = computed(() => {
         </div>
       </div>
 
-    </div>
-
-    <!-- ASSETS & EXPENSES DONUT CHARTS -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-      <div>
-        <SectionHeader v-if="finance.allocation.length" overline="Distribution" />
-        <div v-if="finance.allocation.length" class="card p-6">
-          <DonutChart :data="finance.allocation" theme="strategic" />
-        </div>
-      </div>
-
-      <div>
-        <SectionHeader v-if="finance.expenseBreakdownLatest.length" overline="Spending shape" />
-        <div v-if="finance.expenseBreakdownLatest.length" class="card p-6">
-          <DonutChart :data="finance.expenseBreakdownLatest" theme="critical" />
-        </div>
-      </div>
     </div>
 
     <!-- Financial Progression Charts (Dynamics) -->

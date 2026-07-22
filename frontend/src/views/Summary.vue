@@ -26,7 +26,7 @@ const router = useRouter()
 const activeYearId = ref(null)
 const activeTab = ref('yearly') // 'yearly' or 'yoy'
 
-import { watch } from 'vue'
+import { watch, onBeforeUnmount } from 'vue'
 
 function handleQuery() {
   if (route.query.tab) {
@@ -35,13 +35,41 @@ function handleQuery() {
   }
 }
 
+function handleKeydown(e) {
+  if (e.altKey && !e.metaKey && !e.ctrlKey && e.code?.startsWith('Digit')) {
+    const idx = parseInt(e.code.replace('Digit', '')) - 1
+    const TABS = ['yearly', 'yoy']
+    if (idx >= 0 && idx < TABS.length) {
+      e.preventDefault()
+      activeTab.value = TABS[idx]
+      return
+    }
+  }
+  if (e.altKey && !e.metaKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    const TABS = ['yearly', 'yoy']
+    const currentIdx = TABS.indexOf(activeTab.value)
+    if (currentIdx !== -1) {
+      e.preventDefault()
+      const step = e.key === 'ArrowUp' ? -1 : 1
+      const nextIdx = (currentIdx + step + TABS.length) % TABS.length
+      activeTab.value = TABS[nextIdx]
+      return
+    }
+  }
+}
+
 onMounted(async () => {
   handleQuery()
+  window.addEventListener('keydown', handleKeydown)
   if (years.items.length) {
     // Sort years descending for dropdown
     const sorted = [...years.items].sort((a, b) => b.year - a.year)
     activeYearId.value = sorted[0].id
   }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 watch(() => route.query, handleQuery)

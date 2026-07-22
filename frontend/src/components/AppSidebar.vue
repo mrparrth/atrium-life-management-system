@@ -116,7 +116,7 @@ function getHighlightedName(name, shortcut) {
 function isActive(to) { return route.path === to || (to !== '/' && route.path.startsWith(to)) }
 
 function handleKeydown(e) {
-  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return
+  if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.target.tagName) || e.target.isContentEditable) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
 
   const key = e.key.toLowerCase()

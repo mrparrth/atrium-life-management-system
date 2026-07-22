@@ -8,7 +8,7 @@ import { useAreasStore } from '@/stores/areas'
 import { useNotesStore } from '@/stores/notes'
 import { useUIStore } from '@/stores/ui'
 import { isTaskOpen, getProjectLastTouched } from '@/lib/resurface'
-import { fromNow } from '@/lib/date'
+import { fromNow, daysSince } from '@/lib/date'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
@@ -95,6 +95,16 @@ async function deleteNote(idx) {
     ui.showToast('Progress note deleted', 'success')
   }
 }
+const needsReview = computed(() => {
+  if (!project.value) return false
+  return daysSince(getProjectLastTouched(project.value)) >= 30
+})
+
+async function updateReviewFrequency(e) {
+  if (!project.value) return
+  await projects.update(props.id, { reviewFrequency: e.target.value })
+  ui.showToast('Review frequency updated', 'success')
+}
 </script>
 
 <template>
@@ -116,23 +126,50 @@ async function deleteNote(idx) {
       </template>
     </PageHeader>
 
+    <!-- Review Reminder Banner -->
+    <div v-if="needsReview"
+      class="p-4 mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-300 flex items-start gap-3 shadow-sm">
+      <span class="text-base shrink-0">⚠️</span>
+      <div class="space-y-1">
+        <h4 class="text-sm font-bold text-amber-950 dark:text-amber-200">Review Required</h4>
+        <p class="text-xs text-amber-800 dark:text-amber-400 leading-relaxed">This project has not been reviewed or
+          touched
+          in over a month (last touched {{ fromNow(getProjectLastTouched(project)) }}). Please add a progress note below
+          under the Review Log to update its status.</p>
+      </div>
+    </div>
+
     <div class="card p-6 mb-10" data-testid="project-meta">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
-        <div>
+      <div class="flex flex-wrap items-start justify-between gap-y-6 gap-x-8 text-sm">
+        <div class="min-w-[80px]">
           <div class="overline mb-1">Progress</div>
           <div class="font-serif text-2xl">{{ progress }}%</div>
         </div>
-        <div>
+        <div class="min-w-[80px]">
           <div class="overline mb-1">Open</div>
           <div class="font-serif text-2xl">{{ openTasks.length }}</div>
         </div>
-        <div>
+        <div class="min-w-[80px]">
           <div class="overline mb-1">Done</div>
           <div class="font-serif text-2xl">{{ doneTasks.length }}</div>
         </div>
-        <div>
+        <div class="min-w-[120px]">
           <div class="overline mb-1">Last touched</div>
-          <div class="font-serif text-lg">{{ fromNow(getProjectLastTouched(project)) }}</div>
+          <div class="font-serif text-2xl text-ink">{{ fromNow(getProjectLastTouched(project)) }}</div>
+        </div>
+        <div class="min-w-[140px]">
+          <div class="overline mb-1">Review Frequency</div>
+          <div class="relative inline-flex items-center mt-1">
+            <select :value="project.reviewFrequency || '14'" @change="updateReviewFrequency"
+              class="appearance-none bg-transparent border-none p-0 pr-4 font-serif text-2xl text-ink focus:outline-none focus:ring-0 cursor-pointer transition-colors dark:bg-transparent">
+              <option value="7" class="bg-surface text-ink text-sm">Weekly</option>
+              <option value="14" class="bg-surface text-ink text-sm">Bi-weekly</option>
+              <option value="30" class="bg-surface text-ink text-sm">Monthly</option>
+              <option value="90" class="bg-surface text-ink text-sm">Quarterly</option>
+              <option value="0" class="bg-surface text-ink text-sm">Never</option>
+            </select>
+            <span class="absolute right-0 pointer-events-none text-ink-3 text-[10px] ml-1">▼</span>
+          </div>
         </div>
       </div>
       <div class="mt-5 h-1.5 rounded-full bg-elevated overflow-hidden">

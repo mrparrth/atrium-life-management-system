@@ -129,7 +129,7 @@ function filterEntries(p, scope) {
             </div>
             <div class="flex items-center gap-1 shrink-0" @click.stop>
               <!-- Comment Count Badge -->
-              <VTooltip v-if="entryNotesCount(p) > 0" position="top">
+              <VTooltip v-if="entryNotesCount(p) > 0" position="left" contentClass="min-w-[220px]">
                 <div class="btn-ghost !p-1.5 flex items-center gap-1 text-ink-2 select-none cursor-help mr-1">
                   <svg class="w-4 h-4 fill-current text-ink-3" viewBox="0 0 24 24">
                     <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>

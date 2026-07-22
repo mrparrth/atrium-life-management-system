@@ -414,7 +414,7 @@ onUnmounted(() => {
                   ]" />
                 </VCol>
                 <VCol cols="12" sm="6">
-                  <VSelect v-model="clientSource" label="Acquisition Source" id="client-source" :options="[
+                  <VSelect v-model="clientSource" label="Source" id="client-source" :options="[
                     { value: 'Upwork', label: 'Upwork' },
                     { value: 'Referral', label: 'Referral' },
                     { value: 'Cold Email', label: 'Cold Email' },

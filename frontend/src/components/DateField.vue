@@ -59,9 +59,9 @@ function setUpcomingMonday() {
       <button type="button" @click="setRelativeToToday(2)"
         class="text-[9px] tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
         title="Add 2 days">T+2D</button>
-      <button type="button" @click="setRelativeToToday(5)"
+      <button type="button" @click="setRelativeToToday(7)"
         class="text-[9px] tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
-        title="Add 5 days">T+5D</button>
+        title="Add 7 days">T+7D</button>
       <button type="button" @click="setUpcomingMonday"
         class="text-[9px] tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-1.5 py-0.5 rounded hover:bg-line transition-all font-mono"
         title="Set to Upcoming Monday">Next Mon</button>

@@ -409,7 +409,7 @@ async function saveCapacitySettings() {
                       <ul class="space-y-0.5">
                         <li v-for="opt in filteredSuggestions(allocSearchQuery)" :key="opt"
                           class="px-2.5 py-1.5 text-xs rounded-lg cursor-pointer flex items-center justify-between transition-colors text-ink-2 hover:bg-canvas"
-                          @click="alloc.projectName = opt; activeDropdownAllocId = null; allocSearchQuery = ''; saveAllocations()">
+                          @click="alloc.projectName = opt; activeDropdownAllocId = null; allocSearchQuery = ''">
                           <span>{{ opt }}</span>
                         </li>
                         <li v-if="!filteredSuggestions(allocSearchQuery).length"

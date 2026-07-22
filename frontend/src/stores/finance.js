@@ -1,6 +1,34 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { db, newId, now, plain, ensureDefaultCategories, DEFAULT_CATEGORIES } from '@/db'
+import dayjs from 'dayjs'
+
+function calculateNextRenewal(renewalDateStr, billingPeriod) {
+  if (!renewalDateStr) return new Date().toISOString().slice(0, 10)
+  const base = dayjs(renewalDateStr).startOf('day')
+  const today = dayjs().startOf('day')
+  
+  if (!base.isBefore(today)) {
+    return base.format('YYYY-MM-DD')
+  }
+  
+  let next = base
+  if (billingPeriod === 'yearly') {
+    const diff = today.diff(base, 'year')
+    next = base.add(diff, 'year')
+    if (next.isBefore(today)) {
+      next = next.add(1, 'year')
+    }
+  } else {
+    // monthly
+    const diff = today.diff(base, 'month')
+    next = base.add(diff, 'month')
+    if (next.isBefore(today)) {
+      next = next.add(1, 'month')
+    }
+  }
+  return next.format('YYYY-MM-DD')
+}
 
 export const useFinanceStore = defineStore('finance', () => {
   const networthLogs = ref([])      // [{ id, date, entries:[{category,type,value}], note, createdAt, updatedAt }]
@@ -27,7 +55,27 @@ export const useFinanceStore = defineStore('finance', () => {
     categories.value = cats.sort((a, b) => a.name.localeCompare(b.name))
 
     if (db.finance_subscriptions) {
-      subscriptions.value = await db.finance_subscriptions.toArray()
+      const rawSubs = await db.finance_subscriptions.toArray()
+      for (const s of rawSubs) {
+        let changed = false
+        if (!s.renewalDate) {
+          s.renewalDate = s.nextRenewal || new Date().toISOString().slice(0, 10)
+          changed = true
+        }
+        if (!s.spendType) {
+          s.spendType = 'need'
+          changed = true
+        }
+        const correctNext = calculateNextRenewal(s.renewalDate, s.billingPeriod)
+        if (s.nextRenewal !== correctNext) {
+          s.nextRenewal = correctNext
+          changed = true
+        }
+        if (changed) {
+          await db.finance_subscriptions.put(plain(s))
+        }
+      }
+      subscriptions.value = rawSubs
     }
   }
 
@@ -272,15 +320,21 @@ export const useFinanceStore = defineStore('finance', () => {
   }
 
   async function addSubscription(payload) {
+    const renewalDate = payload.renewalDate || payload.nextRenewal || new Date().toISOString().slice(0, 10)
+    const nextRenewal = calculateNextRenewal(renewalDate, payload.billingPeriod || 'monthly')
+    
     const item = {
       id: newId(),
       name: payload.name || 'New Subscription',
       cost: payload.cost ? +payload.cost : 0,
       currency: payload.currency || 'INR',
       billingPeriod: payload.billingPeriod || 'monthly',
-      nextRenewal: payload.nextRenewal || new Date().toISOString().slice(0, 10),
+      renewalDate,
+      nextRenewal,
+      spendType: payload.spendType || 'need',
       category: payload.category || '',
       status: payload.status || 'active',
+      type: payload.type || 'subscription',
       createdAt: now(),
       updatedAt: now()
     }
@@ -291,7 +345,18 @@ export const useFinanceStore = defineStore('finance', () => {
 
   async function updateSubscription(id, patch) {
     const sub = subscriptions.value.find(x => x.id === id); if (!sub) return
-    Object.assign(sub, patch, { updatedAt: now() })
+    
+    const baseRenewalDate = patch.renewalDate || sub.renewalDate || sub.nextRenewal || new Date().toISOString().slice(0, 10)
+    const baseBillingPeriod = patch.billingPeriod || sub.billingPeriod || 'monthly'
+    const nextRenewal = calculateNextRenewal(baseRenewalDate, baseBillingPeriod)
+    
+    const finalPatch = {
+      ...patch,
+      renewalDate: baseRenewalDate,
+      nextRenewal
+    }
+    
+    Object.assign(sub, finalPatch, { updatedAt: now() })
     await db.finance_subscriptions.put(plain(sub))
   }
 

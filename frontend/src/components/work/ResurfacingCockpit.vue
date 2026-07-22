@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
@@ -26,6 +26,30 @@ const snoozedAlerts = ref(JSON.parse(localStorage.getItem('atrium.snoozed_alerts
 function saveSnoozes() {
   localStorage.setItem('atrium.snoozed_alerts', JSON.stringify(snoozedAlerts.value))
 }
+
+const activeSnoozePopoverAlertId = ref(null)
+
+function toggleSnoozePopover(alertId) {
+  if (activeSnoozePopoverAlertId.value === alertId) {
+    activeSnoozePopoverAlertId.value = null
+  } else {
+    activeSnoozePopoverAlertId.value = alertId
+  }
+}
+
+function closeSnoozePopover(e) {
+  if (!e.target.closest('.snooze-popover-container')) {
+    activeSnoozePopoverAlertId.value = null
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', closeSnoozePopover)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeSnoozePopover)
+})
 
 function snoozeAlert(id, days = 7) {
   const until = dayjs().add(days, 'day').toISOString()
@@ -63,6 +87,12 @@ const alerts = computed(() => {
 
   // 1. Stale Clients (> 30 days since last interaction)
   clientsStore.items.forEach(c => {
+    console.log(c)
+    if (c.status === 'inactive' || c.status === 'do_not_follow_up') return
+    const hasActiveTask = itemsStore.items.some(item => 
+      item.clientId === c.id && !itemsStore.isCompleted(item.status)
+    )
+    if (hasActiveTask) return
     const key = `client-stale-${c.id}`
     if (isSnoozed(key)) return
     const daysSince = dayjs().diff(dayjs(c.lastInteractionAt), 'day')
@@ -72,12 +102,7 @@ const alerts = computed(() => {
         type: 'client',
         targetId: c.id,
         title: `${c.name} has gone quiet`,
-        description: `No interactions registered for ${daysSince} days. Check in to maintain relationship health.`,
-        actionText: 'Mark checked-in',
-        action: () => {
-          clientsStore.update(c.id, { lastInteractionAt: new Date().toISOString() })
-          ui.showToast(`Updated interaction date for ${c.name}`, 'success')
-        }
+        description: `No interactions registered for ${daysSince} days. Check in to maintain relationship health.`
       })
     }
   })
@@ -180,23 +205,25 @@ watch(alerts, (newAlerts) => {
       <h3 class="overline text-ink-2">Strategic Briefing Alerts</h3>
     </div>
 
-    <div class="grid grid-cols-1 gap-3">
+    <div class="grid grid-cols-1 gap-2">
       <div v-for="alert in alerts" :key="alert.id" @click="goToItem(alert)" title="Click to view details"
-        class="card p-4 flex items-start justify-between gap-4 border border-line bg-surface hover:border-line-2 transition-all duration-300 cursor-pointer">
+        class="card py-2 px-3 flex items-center justify-between gap-3 border border-line bg-surface hover:border-line-2 transition-all duration-300 cursor-pointer">
 
-        <div class="space-y-1">
-          <div class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full shrink-0"
-              :class="alert.type === 'invoice' ? 'bg-pri-critical' : alert.type === 'client' ? 'bg-pri-critical' : 'bg-pri-interruptive'">
-            </span>
-            <span class="text-xs uppercase tracking-wider text-ink-3 font-semibold">{{ alert.type }}</span>
+        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+          <span class="w-1.5 h-1.5 rounded-full shrink-0"
+            :class="alert.type === 'invoice' ? 'bg-pri-critical' : alert.type === 'client' ? 'bg-pri-critical' : 'bg-pri-interruptive'">
+          </span>
+          <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 min-w-0 flex-1">
+            <div class="flex items-center gap-2 shrink-0">
+              <h4 class="font-serif text-xs md:text-sm text-ink font-bold truncate">{{ alert.title }}</h4>
+              <span class="text-[9px] uppercase tracking-wider text-ink-3 font-bold bg-canvas px-1.5 py-0.5 rounded border border-line/40 shrink-0">{{ alert.type }}</span>
+            </div>
+            <p class="text-xs text-ink-2 truncate max-w-xl md:border-l md:border-line md:pl-3">{{ alert.description }}</p>
           </div>
-          <h4 class="font-serif text-base text-ink font-semibold mt-1">{{ alert.title }}</h4>
-          <p class="text-xs text-ink-2 leading-relaxed max-w-xl">{{ alert.description }}</p>
         </div>
 
         <div @click.stop class="flex items-center gap-2 shrink-0 self-center">
-          <div class="relative group">
+          <div v-if="alert.actionText" class="relative group">
             <button @click="alert.action"
               class="btn-ghost !text-xs !py-1 px-2.5 bg-canvas hover:bg-line/40 rounded-lg flex items-center gap-1 text-ink font-medium">
               <Check class="w-3.5 h-3.5" /> {{ alert.actionText }}
@@ -207,14 +234,22 @@ watch(alerts, (newAlerts) => {
             </div>
           </div>
 
-          <div class="relative group">
-            <button @click="snoozeAlert(alert.id)"
-              class="btn-ghost !p-1.5 hover:bg-canvas text-ink-3 hover:text-ink rounded-lg">
+          <div class="relative snooze-popover-container">
+            <button @click="toggleSnoozePopover(alert.id)"
+              class="btn-ghost !p-1.5 hover:bg-canvas text-ink-3 hover:text-ink rounded-lg"
+              title="Snooze Alert">
               <EyeOff class="w-3.5 h-3.5" />
             </button>
-            <div
-              class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-ink text-canvas text-[10px] px-2.5 py-1.5 rounded-lg font-medium shadow-lg whitespace-nowrap z-50">
-              Snooze for 7 days
+            
+            <!-- Snooze Options Popover -->
+            <div v-if="activeSnoozePopoverAlertId === alert.id"
+              class="absolute right-0 bottom-full mb-2 bg-surface border border-line rounded-xl shadow-xl p-1.5 min-w-[100px] z-50 flex flex-col space-y-0.5 animate-rise-in text-left">
+              <span class="text-[9px] uppercase font-bold text-ink-3 px-2 py-1 select-none">Snooze for:</span>
+              <button v-for="days in [1, 3, 7, 14, 30]" :key="days"
+                @click="snoozeAlert(alert.id, days); activeSnoozePopoverAlertId = null"
+                class="px-2.5 py-1 text-xs text-ink-2 hover:text-ink hover:bg-canvas rounded-lg text-left font-medium transition-colors cursor-pointer w-full">
+                {{ days }} {{ days === 1 ? 'day' : 'days' }}
+              </button>
             </div>
           </div>
         </div>

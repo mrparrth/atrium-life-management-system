@@ -465,8 +465,11 @@ onUnmounted(() => {
         </VRow>
 
         <!-- Reason / Note field positioned at the very end -->
-        <VTextarea v-model="form.reason" label="Reason for following" id="follow-reason" autogrow />
-
+        <VRow>
+          <VCol>
+            <VTextarea v-model="form.reason" label="Reason for following" id="follow-reason" autogrow />
+          </VCol>
+        </VRow>
         <div class="flex justify-end gap-3">
           <button type="button" class="btn-ghost" @click="showModal = false">Cancel</button>
           <button type="submit" class="btn-primary">

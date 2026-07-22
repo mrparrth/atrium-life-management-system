@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
 import { inr, inrShort } from '@/lib/money'
-import { X, ChevronDown, ChevronRight } from 'lucide-vue-next'
+import { X, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-vue-next'
 import { onKeyStroke } from '@vueuse/core'
 
 const props = defineProps({
@@ -15,8 +15,16 @@ const emit = defineEmits(['close', 'saved'])
 const finance = useFinanceStore()
 const ui = useUIStore()
 
-const month = ref(props.initial?.month || new Date().toISOString().slice(0, 7))
-const note = ref(props.initial?.note || '')
+const currentCf = ref(props.initial)
+const month = ref(currentCf.value?.month || new Date().toISOString().slice(0, 7))
+const note = ref(currentCf.value?.note || '')
+
+watch(() => props.initial, (newVal) => {
+  currentCf.value = newVal
+  month.value = newVal?.month || new Date().toISOString().slice(0, 7)
+  note.value = newVal?.note || ''
+  initValues()
+})
 
 // ── Values ─────────────────────────────────────────────────────
 const valuesMap = ref({})
@@ -24,12 +32,17 @@ const displayValues = ref({})
 const notesMap = ref({})
 function makeKey(type, category) { return `${type}::${category}` }
 
+const initialMonth = ref('')
+const initialNote = ref('')
+const initialValues = ref({})
+const initialNotes = ref({})
+
 function initValues() {
   const map = {}
   const dispMap = {}
   const nMap = {}
   for (const scope of ['income', 'investment', 'expense']) {
-    for (const cat of finance.visibleCategoriesForScope(scope, props.initial)) {
+    for (const cat of finance.visibleCategoriesForScope(scope, currentCf.value)) {
       const key = makeKey(scope, cat.name)
       const def = cat.defaultValue ? +cat.defaultValue : 0
       map[key] = def
@@ -37,8 +50,8 @@ function initValues() {
       nMap[key] = ''
     }
   }
-  if (props.initial?.entries) {
-    for (const e of props.initial.entries) {
+  if (currentCf.value?.entries) {
+    for (const e of currentCf.value.entries) {
       const key = makeKey(e.type, e.category)
       map[key] = +e.value
       dispMap[key] = inrShort(e.value)
@@ -48,9 +61,60 @@ function initValues() {
   valuesMap.value = map
   displayValues.value = dispMap
   notesMap.value = nMap
+
+  initialMonth.value = currentCf.value?.month || new Date().toISOString().slice(0, 7)
+  initialNote.value = currentCf.value?.note || ''
+  initialValues.value = { ...map }
+  initialNotes.value = { ...nMap }
 }
 initValues()
 watch(() => finance.categories.length, initValues)
+
+const isDirty = computed(() => {
+  if (month.value !== initialMonth.value) return true
+  if (note.value !== initialNote.value) return true
+
+  for (const [key, val] of Object.entries(valuesMap.value)) {
+    const initVal = initialValues.value[key] !== undefined ? initialValues.value[key] : 0
+    if (+val !== +initVal) return true
+  }
+
+  for (const [key, val] of Object.entries(notesMap.value)) {
+    const initVal = initialNotes.value[key] || ''
+    if ((val || '') !== initVal) return true
+  }
+
+  return false
+})
+
+const currentIndex = computed(() => {
+  if (!currentCf.value) return -1
+  return finance.cashflowPeriods.findIndex(p => p.id === currentCf.value.id)
+})
+
+const hasPrev = computed(() => {
+  return currentIndex.value !== -1 && currentIndex.value < finance.cashflowPeriods.length - 1
+})
+
+const hasNext = computed(() => {
+  return currentIndex.value > 0
+})
+
+async function navigateTo(offset) {
+  if (isDirty.value) {
+    const success = await executeSave()
+    if (!success) return
+  }
+
+  const targetIndex = currentIndex.value + offset
+  const targetPeriod = finance.cashflowPeriods[targetIndex]
+  if (targetPeriod) {
+    currentCf.value = targetPeriod
+    month.value = targetPeriod.month
+    note.value = targetPeriod.note || ''
+    initValues()
+  }
+}
 
 function onFocus(scope, catName, event) {
   const key = makeKey(scope, catName)
@@ -88,7 +152,7 @@ const totals = computed(() => {
 
 // ── Grouped categories ──────────────────────────────────────────
 function groupedCategories(scope) {
-  const cats = finance.visibleCategoriesForScope(scope, props.initial)
+  const cats = finance.visibleCategoriesForScope(scope, currentCf.value)
   const groupsMap = {}
   for (const c of cats) {
     const g = c.group || 'Other'
@@ -177,7 +241,7 @@ onBeforeUnmount(() => {
 })
 
 // ── Save / close ────────────────────────────────────────────────
-async function save() {
+async function executeSave() {
   const entries = []
   for (const [k, v] of Object.entries(valuesMap.value)) {
     const num = +v
@@ -186,27 +250,43 @@ async function save() {
     const [type, category] = k.split('::')
     entries.push({ type, category, value: num, note: entryNote.trim() })
   }
-  if (!entries.length) { ui.showToast('Add at least one value', 'error'); return }
+  if (!entries.length) { ui.showToast('Add at least one value', 'error'); return false }
 
-  const exists = finance.cashflowPeriods.some(p => p.month === month.value && (!props.initial || props.isCopy || p.id !== props.initial.id))
+  const exists = finance.cashflowPeriods.some(p => p.month === month.value && (!currentCf.value || props.isCopy || p.id !== currentCf.value.id))
   if (exists) {
     const monthFormatted = formatMonth(month.value)
     if (!await ui.confirm({
       title: 'Duplicate Month',
       message: `A cashflow log for ${monthFormatted} already exists. Do you want to save anyway and create a duplicate entry?`
     })) {
-      return
+      return false
     }
   }
 
-  if (props.initial && !props.isCopy) {
-    await finance.updateCashflowPeriod(props.initial.id, { month: month.value, entries, note: note.value })
+  if (currentCf.value && !props.isCopy) {
+    await finance.updateCashflowPeriod(currentCf.value.id, { month: month.value, entries, note: note.value })
     ui.showToast('Updated', 'success')
   } else {
-    await finance.addCashflowPeriod({ month: month.value, entries, note: note.value })
+    const saved = await finance.addCashflowPeriod({ month: month.value, entries, note: note.value })
     ui.showToast('Month logged', 'success')
+    currentCf.value = saved
   }
-  emit('saved'); emit('close')
+
+  // Reset baseline values so form is no longer dirty after saving
+  initialMonth.value = month.value
+  initialNote.value = note.value
+  initialValues.value = { ...valuesMap.value }
+  initialNotes.value = { ...notesMap.value }
+
+  emit('saved')
+  return true
+}
+
+async function save() {
+  const success = await executeSave()
+  if (success) {
+    emit('close')
+  }
 }
 
 function formatMonth(m) {
@@ -217,9 +297,8 @@ function formatMonth(m) {
 }
 
 async function closeForm() {
-  const hasValues = Object.values(valuesMap.value).some(v => +v !== 0)
-  if (hasValues || note.value.trim()) {
-    if (!await ui.confirm({ title: 'Discard draft?', message: 'You have unsaved changes. Discard them?' })) return
+  if (isDirty.value) {
+    if (!await ui.confirm({ title: 'Discard changes?', message: 'You have unsaved changes. Discard them?' })) return
   }
   emit('close')
 }
@@ -261,6 +340,21 @@ const scopeMeta = {
   <div class="fixed inset-0 z-50 flex items-center justify-center px-4" data-testid="cashflow-form">
     <div class="fixed inset-0 bg-ink/50 backdrop-blur-md" @click="closeForm"></div>
 
+    <!-- Left/Right Nav Buttons -->
+    <button v-if="currentCf && !props.isCopy && hasPrev" type="button"
+      @click="navigateTo(1)"
+      class="hidden md:flex fixed left-4 lg:left-8 top-1/2 -translate-y-1/2 z-[100] w-12 h-12 items-center justify-center rounded-full bg-surface/90 border border-line text-ink hover:text-pri-strategic hover:bg-surface shadow-xl transition-all focus:outline-none cursor-pointer"
+      title="Previous month">
+      <ChevronLeft class="w-6 h-6" />
+    </button>
+
+    <button v-if="currentCf && !props.isCopy && hasNext" type="button"
+      @click="navigateTo(-1)"
+      class="hidden md:flex fixed right-4 lg:right-8 top-1/2 -translate-y-1/2 z-[100] w-12 h-12 items-center justify-center rounded-full bg-surface/90 border border-line text-ink hover:text-pri-strategic hover:bg-surface shadow-xl transition-all focus:outline-none cursor-pointer"
+      title="Next month">
+      <ChevronRight class="w-6 h-6" />
+    </button>
+
     <form @submit.prevent="save" @keydown="handleFormKeydown"
       class="cf-modal relative w-full max-w-5xl animate-rise-in flex flex-col overflow-hidden"
       style="max-height: max(90vh, 820px)">
@@ -272,7 +366,7 @@ const scopeMeta = {
         <div class="flex items-center justify-between px-7 pt-6 pb-5">
           <div>
             <h2 class="font-serif text-2xl text-ink font-semibold tracking-tight">
-              {{ (initial && !isCopy) ? "Edit Month's Cashflow" : "Log a Month's Cashflow" }}
+              {{ (currentCf && !isCopy) ? "Edit Month's Cashflow" : "Log a Month's Cashflow" }}
             </h2>
           </div>
           <div class="flex items-center gap-3">
@@ -436,7 +530,7 @@ const scopeMeta = {
         <div class="flex items-center gap-2 shrink-0">
           <button type="button" class="btn-ghost text-sm" @click="closeForm">Cancel</button>
           <button type="submit" class="btn-primary text-sm flex items-center gap-1.5" data-testid="cf-save">
-            {{ (initial && !isCopy) ? 'Save changes' : 'Save month' }}
+            {{ (currentCf && !isCopy) ? 'Save changes' : 'Save month' }}
             <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>

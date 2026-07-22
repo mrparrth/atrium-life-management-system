@@ -43,11 +43,11 @@ export const useWorkForecastStore = defineStore('workForecast', () => {
         weekStartDate,
         availableHours: patch.availableHours !== undefined ? Number(patch.availableHours) : 40,
         adminLoadPercent: patch.adminLoadPercent !== undefined ? Number(patch.adminLoadPercent) : 10,
-        allocations: patch.allocations || [],
+        allocations: patch.allocations ? plain(patch.allocations) : { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [], Sun: [] },
         createdAt: now(),
         updatedAt: now()
       }
-      await db.work_capacity.add(rec)
+      await db.work_capacity.add(plain(rec))
       capacityRecords.value.push(rec)
     }
     return rec
@@ -69,7 +69,7 @@ export const useWorkForecastStore = defineStore('workForecast', () => {
         createdAt: now(),
         updatedAt: now()
       }
-      await db.work_capacity.add(rec)
+      await db.work_capacity.add(plain(rec))
       capacityRecords.value.push(rec)
     }
   }

@@ -60,6 +60,15 @@ function handleKeydown(e) {
       tab.value = tabsList[idx]
     }
   }
+  if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    const currentIdx = tabsList.indexOf(tab.value)
+    if (currentIdx !== -1) {
+      e.preventDefault()
+      const step = e.key === 'ArrowUp' ? -1 : 1
+      const nextIdx = (currentIdx + step + tabsList.length) % tabsList.length
+      tab.value = tabsList[nextIdx]
+    }
+  }
   if ((e.metaKey || e.ctrlKey) && e.key === '2') {
     if (tab.value === 'overview' || tab.value === 'cashflow') {
       const logMonthBtn = document.querySelector('[data-testid="overview-log-cf"], [data-testid="cf-add-btn"]')
@@ -101,11 +110,11 @@ watch(() => route.query, handleQuery)
 <template>
   <div class="py-10 max-w-7xl mx-auto" data-testid="finance-view">
     <PageHeader overline="Memory · Finance" title="Money, gently tracked" g />
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-10">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
       <div class="flex flex-wrap gap-1 bg-elevated rounded-2xl p-1 border border-line text-sm w-fit"
         data-testid="finance-tabs">
         <button
-          v-for="t in [{ k: 'overview', l: 'Overview' }, { k: 'cashflow', l: 'Cash flow' }, { k: 'networth', l: 'Net worth' }, { k: 'budgets', l: 'Budgets' }, { k: 'summary', l: 'Annual Summary' }, { k: 'subscriptions', l: 'Subscriptions' }, { k: 'categories', l: 'Settings' }]"
+          v-for="t in [{ k: 'overview', l: '1. Overview' }, { k: 'cashflow', l: '2. Cash flow' }, { k: 'networth', l: '3. Net worth' }, { k: 'budgets', l: '4. Budgets' }, { k: 'summary', l: '5. Annual Summary' }, { k: 'subscriptions', l: '6. Subscriptions' }, { k: 'categories', l: '7. Settings' }]"
           :key="t.k" :data-testid="`tab-${t.k}`" class="px-4 py-2 rounded-xl transition-colors duration-200"
           :class="tab === t.k ? 'bg-surface text-ink' : 'text-ink-2 hover:text-ink'" @click="tab = t.k">{{ t.l
           }}</button>

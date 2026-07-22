@@ -193,8 +193,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
     <!-- Header Block conforming to the modern visual layout -->
     <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 ml-1 gap-4 px-1">
       <div>
-        <div class="overline text-[10px] text-ink-3 tracking-widest uppercase mb-1 font-sans">Budgets</div>
-        <h2 class="font-serif text-3xl font-bold text-ink">Annual Category Budgets</h2>
+        <div class="overline">Budgets</div>
+        <div class="font-serif text-3xl mt-1">Annual Category Budgets</div>
       </div>
       <!-- Year Selector aligned right in a compact container -->
       <div

@@ -113,10 +113,12 @@ export function getProjectLastTouched(project) {
 export function staleProjects(projects, tasks) {
   return projects
     .filter(
-      (p) =>
-        p.status !== "archived" && 
-        p.status !== "completed" && 
-        daysSince(getProjectLastTouched(p)) >= RESURFACE.projectStaleDays,
+      (p) => {
+        if (p.status === "archived" || p.status === "completed") return false;
+        if (p.reviewFrequency === "0") return false;
+        const threshold = p.reviewFrequency ? Number(p.reviewFrequency) : RESURFACE.projectStaleDays;
+        return daysSince(getProjectLastTouched(p)) >= threshold;
+      }
     )
     .map((p) => ({ ...p, openTaskCount: tasks.filter((t) => t.projectId === p.id && isTaskOpen(t)).length }));
 }

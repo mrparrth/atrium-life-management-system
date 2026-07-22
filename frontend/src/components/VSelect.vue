@@ -205,6 +205,34 @@ watch(isOpen, async (open) => {
   }
 })
 
+function handleKeyDown(e) {
+  if (props.disabled) return
+
+  if (e.key === 'Escape' && isOpen.value) {
+    isOpen.value = false
+    e.preventDefault()
+    e.stopPropagation()
+    return
+  }
+
+  // Handle character keypresses to select options by first letter
+  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const char = e.key.toLowerCase()
+    
+    // Always stop propagation to prevent global key listener interference (like sidebars)
+    e.stopPropagation()
+
+    const match = props.options.find(opt => {
+      const label = getOptionLabel(opt).toLowerCase()
+      return label.trim().startsWith(char)
+    })
+    if (match) {
+      e.preventDefault()
+      selectOption(match)
+    }
+  }
+}
+
 function onClickOutside(e) {
   if (container.value && !container.value.contains(e.target)) {
     isOpen.value = false
@@ -224,6 +252,7 @@ onBeforeUnmount(() => {
   <!-- Unified Custom Dropdown Component -->
   <div :class="variant === 'compact' ? 'inline-block relative' : 'v-field-group relative'" ref="container" @click.stop>
     <button type="button" :id="id" :disabled="disabled"
+      @keydown="handleKeyDown"
       class="cursor-pointer text-left flex items-center justify-between transition-all" :class="[
         variant === 'compact'
           ? (iconOnly && (modelValue === null || modelValue === undefined || modelValue === ''))

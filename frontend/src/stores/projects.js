@@ -14,6 +14,7 @@ export const useProjectsStore = defineStore('projects', () => {
       description: payload.description || '',
       goalId: payload.goalId || null,
       areaId: payload.areaId || null,
+      reviewFrequency: payload.reviewFrequency || '14',
       status: 'active',
       lastViewedAt: now(),
       createdAt: now(),
