@@ -127,6 +127,8 @@ export async function backup() {
   });
   if (!r.ok) throw new Error(`Drive upload failed (${r.status})`);
   localStorage.setItem("atrium.drive.lastBackup", new Date().toISOString());
+  localStorage.setItem("atrium.drive.backupFailedAttempts", "0");
+  localStorage.removeItem("atrium.drive.backupNeedsIntervention");
   return await r.json();
 }
 
@@ -148,6 +150,8 @@ export async function connect() {
   // Force consent prompt to verify scope grant
   await ensureToken({ prompt: "consent" });
   localStorage.setItem("atrium.drive.connected", "1");
+  localStorage.setItem("atrium.drive.backupFailedAttempts", "0");
+  localStorage.removeItem("atrium.drive.backupNeedsIntervention");
   return true;
 }
 
@@ -157,6 +161,8 @@ export function disconnect() {
   localStorage.removeItem("atrium.drive.accessToken");
   localStorage.removeItem("atrium.drive.tokenExpiresAt");
   localStorage.removeItem("atrium.drive.tokenScope");
+  localStorage.removeItem("atrium.drive.backupFailedAttempts");
+  localStorage.removeItem("atrium.drive.backupNeedsIntervention");
   accessToken = null;
   tokenExpiresAt = 0;
   currentScope = null;
@@ -314,6 +320,9 @@ export async function autoBackup() {
   // Throttle failed attempts: wait at least 15 minutes between backup attempts
   if (lastAttempt && now - new Date(lastAttempt).getTime() < 15 * 60000) return;
 
+  // Short-circuit if manual intervention is required
+  if (localStorage.getItem("atrium.drive.backupNeedsIntervention") === "true") return;
+
   localStorage.setItem("atrium.drive.lastBackupAttempt", new Date().toISOString());
 
   try {
@@ -337,10 +346,21 @@ export async function autoBackup() {
     });
     if (r.ok) {
       localStorage.setItem("atrium.drive.lastBackup", new Date().toISOString());
+      localStorage.setItem("atrium.drive.backupFailedAttempts", "0");
+      localStorage.removeItem("atrium.drive.backupNeedsIntervention");
       console.log("Hourly auto-backup completed successfully");
+    } else {
+      throw new Error(`Upload returned status ${r.status}`);
     }
   } catch (e) {
-    console.warn("Silent hourly auto-backup skipped:", e.message);
+    const attempts = Number(localStorage.getItem("atrium.drive.backupFailedAttempts") || 0) + 1;
+    localStorage.setItem("atrium.drive.backupFailedAttempts", String(attempts));
+    console.warn(`Silent hourly auto-backup skipped (attempt ${attempts}):`, e.message);
+
+    if (attempts >= 3) {
+      localStorage.setItem("atrium.drive.backupNeedsIntervention", "true");
+      window.dispatchEvent(new CustomEvent('atrium-backup-failed-alert', { detail: { message: e.message } }));
+    }
   }
 }
 
@@ -348,6 +368,9 @@ export async function syncGoogleCalendar({ force = false } = {}) {
   if (!isConnected()) return;
   const mode = localStorage.getItem("atrium.sync.mode") || "auto";
   if (mode === "manual" && !force) return;
+
+  // Short-circuit silent sync if manual intervention is required
+  if (!force && localStorage.getItem("atrium.drive.backupNeedsIntervention") === "true") return;
 
   try {
     const token = await ensureToken({ prompt: "none", scope: SCOPE });

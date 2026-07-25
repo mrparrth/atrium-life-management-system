@@ -22,6 +22,7 @@ const connecting = ref(false)
 const backingUp = ref(false)
 const restoring = ref(false)
 const isEditingClientId = ref(false)
+const needsIntervention = ref(false)
 
 const notificationsSupported = ref(isNotificationSupported())
 const notificationsEnabled = ref(areNotificationsEnabled())
@@ -71,6 +72,7 @@ function refresh() {
   connected.value = !!localStorage.getItem('atrium.drive.connected')
   lastBackup.value = lastBackupAt()
   isEditingClientId.value = !clientIdInput.value.trim()
+  needsIntervention.value = localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
 
   const url = localStorage.getItem('atrium.work.drive_folder_url') || ''
   const root = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
@@ -437,6 +439,15 @@ function saveOfflineSettings() {
           <button class="btn-secondary !text-xs !py-1.5" @click="saveWorkSettings" data-testid="save-sync-settings">
             <Save class="w-3.5 h-3.5" /> Save Sync Settings
           </button>
+        </div>
+      </div>
+
+      <!-- Warning if manual intervention is required -->
+      <div v-if="connected && needsIntervention" class="mb-3 p-3 bg-pri-critical-bg border border-pri-critical/20 rounded-xl text-xs text-pri-critical flex items-start gap-2.5">
+        <span class="text-base select-none">⚠️</span>
+        <div class="space-y-1">
+          <p class="font-semibold">Auto-Backup Suspended</p>
+          <p class="leading-relaxed opacity-90">Cloud backups have failed 3 times and are suspended. Please click <strong>"Back up now"</strong> below to sign in manually and restore sync.</p>
         </div>
       </div>
 

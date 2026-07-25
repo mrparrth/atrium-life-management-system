@@ -22,7 +22,7 @@ import { useWorkForecastStore } from '@/stores/workForecast'
 import { useWorkTemplatesStore } from '@/stores/workTemplates'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { db, seedIfEmpty } from '@/db'
-import { backup as driveBackup, isConnected, lastBackupAt, autoBackup } from '@/services/drive'
+import { autoBackup } from '@/services/drive'
 import { autoOfflineBackup } from '@/services/offlineSync'
 import { initNotificationsOnLoad } from '@/lib/notifications'
 
@@ -199,20 +199,14 @@ onMounted(async () => {
     }
   })
 
-  // Auto backup check
-  function checkAutoBackup() {
-    if (!isConnected()) return
-    const last = lastBackupAt()
-    const today = new Date().toISOString().slice(0, 10)
-    const lastDate = last ? new Date(last).toISOString().slice(0, 10) : null
-
-    if (today !== lastDate) {
-      driveBackup().catch(err => console.error("Auto-backup failed:", err))
-    }
-  }
-
-  checkAutoBackup()
-  setInterval(checkAutoBackup, 1000 * 60 * 60) // Check every hour
+  // Handle background backup failure alert events
+  let lastToastTime = 0
+  window.addEventListener('atrium-backup-failed-alert', () => {
+    // Throttle alert to show at most once every 5 minutes (300,000 ms)
+    if (Date.now() - lastToastTime < 300000) return
+    lastToastTime = Date.now()
+    ui.showToast('Google Drive backup failed. Manual authorization required in Settings.', 'error')
+  })
 
   // Auto-reload stores when active/visible or every 5 mins
   async function reloadAllStores() {

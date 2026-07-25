@@ -35,6 +35,12 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - **Sidebar Restructuring**: Removed the static suggestions card completely. Repositioned the synced calendar meetings card into the right sidebar column for visual balance.
 - **Toolbar Actions**: Moved Google Drive link tools to the top toolbar header actions strip. Icons are uniform, monochromatic `w-4 h-4` SVG shapes wrapped inside custom `VTooltip` blocks. Shows a dashed border indicator for unlinked (Initialize Folder) folders and a solid border for linked (Open Folder) folders.
 
+### 6. Cloud Backup Suspense & Manual Intervention
+- Tracks consecutive silent backup failures via `atrium.drive.backupFailedAttempts`.
+- If failures reach 3, triggers a throttled toast alert event and sets `atrium.drive.backupNeedsIntervention = true` in storage.
+- Auto-sync checks (`autoBackup` and `syncGoogleCalendar`) short-circuit immediately if the intervention flag is active.
+- Successful manual backups or connection settings clear the failure count and remove the intervention flag.
+
 ---
 
 ## 📅 Session Checkpoint Log
@@ -46,3 +52,8 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Compacted Client detail KPI card row, restructured sidebar logs, deleted static suggestion callout.
 - UX: Moved Google Drive utility folder action to toolbar header, using monochromatic icons and custom VTooltip hover wrappers.
 - DOCS: Synchronized README.md and context.md to reflect all new systems.
+
+### July 25, 2026
+- FEATURE: Added cloud backup failure threshold throttling (3 attempts) and background suspense flag (`backupNeedsIntervention`).
+- FEATURE: Removed hourly `checkAutoBackup` script from `App.vue` to prevent Google Auth popups from spamming.
+- UX: Created a critical re-authorization warning banner in the Google Drive settings section.
