@@ -59,4 +59,4 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Created a critical re-authorization warning banner in the Google Drive settings section.
 
 ### July 27, 2026
-- UX: Converted Subscriptions page to a responsive dual-column layout. Placed the filters and commitment cards grid on the left, and a permanent, detailed Outflow Summary card (Monthly & Yearly outflows with sub/fixed breakdown lists) in the right-hand sidebar.
+- UX: Added direct Subscriptions Monthly & Yearly outflow indicators inline to the horizontal finance stats banner.

@@ -250,207 +250,228 @@ async function deleteSub(sub) {
 </script>
 
 <template>
-  <div class="w-full">
-    <div class="flex flex-col lg:flex-row gap-8 items-start">
-      <!-- Left Column: Filters and Grid -->
-      <div class="flex-1 min-w-0 w-full">
-        <!-- Filters and Actions Header -->
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div class="flex items-center gap-4 flex-wrap">
-            <!-- Type Filter Tab Strip with integrated count badges -->
-            <div class="flex gap-1 bg-elevated rounded-xl p-0.5 border border-line text-xs">
-              <button v-for="t in [
-                { k: 'all', l: 'All Commitments', count: activeCounts.all },
-                { k: 'subscription', l: 'Subscriptions', count: activeCounts.subscription },
-                { k: 'fixed', l: 'Fixed Obligations', count: activeCounts.fixed }
-              ]" :key="t.k" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-2"
-                :class="filterType === t.k ? 'bg-surface text-ink font-medium shadow-sm' : 'text-ink-3 hover:text-ink'"
-                @click="filterType = t.k">
-                <span>{{ t.l }}</span>
-                <span class="px-1.5 py-0.5 rounded-md text-[9px] font-semibold leading-none font-mono"
-                  :class="filterType === t.k ? 'bg-ink/5 text-ink-2' : 'bg-elevated text-ink-3 border border-line/30'">
-                  {{ t.count }}
-                </span>
-              </button>
+  <div>
+    <!-- Compact Stats Banner (Single horizontal full-width bar) -->
+    <div class="card px-6 py-4 mb-8 flex flex-wrap items-center gap-6 border border-line bg-elevated/40 text-sm">
+      <!-- Monthly Outflow (Primary Metric) -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Monthly Outflow:</span>
+        <VTooltip position="bottom"
+          contentClass="p-3 bg-ink text-canvas border border-line/20 rounded-xl shadow-2xl min-w-[210px]">
+          <span
+            class="font-serif text-lg font-black text-pri-critical hover:underline cursor-help select-all transition-all leading-none">
+            {{ inr(stats.monthly) }}
+          </span>
+          <template #content>
+            <div class="flex flex-col gap-2 font-sans text-xs">
+              <div class="font-bold border-b border-canvas/10 pb-1 mb-1">Monthly Breakdown</div>
+              <div class="flex justify-between gap-6">
+                <span class="opacity-80">Subscriptions:</span>
+                <span class="font-mono text-emerald-400 font-semibold">{{ inr(stats.monthlySubscription) }}</span>
+              </div>
+              <div class="flex justify-between gap-6">
+                <span class="opacity-80">Fixed Obligations:</span>
+                <span class="font-mono text-rose-400 font-semibold">{{ inr(stats.monthlyFixed) }}</span>
+              </div>
             </div>
+          </template>
+        </VTooltip>
+      </div>
 
-            <!-- Status Filter Tab Strip -->
-            <div class="flex gap-1 bg-elevated rounded-xl p-0.5 border border-line text-xs">
-              <button v-for="s in [{ k: 'all', l: 'All' }, { k: 'active', l: 'Active' }, { k: 'paused', l: 'Paused' }]"
-                :key="s.k" class="px-3 py-1.5 rounded-lg transition-all"
-                :class="filterStatus === s.k ? 'bg-surface text-ink font-medium shadow-sm' : 'text-ink-3 hover:text-ink'"
-                @click="filterStatus = s.k">
-                {{ s.l }}
-              </button>
+      <!-- Divider -->
+      <span class="text-line select-none text-xs">|</span>
+
+      <!-- Yearly Outflow -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Yearly:</span>
+        <VTooltip position="bottom"
+          contentClass="p-3 bg-ink text-canvas border border-line/20 rounded-xl shadow-2xl min-w-[210px]">
+          <span
+            class="font-serif text-lg font-bold text-ink hover:underline cursor-help select-all transition-all leading-none">
+            {{ inr(stats.yearly) }}
+          </span>
+          <template #content>
+            <div class="flex flex-col gap-2 font-sans text-xs">
+              <div class="font-bold border-b border-canvas/10 pb-1 mb-1">Yearly Breakdown</div>
+              <div class="flex justify-between gap-6">
+                <span class="opacity-80">Subscriptions:</span>
+                <span class="font-mono text-emerald-400 font-semibold">{{ inr(stats.yearlySubscription) }}</span>
+              </div>
+              <div class="flex justify-between gap-6">
+                <span class="opacity-80">Fixed Obligations:</span>
+                <span class="font-mono text-rose-400 font-semibold">{{ inr(stats.yearlyFixed) }}</span>
+              </div>
             </div>
+          </template>
+        </VTooltip>
+      </div>
 
-            <!-- Sort Select Pill -->
-            <div class="flex items-center gap-1.5 text-xs text-ink-3">
-              <ArrowUpDown class="w-3.5 h-3.5" />
-              <span>Sort:</span>
-              <select v-model="sortBy"
-                class="bg-elevated border border-line rounded-lg px-2.5 py-1.5 outline-none text-ink cursor-pointer hover:border-line-2">
-                <option value="nextRenewal">Renewal Date</option>
-                <option value="name">Service Name</option>
-                <option value="cost">Highest Cost</option>
-              </select>
-            </div>
-          </div>
+      <!-- Divider -->
+      <span class="text-line select-none text-xs">|</span>
 
-          <button class="btn-primary text-xs" @click="openAddModal" data-testid="add-sub-btn">
-            <Plus class="w-4 h-4" /> Add commitment
+      <!-- Active commitments count -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Active:</span>
+        <span class="font-mono text-base font-bold text-ink leading-none">{{ stats.count }}</span>
+      </div>
+
+      <!-- Divider -->
+      <span class="text-line select-none text-xs">|</span>
+
+      <!-- Subscriptions Monthly -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Subs Monthly:</span>
+        <span class="font-serif text-lg font-bold text-emerald-600 dark:text-emerald-400 leading-none">
+          {{ inr(stats.monthlySubscription) }}
+        </span>
+      </div>
+
+      <!-- Divider -->
+      <span class="text-line select-none text-xs">|</span>
+
+      <!-- Subscriptions Yearly -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Subs Yearly:</span>
+        <span class="font-serif text-lg font-bold text-emerald-600 dark:text-emerald-400 leading-none">
+          {{ inr(stats.yearlySubscription) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Filters and Actions Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-4 flex-wrap">
+        <!-- Type Filter Tab Strip with integrated count badges -->
+        <div class="flex gap-1 bg-elevated rounded-xl p-0.5 border border-line text-xs">
+          <button v-for="t in [
+            { k: 'all', l: 'All Commitments', count: activeCounts.all },
+            { k: 'subscription', l: 'Subscriptions', count: activeCounts.subscription },
+            { k: 'fixed', l: 'Fixed Obligations', count: activeCounts.fixed }
+          ]" :key="t.k" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-2"
+            :class="filterType === t.k ? 'bg-surface text-ink font-medium shadow-sm' : 'text-ink-3 hover:text-ink'"
+            @click="filterType = t.k">
+            <span>{{ t.l }}</span>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-semibold leading-none font-mono"
+              :class="filterType === t.k ? 'bg-ink/5 text-ink-2' : 'bg-elevated text-ink-3 border border-line/30'">
+              {{ t.count }}
+            </span>
           </button>
         </div>
 
-        <!-- Subscriptions List Grid -->
-        <div v-if="filteredAndSortedSubscriptions.length"
-          class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-          <div v-for="sub in filteredAndSortedSubscriptions" :key="sub.id"
-            class="card p-5 hover:border-line-2 transition-all relative flex flex-col justify-between"
-            :class="sub.status === 'paused' ? 'opacity-70 bg-elevated/20' : ''" :data-testid="`sub-card-${sub.id}`">
+        <!-- Status Filter Tab Strip -->
+        <div class="flex gap-1 bg-elevated rounded-xl p-0.5 border border-line text-xs">
+          <button v-for="s in [{ k: 'all', l: 'All' }, { k: 'active', l: 'Active' }, { k: 'paused', l: 'Paused' }]"
+            :key="s.k" class="px-3 py-1.5 rounded-lg transition-all"
+            :class="filterStatus === s.k ? 'bg-surface text-ink font-medium shadow-sm' : 'text-ink-3 hover:text-ink'"
+            @click="filterStatus = s.k">
+            {{ s.l }}
+          </button>
+        </div>
 
-            <!-- Card Body content -->
-            <div>
-              <!-- Row 1: Name + Type + Dropdown Trigger -->
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="font-serif text-lg text-ink leading-tight capitalize truncate pr-2" title="sub.name">
-                  {{ sub.name }}
-                </h4>
-                <div class="flex items-center gap-2 shrink-0">
-                  <!-- Type Tag -->
-                  <span
-                    class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono border bg-canvas/30 text-ink-2 border-line">
-                    {{ (sub.type || 'subscription') === 'fixed' ? 'FIXED' : 'SUB' }}
-                  </span>
+        <!-- Sort Select Pill -->
+        <div class="flex items-center gap-1.5 text-xs text-ink-3">
+          <ArrowUpDown class="w-3.5 h-3.5" />
+          <span>Sort:</span>
+          <select v-model="sortBy"
+            class="bg-elevated border border-line rounded-lg px-2.5 py-1.5 outline-none text-ink cursor-pointer hover:border-line-2">
+            <option value="nextRenewal">Renewal Date</option>
+            <option value="name">Service Name</option>
+            <option value="cost">Highest Cost</option>
+          </select>
+        </div>
+      </div>
 
-                  <!-- Options Dropdown Kebab Trigger -->
-                  <div class="relative">
-                    <button type="button" @click="toggleMenu(sub.id, $event)"
-                      class="btn-ghost !p-1 rounded-md text-ink-3 hover:text-ink hover:bg-elevated" title="Options">
-                      <MoreVertical class="w-4 h-4" />
-                    </button>
+      <button class="btn-primary text-xs" @click="openAddModal" data-testid="add-sub-btn">
+        <Plus class="w-4 h-4" /> Add commitment
+      </button>
+    </div>
 
-                    <!-- Dropdown Menu -->
-                    <div v-if="activeMenuId === sub.id"
-                      class="absolute right-0 top-full mt-1 z-30 w-44 rounded-xl bg-surface border border-line shadow-xl py-1 flex flex-col text-xs text-ink"
-                      @click.stop>
-                      <button type="button" @click="toggleStatus(sub); activeMenuId = null"
-                        class="w-full text-left px-3 py-2 hover:bg-elevated flex items-center gap-2"
-                        :class="sub.status === 'active' ? 'text-pri-interruptive hover:text-pri-interruptive' : 'text-pri-strategic hover:bg-pri-strategic/10'">
-                        <component :is="sub.status === 'active' ? Pause : Play" class="w-3.5 h-3.5" />
-                        <span>{{ sub.status === 'active' ? 'Pause commitment' : 'Resume commitment' }}</span>
-                      </button>
-                      <button type="button" @click="openEditModal(sub); activeMenuId = null"
-                        class="w-full text-left px-3 py-2 hover:bg-elevated flex items-center gap-2 text-ink">
-                        <Edit3 class="w-3.5 h-3.5 text-ink-3" />
-                        <span>Edit details</span>
-                      </button>
-                      <div class="border-t border-line/40 my-1"></div>
-                      <button type="button" @click="deleteSub(sub); activeMenuId = null"
-                        class="w-full text-left px-3 py-2 hover:bg-elevated flex items-center gap-2 text-pri-critical">
-                        <Trash2 class="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
+    <!-- Subscriptions List Grid -->
+    <div v-if="filteredAndSortedSubscriptions.length"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      <div v-for="sub in filteredAndSortedSubscriptions" :key="sub.id"
+        class="card p-5 hover:border-line-2 transition-all relative flex flex-col justify-between"
+        :class="sub.status === 'paused' ? 'opacity-70 bg-elevated/20' : ''" :data-testid="`sub-card-${sub.id}`">
+
+        <!-- Card Body content -->
+        <div>
+          <!-- Row 1: Name + Type + Dropdown Trigger -->
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="font-serif text-lg text-ink leading-tight capitalize truncate pr-2" title="sub.name">
+              {{ sub.name }}
+            </h4>
+            <div class="flex items-center gap-2 shrink-0">
+              <!-- Type Tag -->
+              <span
+                class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono border bg-canvas/30 text-ink-2 border-line">
+                {{ (sub.type || 'subscription') === 'fixed' ? 'FIXED' : 'SUB' }}
+              </span>
+
+              <!-- Options Dropdown Kebab Trigger -->
+              <div class="relative">
+                <button type="button" @click="toggleMenu(sub.id, $event)"
+                  class="btn-ghost !p-1 rounded-md text-ink-3 hover:text-ink hover:bg-elevated" title="Options">
+                  <MoreVertical class="w-4 h-4" />
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div v-if="activeMenuId === sub.id"
+                  class="absolute right-0 top-full mt-1 z-30 w-44 rounded-xl bg-surface border border-line shadow-xl py-1 flex flex-col text-xs text-ink"
+                  @click.stop>
+                  <button type="button" @click="toggleStatus(sub); activeMenuId = null"
+                    class="w-full text-left px-3 py-2 hover:bg-elevated flex items-center gap-2"
+                    :class="sub.status === 'active' ? 'text-pri-interruptive hover:text-pri-interruptive' : 'text-pri-strategic hover:bg-pri-strategic/10'">
+                    <component :is="sub.status === 'active' ? Pause : Play" class="w-3.5 h-3.5" />
+                    <span>{{ sub.status === 'active' ? 'Pause commitment' : 'Resume commitment' }}</span>
+                  </button>
+                  <button type="button" @click="openEditModal(sub); activeMenuId = null"
+                    class="w-full text-left px-3 py-2 hover:bg-elevated flex items-center gap-2 text-ink">
+                    <Edit3 class="w-3.5 h-3.5 text-ink-3" />
+                    <span>Edit details</span>
+                  </button>
+                  <div class="border-t border-line/40 my-1"></div>
+                  <button type="button" @click="deleteSub(sub); activeMenuId = null"
+                    class="w-full text-left px-3 py-2 hover:bg-elevated flex items-center gap-2 text-pri-critical">
+                    <Trash2 class="w-3.5 h-3.5" />
+                    <span>Delete</span>
+                  </button>
                 </div>
               </div>
-
-              <!-- Row 2: Price / Billing Cycle -->
-              <div class="flex items-baseline gap-1.5 mb-2 mt-2">
-                <span class="font-serif text-2xl text-ink ">{{ inr(sub.cost) }}</span>
-                <span class="text-xs text-ink-3 font-semibold uppercase">/ {{ sub.billingPeriod.toUpperCase() }}</span>
-              </div>
             </div>
+          </div>
 
-            <!-- Row 3: Next Due Information -->
-            <div class="border-t border-line/40 pt-3 flex items-center justify-between text-xs mt-2">
-              <div class="flex items-center gap-1.5 text-ink-3 font-medium">
-                <span>📅</span>
-                <span>Next Due</span>
-              </div>
-              <div class="flex items-center gap-2 font-mono">
-                <span class="text-ink-2">{{ sub.nextRenewal }}</span>
-                <span v-if="sub.status === 'active'"
-                  class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-pri-strategic/5 border border-pri-strategic/20 text-pri-strategic"
-                  :class="daysRemaining(sub.nextRenewal) <= 7 ? 'bg-pri-interruptive/5 text-pri-interruptive border-pri-interruptive/20 animate-pulse' : ''">
-                  {{ formatDaysRemaining(sub.nextRenewal).toUpperCase() }}
-                </span>
-                <span v-else
-                  class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-pri-critical/5 border border-pri-critical/20 text-pri-critical">
-                  PAUSED
-                </span>
-              </div>
-            </div>
-
+          <!-- Row 2: Price / Billing Cycle -->
+          <div class="flex items-baseline gap-1.5 mb-2 mt-2">
+            <span class="font-serif text-2xl text-ink ">{{ inr(sub.cost) }}</span>
+            <span class="text-xs text-ink-3 font-semibold uppercase">/ {{ sub.billingPeriod.toUpperCase() }}</span>
           </div>
         </div>
 
-        <EmptyState v-else title="No commitments found"
-          hint="Log your recurring SaaS, rent, utilities, or services above to track your aggregates." />
-      </div>
-
-      <!-- Right Column: Subscriptions Outflow Details Sidebar -->
-      <div class="w-full lg:w-80 shrink-0 space-y-6">
-        <div class="card p-6 border border-line bg-elevated/40 space-y-6">
-          <h3 class="font-serif text-lg font-bold text-ink leading-tight">Outflow Summary</h3>
-          
-          <!-- Monthly Outflow Details -->
-          <div class="space-y-2 pb-4 border-b border-line/60">
-            <div class="flex justify-between items-baseline">
-              <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Monthly Outflow</span>
-              <span class="font-serif text-2xl font-black text-pri-critical leading-none">{{ inr(stats.monthly) }}</span>
-            </div>
-            <div class="space-y-1.5 pl-2 text-xs">
-              <div class="flex justify-between text-ink-2">
-                <span class="flex items-center gap-2">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Subscriptions
-                </span>
-                <span class="font-mono font-medium">{{ inr(stats.monthlySubscription) }}</span>
-              </div>
-              <div class="flex justify-between text-ink-2">
-                <span class="flex items-center gap-2">
-                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  Fixed Obligations
-                </span>
-                <span class="font-mono font-medium">{{ inr(stats.monthlyFixed) }}</span>
-              </div>
-            </div>
+        <!-- Row 3: Next Due Information -->
+        <div class="border-t border-line/40 pt-3 flex items-center justify-between text-xs mt-2">
+          <div class="flex items-center gap-1.5 text-ink-3 font-medium">
+            <span>📅</span>
+            <span>Next Due</span>
           </div>
-
-          <!-- Yearly Outflow Details -->
-          <div class="space-y-2 pb-2">
-            <div class="flex justify-between items-baseline">
-              <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Yearly Outflow</span>
-              <span class="font-serif text-2xl font-bold text-ink leading-none">{{ inr(stats.yearly) }}</span>
-            </div>
-            <div class="space-y-1.5 pl-2 text-xs">
-              <div class="flex justify-between text-ink-2">
-                <span class="flex items-center gap-2">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500/60"></span>
-                  Subscriptions
-                </span>
-                <span class="font-mono font-medium">{{ inr(stats.yearlySubscription) }}</span>
-              </div>
-              <div class="flex justify-between text-ink-2">
-                <span class="flex items-center gap-2">
-                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500/60"></span>
-                  Fixed Obligations
-                </span>
-                <span class="font-mono font-medium">{{ inr(stats.yearlyFixed) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Active commitments count -->
-          <div class="pt-4 border-t border-line/60 flex justify-between items-center text-xs">
-            <span class="text-ink-3 font-semibold uppercase">Active Commitments</span>
-            <span class="font-mono font-bold text-ink bg-canvas px-2.5 py-1 rounded-md border border-line">{{ stats.count }}</span>
+          <div class="flex items-center gap-2 font-mono">
+            <span class="text-ink-2">{{ sub.nextRenewal }}</span>
+            <span v-if="sub.status === 'active'"
+              class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-pri-strategic/5 border border-pri-strategic/20 text-pri-strategic"
+              :class="daysRemaining(sub.nextRenewal) <= 7 ? 'bg-pri-interruptive/5 text-pri-interruptive border-pri-interruptive/20 animate-pulse' : ''">
+              {{ formatDaysRemaining(sub.nextRenewal).toUpperCase() }}
+            </span>
+            <span v-else
+              class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-pri-critical/5 border border-pri-critical/20 text-pri-critical">
+              PAUSED
+            </span>
           </div>
         </div>
+
       </div>
     </div>
+
+    <EmptyState v-else title="No commitments found"
+      hint="Log your recurring SaaS, rent, utilities, or services above to track your aggregates." />
 
     <!-- Add/Edit Subscription Modal Popup -->
     <div v-if="showModal" @keydown.window.esc="showModal = false"
