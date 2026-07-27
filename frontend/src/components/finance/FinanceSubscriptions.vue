@@ -431,18 +431,18 @@ async function deleteSub(sub) {
         <!-- Row 3: Next Due Information -->
         <div class="border-t border-line/40 pt-3 flex items-center justify-between text-xs mt-2">
           <div class="flex items-center gap-1.5 text-ink-3 font-medium">
-            <span>📅</span>
+            <Calendar class="w-3.5 h-3.5 shrink-0" />
             <span>Next Due</span>
           </div>
           <div class="flex items-center gap-2 font-mono">
             <span class="text-ink-2">{{ sub.nextRenewal }}</span>
             <span v-if="sub.status === 'active'"
-              class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-pri-strategic/5 border border-pri-strategic/20 text-pri-strategic"
-              :class="daysRemaining(sub.nextRenewal) <= 7 ? 'bg-pri-interruptive/5 text-pri-interruptive border-pri-interruptive/20 animate-pulse' : ''">
+              class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-canvas/30 border border-line text-ink-2"
+              :class="daysRemaining(sub.nextRenewal) <= 7 ? 'bg-canvas border-line text-ink font-extrabold animate-pulse' : ''">
               {{ formatDaysRemaining(sub.nextRenewal).toUpperCase() }}
             </span>
             <span v-else
-              class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-pri-critical/5 border border-pri-critical/20 text-pri-critical">
+              class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-canvas/30 border border-line text-ink-3">
               PAUSED
             </span>
           </div>

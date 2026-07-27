@@ -60,3 +60,4 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 
 ### July 27, 2026
 - UX: Displayed Monthly Outflow breakdown sub-labels (Subs/Fixed) directly inline inside braces next to the primary outflow metric on the compact banner.
+- UX: Converted commitment cards to a monochromatic black and white palette, replacing the emoji calendar with a Lucide Calendar icon and replacing colored day badges (indigo/orange/red) with neutral borders and text formatting.
