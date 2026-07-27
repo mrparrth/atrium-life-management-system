@@ -59,4 +59,4 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Created a critical re-authorization warning banner in the Google Drive settings section.
 
 ### July 27, 2026
-- UX: Added direct Subscriptions Monthly & Yearly outflow indicators inline to the horizontal finance stats banner.
+- UX: Displayed Monthly Outflow breakdown sub-labels (Subs/Fixed) directly inline inside braces next to the primary outflow metric on the compact banner.

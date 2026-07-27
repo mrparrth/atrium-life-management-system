@@ -276,6 +276,9 @@ async function deleteSub(sub) {
             </div>
           </template>
         </VTooltip>
+        <span class="text-xs text-ink-3 font-semibold ml-1">
+          (Subs: {{ inr(stats.monthlySubscription) }}, Fixed: {{ inr(stats.monthlyFixed) }})
+        </span>
       </div>
 
       <!-- Divider -->
@@ -313,28 +316,6 @@ async function deleteSub(sub) {
       <div class="flex items-center gap-2">
         <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Active:</span>
         <span class="font-mono text-base font-bold text-ink leading-none">{{ stats.count }}</span>
-      </div>
-
-      <!-- Divider -->
-      <span class="text-line select-none text-xs">|</span>
-
-      <!-- Subscriptions Monthly -->
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Subs Monthly:</span>
-        <span class="font-serif text-lg font-bold text-emerald-600 dark:text-emerald-400 leading-none">
-          {{ inr(stats.monthlySubscription) }}
-        </span>
-      </div>
-
-      <!-- Divider -->
-      <span class="text-line select-none text-xs">|</span>
-
-      <!-- Subscriptions Yearly -->
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-ink-3">Subs Yearly:</span>
-        <span class="font-serif text-lg font-bold text-emerald-600 dark:text-emerald-400 leading-none">
-          {{ inr(stats.yearlySubscription) }}
-        </span>
       </div>
     </div>
 
