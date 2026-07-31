@@ -463,7 +463,7 @@ onUnmounted(() => {
         <div>
           <VRow>
             <VCol cols="12" sm="6">
-              <VInput v-model="clientName" label="Prospect Name *" id="lead-client" required />
+              <VInput ref="addModalFirstInput" v-model="clientName" label="Prospect Name *" id="lead-client" required />
             </VCol>
             <VCol cols="12" sm="6">
               <VSelect v-model="status" label="Initial Stage" id="lead-status" :options="stages" option-value="key"
@@ -480,19 +480,20 @@ onUnmounted(() => {
             </VCol>
           </VRow>
 
-          <VRow class="items-center">
+          <VRow class="items-start">
             <VCol cols="12" sm="6">
-              <div class="py-1">
-                <label
-                  class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability</label>
-                <div class="flex gap-2 flex-wrap mt-1">
+              <div class="v-field-group block my-1">
+                <div class="v-field-input flex items-center gap-1.5 h-[48px] bg-canvas/30 !py-0">
                   <button v-for="opt in ['low', 'mid', 'high']" :key="opt" type="button"
-                    class="px-4 py-1.5 rounded-lg border text-xs capitalize transition-all font-medium"
+                    class="flex-1 py-1 rounded-lg border text-xs capitalize transition-all font-medium text-center"
                     :class="probability === opt ? 'bg-pri-strategic text-white border-pri-strategic shadow-sm' : 'bg-surface text-ink-2 border-line hover:border-line-2'"
                     @click="probability = opt">
                     {{ opt }}
                   </button>
                 </div>
+                <label class="v-field-label !text-xs !bg-surface px-1 transform -translate-y-4 scale-75 top-2 left-3 origin-[0_0] pointer-events-none select-none text-ink-3">
+                  Probability
+                </label>
               </div>
             </VCol>
             <VCol cols="12" sm="6">
@@ -536,7 +537,7 @@ onUnmounted(() => {
         <div class="pt-2">
           <VRow>
             <VCol cols="12" sm="6">
-              <VInput v-model="editForm.clientName" label="Prospect Name *" id="edit-lead-client" required />
+              <VInput ref="editModalFirstInput" v-model="editForm.clientName" label="Prospect Name *" id="edit-lead-client" required />
             </VCol>
             <VCol cols="12" sm="6">
               <VSelect v-model="editForm.status" label="Pipeline Stage" id="edit-lead-status" :options="stages"
@@ -555,19 +556,20 @@ onUnmounted(() => {
             </VCol>
           </VRow>
 
-          <VRow class="items-center">
+          <VRow class="items-start">
             <VCol cols="12" sm="6">
-              <div class="py-1">
-                <label
-                  class="block text-[10px] text-ink-3 uppercase tracking-wider mb-1 font-semibold">Probability</label>
-                <div class="flex gap-2 flex-wrap mt-1">
+              <div class="v-field-group block my-1">
+                <div class="v-field-input flex items-center gap-1.5 h-[48px] bg-canvas/30 !py-0">
                   <button v-for="opt in ['low', 'mid', 'high']" :key="opt" type="button"
-                    class="px-4 py-1.5 rounded-lg border text-xs capitalize transition-all font-medium"
+                    class="flex-1 py-1 rounded-lg border text-xs capitalize transition-all font-medium text-center"
                     :class="editForm.probability === opt ? 'bg-pri-strategic text-white border-pri-strategic shadow-sm' : 'bg-surface text-ink-2 border-line hover:border-line-2'"
                     @click="editForm.probability = opt">
                     {{ opt }}
                   </button>
                 </div>
+                <label class="v-field-label !text-xs !bg-surface px-1 transform -translate-y-4 scale-75 top-2 left-3 origin-[0_0] pointer-events-none select-none text-ink-3">
+                  Probability
+                </label>
               </div>
             </VCol>
             <VCol cols="12" sm="6">
