@@ -41,6 +41,7 @@ export const useWorkItemsStore = defineStore('workItems', () => {
       resurfaceDate: payload.resurfaceDate || null,
       snoozedUntil: payload.snoozedUntil || null,
       subtasks: payload.subtasks || [], // [{ id, title, done }]
+      enableSubtasks: payload.enableSubtasks !== undefined ? payload.enableSubtasks : false,
       closedDate: payload.closedDate || null,
       createdAt: now(),
       updatedAt: now()

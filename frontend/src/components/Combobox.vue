@@ -111,7 +111,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
     <!-- Standard Selector Variant -->
     <template v-else>
       <button type="button"
-        class="w-full bg-surface border border-line hover:border-line-2 transition-colors rounded-xl px-3 py-2 text-xs outline-none focus:border-line-2 font-serif flex items-center justify-between text-left"
+        class="w-full bg-surface border border-line hover:border-line-2 transition-colors rounded-xl px-3 py-2 text-xs outline-none focus:border-line-2 flex items-center justify-between text-left"
         @click="isOpen = !isOpen">
         <span class="truncate"
           :class="modelValue && (multiple ? modelValue.length : modelValue) ? 'text-ink' : 'text-ink-3'">

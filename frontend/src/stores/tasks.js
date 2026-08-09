@@ -90,6 +90,8 @@ export const useTasksStore = defineStore("tasks", () => {
       urgent: !!payload.urgent,
       status: "open",
       tags: payload.tags || [],
+      enableSubtasks: !!payload.enableSubtasks,
+      subtasks: payload.subtasks || [],
       completedAt: payload.completedAt || null,
       createdAt: now(),
       updatedAt: now(),

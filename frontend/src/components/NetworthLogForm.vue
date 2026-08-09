@@ -286,8 +286,10 @@ const scopeMeta = {
                   {{ scopeMeta[scope].label }}
                 </span>
               </div>
-              <span class="nw-section-total" :class="(scope === 'asset' ? totalAssets : totalLiabs) > 0 ? scopeMeta[scope].textClass : 'text-ink-3/40'">
-                {{ (scope === 'asset' ? totalAssets : totalLiabs) > 0 ? inr(scope === 'asset' ? totalAssets : totalLiabs) : '—' }}
+              <span class="nw-section-total"
+                :class="(scope === 'asset' ? totalAssets : totalLiabs) > 0 ? scopeMeta[scope].textClass : 'text-ink-3/40'">
+                {{ (scope === 'asset' ? totalAssets : totalLiabs) > 0 ? inr(scope === 'asset' ? totalAssets :
+                totalLiabs) : '—' }}
               </span>
             </div>
 
@@ -300,9 +302,11 @@ const scopeMeta = {
                   :class="collapsed[`${scope}::${group.name}`] ? 'nw-group-collapsed' : 'nw-group-expanded'"
                   @click="toggleGroup(`${scope}::${group.name}`)">
                   <span class="flex items-center gap-2">
-                    <component :is="collapsed[`${scope}::${group.name}`] ? ChevronRight : ChevronDown" class="nw-chevron"
+                    <component :is="collapsed[`${scope}::${group.name}`] ? ChevronRight : ChevronDown"
+                      class="nw-chevron"
                       :class="collapsed[`${scope}::${group.name}`] ? 'text-ink-3' : scopeMeta[scope].textClass" />
-                    <span class="nw-group-name" :class="collapsed[`${scope}::${group.name}`] ? 'text-ink-3' : 'text-ink'">
+                    <span class="nw-group-name"
+                      :class="collapsed[`${scope}::${group.name}`] ? 'text-ink-3' : 'text-ink'">
                       {{ group.name }}
                     </span>
                   </span>
@@ -314,16 +318,12 @@ const scopeMeta = {
 
                 <!-- Rows — single-column stacked list -->
                 <div v-show="!collapsed[`${scope}::${group.name}`]" class="nw-rows-list">
-                  <label v-for="c in group.cats" :key="c.id" class="nw-row-single"
-                    :class="`nw-row-hover-${scope}`"
+                  <label v-for="c in group.cats" :key="c.id" class="nw-row-single" :class="`nw-row-hover-${scope}`"
                     :data-testid="`nw-input-${scope}-${c.name}`">
                     <span class="nw-row-label">{{ label(c.name) }}</span>
-                    <input type="text"
-                      :value="displayValues[makeKey(scope, c.name)]"
-                      @focus="onFocus(scope, c.name, $event)"
-                      @input="onInput(scope, c.name, $event.target.value)"
-                      @blur="onBlur(scope, c.name)"
-                      class="nw-input"
+                    <input type="text" :value="displayValues[makeKey(scope, c.name)]"
+                      @focus="onFocus(scope, c.name, $event)" @input="onInput(scope, c.name, $event.target.value)"
+                      @blur="onBlur(scope, c.name)" class="nw-input"
                       :class="(+valuesMap[makeKey(scope, c.name)] || 0) > 0 ? 'nw-input-filled' : 'nw-input-empty'"
                       placeholder="0" />
                   </label>
@@ -604,6 +604,7 @@ const scopeMeta = {
 .nw-row-hover-asset:hover {
   background: rgb(var(--pri-strategic) / 0.04);
 }
+
 .nw-row-hover-asset:focus-within {
   background: rgb(var(--pri-strategic) / 0.06);
 }
@@ -611,6 +612,7 @@ const scopeMeta = {
 .nw-row-hover-liability:hover {
   background: rgb(var(--pri-critical) / 0.04);
 }
+
 .nw-row-hover-liability:focus-within {
   background: rgb(var(--pri-critical) / 0.06);
 }

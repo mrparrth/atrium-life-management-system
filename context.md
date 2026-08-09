@@ -63,5 +63,46 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Converted commitment cards to a monochromatic black and white palette, replacing the emoji calendar with a Lucide Calendar icon and replacing colored day badges (indigo/orange/red) with neutral borders and text formatting.
 
 ### July 31, 2026
+- UX: Restructured the Probability button group inside the sales opportunity modals to match the standard notched outline height (`48px`) and floating label style of the adjacent `DateField` input, achieving pixel-perfect vertical alignment.
+
+### 7. Goals & Wish List Unified Grid Layout
+- **Stacked Sections**: Goals and Wishes are separated into independent, full-width vertical stacked sections styled with standard `<SectionHeader>` components.
+- **Conic Progress Borders**: Replaced all internal progress bars, gauges, and task counts with a thin card border mapping progress percentage via a CSS `conic-gradient`.
+- **Dual Tracking Modes**: Supports Direct % mode (native range slider, database target forced to 100) and Target-based mode (achieved, target, unit). Switches dynamically default the target to 100 if achieved is non-zero to avoid division errors.
+- **Wishlist Ready Alerts & Green Outlines**: Wishes reaching 100% progress render a solid green border (`rgb(var(--pri-strategic))`) and display a "Can be purchased now" check icon badge inside the card.
+- **Modal Cover Banners**: Modals render a dynamic, padded cover photo banner at the top if `imageUrl` is defined (styled to sit cleanly inside the modal layout without overlapping the close button).
+- **Minimalist Palette & Metadata**: Stripped descriptions (from wishes), task/project counts, and header badges (Goal/Wish chips) for a monochromatic aesthetic.
+
+---
+
+## 📅 Session Checkpoint Log
+
+### July 22, 2026
+- OVERHAUL: Overhauled Finance Subscriptions view to introduce compact stats banner, hover breakdowns, filter count badges, and kebab menus.
+- FEATURE: Added prev/next chronological arrows with auto-save to Cashflow form.
+- FEATURE: Integrated universal `Alt + Up/Down` arrow tab switching shortcuts.
+- UX: Compacted Client detail KPI card row, restructured sidebar logs, deleted static suggestion callout.
+- UX: Moved Google Drive utility folder action to toolbar header, using monochromatic icons and custom VTooltip hover wrappers.
+- DOCS: Synchronized README.md and context.md to reflect all new systems.
+
+### July 25, 2026
+- FEATURE: Added cloud backup failure threshold throttling (3 attempts) and background suspense flag (`backupNeedsIntervention`).
+- FEATURE: Removed hourly `checkAutoBackup` script from `App.vue` to prevent Google Auth popups from spamming.
+- UX: Created a critical re-authorization warning banner in the Google Drive settings section.
+
+### July 27, 2026
+- UX: Displayed Monthly Outflow breakdown sub-labels (Subs/Fixed) directly inline inside braces next to the primary outflow metric on the compact banner.
+- UX: Converted commitment cards to a monochromatic black and white palette, replacing the emoji calendar with a Lucide Calendar icon and replacing colored day badges (indigo/orange/red) with neutral borders and text formatting.
+
+### July 31, 2026
 - FEATURE: Fixed dialog autofocus for Prospect Name inputs in both Add and Edit sales lead modals by binding the missing ref handlers.
 - UX: Restructured the Probability button group inside the sales opportunity modals to match the standard notched outline height (`48px`) and floating label style of the adjacent `DateField` input, achieving pixel-perfect vertical alignment.
+
+### August 9, 2026
+- OVERHAUL: Restructured Goals & Wishes page into vertical stacked sections using standardized SectionHeaders.
+- FEATURE: Implemented conic-gradient progress card borders, zero-progress rendering guards, and 100%+ green completion borders with "Can be purchased now" badge alerts.
+- FEATURE: Integrated Direct % mode (range slider input, target=100) and Target-based tracking (achieved/target/unit inputs, target auto-defaults to 100 on toggle with non-zero progress).
+- FEATURE: Added dynamic, padded modal cover banner image previews for goal and wishlist modals.
+- UX: Removed card checkboxes, task/project counts, text summaries, and headers' Goal/Wish pills to enforce a premium, monochromatic look.
+- UX: Widened wishlist modals to `max-w-lg` and resolved the goal edit modal dismiss bug after clicking save changes.
+- DOCS: Synchronized context.md and walkthrough.md to document the goals/wishlist overhaul.

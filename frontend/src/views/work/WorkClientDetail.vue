@@ -18,7 +18,7 @@ import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
   Calendar, Settings, Sparkles, Plus, Clock, MessageSquare,
   HardDrive, ExternalLink, Trash2, Star, Link as LinkIcon, Key,
-  Eye, EyeOff, Copy, X
+  Eye, EyeOff, Copy, X, Pencil
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -371,7 +371,18 @@ watch(showAddResourceModal, (open) => {
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
-          <!-- Google Drive Folder Header Utility Button -->
+          <!-- Delete Client (moved to left) -->
+          <VTooltip text="Delete Client" position="bottom">
+            <button @click="deleteClient"
+              class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-pri-critical hover:bg-pri-critical-bg transition-all shrink-0">
+              <Trash2 class="w-4 h-4" />
+            </button>
+          </VTooltip>
+
+          <!-- Vertical Separator -->
+          <div class="h-6 w-[1px] bg-line shrink-0 mx-1"></div>
+
+          <!-- Google Drive Folder Header Utility Button (in the middle) -->
           <VTooltip v-if="client.driveFolderId" text="Open Google Drive folder (⌘2)" position="bottom">
             <a :href="`https://drive.google.com/drive/folders/${client.driveFolderId}`"
               target="_blank"
@@ -392,18 +403,14 @@ watch(showAddResourceModal, (open) => {
             </button>
           </VTooltip>
 
-          <VTooltip text="Delete Client" position="bottom">
-            <button @click="deleteClient"
-              class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-pri-critical hover:bg-pri-critical-bg transition-all shrink-0">
-              <Trash2 class="w-4 h-4" />
-            </button>
-          </VTooltip>
+          <!-- Edit Profile (Pencil Icon) -->
           <VTooltip text="Edit Profile (⌘1)" position="bottom">
             <button @click="startEditPrefs"
               class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-ink-2 hover:text-ink hover:bg-surface transition-all shrink-0">
-              <User class="w-4 h-4" />
+              <Pencil class="w-4 h-4" />
             </button>
           </VTooltip>
+          
           <VTooltip v-if="activeTab === 'work'" text="Add Task" position="bottom">
             <button @click="newTaskTitle = ''; ui.showToast('Use quick composer below', 'info')"
               class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-pri-strategic hover:bg-surface hover:text-pri-strategic transition-all shrink-0">

@@ -102,7 +102,8 @@ const chartOptions = computed(() => {
       <Doughnut :data="chartData" :options="chartOptions" />
       <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
         <span class="overline text-ink-3" :class="size === 'lg' ? 'text-xs' : 'text-[9px]'">Total</span>
-        <span class="font-serif font-semibold text-ink mt-0.5 leading-none" :class="size === 'lg' ? 'text-2xl' : 'text-lg'">{{ inr(total) }}</span>
+        <span class="font-serif font-semibold text-ink mt-0.5 leading-none"
+          :class="size === 'lg' ? 'text-2xl' : 'text-lg'">{{ inr(total) }}</span>
       </div>
     </div>
 
@@ -110,10 +111,9 @@ const chartOptions = computed(() => {
     <div class="flex-1 w-full space-y-3">
       <div v-for="(item, i) in props.data" :key="item.key" class="flex items-center justify-between text-sm">
         <div class="flex items-center gap-2 min-w-0">
-          <div 
-            class="w-2.5 h-2.5 rounded-full shrink-0" 
-            :style="{ backgroundColor: (palettes[props.theme] || palettes.mixed)[i % (palettes[props.theme] || palettes.mixed).length] }"
-          ></div>
+          <div class="w-2.5 h-2.5 rounded-full shrink-0"
+            :style="{ backgroundColor: (palettes[props.theme] || palettes.mixed)[i % (palettes[props.theme] || palettes.mixed).length] }">
+          </div>
           <span class="capitalize text-ink-2 truncate">{{ (item.key || '').replace(/_/g, ' ') }}</span>
         </div>
         <span class="font-mono text-ink font-medium shrink-0 ml-4">

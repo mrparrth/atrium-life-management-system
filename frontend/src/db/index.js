@@ -108,6 +108,11 @@ db.version(11).stores({
   follows: "id, name, username, category, createdAt",
 });
 
+// v12 - Wishlist items tracking
+db.version(12).stores({
+  wishlist: "id, title, goalValue, currentValue, url, description, status, createdAt"
+});
+
 export function newId() {
   return nanoid(12);
 }

@@ -18,13 +18,16 @@ function onKey(e) {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="confirm-dialog-overlay" @keydown.window="onKey">
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="confirm-dialog-overlay"
+    @keydown.window="onKey">
     <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="ui.confirmState.resolve(false)"></div>
-    <div class="relative w-full max-w-md card p-6 shadow-2xl shadow-black/20 animate-rise-in" role="dialog" aria-modal="true" data-testid="confirm-dialog">
-      <button class="absolute top-4 right-4 btn-ghost !p-1.5" @click="ui.confirmState.resolve(false)" data-testid="confirm-close">
+    <div class="relative w-full max-w-md card p-6 shadow-2xl shadow-black/20 animate-rise-in" role="dialog"
+      aria-modal="true" data-testid="confirm-dialog">
+      <button class="absolute top-4 right-4 btn-ghost !p-1.5" @click="ui.confirmState.resolve(false)"
+        data-testid="confirm-close">
         <X class="w-4 h-4" />
       </button>
-      
+
       <div class="flex items-start gap-4 mt-2">
         <div class="p-2 rounded-xl bg-pri-critical-bg border border-pri-critical-bd text-pri-critical shrink-0">
           <AlertTriangle class="w-5 h-5" />
@@ -39,15 +42,10 @@ function onKey(e) {
         <button class="btn-secondary" @click="ui.confirmState.resolve(false)" data-testid="confirm-cancel-btn">
           {{ ui.confirmState.cancelText }}
         </button>
-        <button 
-          ref="confirmBtn" 
-          :class="[
-            'btn-primary', 
-            ui.confirmState.isDestructive ? '!bg-pri-critical !text-pri-critical-bg hover:opacity-90' : ''
-          ]" 
-          @click="ui.confirmState.resolve(true)"
-          data-testid="confirm-confirm-btn"
-        >
+        <button ref="confirmBtn" :class="[
+          'btn-primary',
+          ui.confirmState.isDestructive ? '!bg-pri-critical !text-pri-critical-bg hover:opacity-90' : ''
+        ]" @click="ui.confirmState.resolve(true)" data-testid="confirm-confirm-btn">
           {{ ui.confirmState.confirmText }}
         </button>
       </div>

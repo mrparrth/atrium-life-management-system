@@ -341,15 +341,13 @@ const scopeMeta = {
     <div class="fixed inset-0 bg-ink/50 backdrop-blur-md" @click="closeForm"></div>
 
     <!-- Left/Right Nav Buttons -->
-    <button v-if="currentCf && !props.isCopy && hasPrev" type="button"
-      @click="navigateTo(1)"
+    <button v-if="currentCf && !props.isCopy && hasPrev" type="button" @click="navigateTo(1)"
       class="hidden md:flex fixed left-4 lg:left-8 top-1/2 -translate-y-1/2 z-[100] w-12 h-12 items-center justify-center rounded-full bg-surface/90 border border-line text-ink hover:text-pri-strategic hover:bg-surface shadow-xl transition-all focus:outline-none cursor-pointer"
       title="Previous month">
       <ChevronLeft class="w-6 h-6" />
     </button>
 
-    <button v-if="currentCf && !props.isCopy && hasNext" type="button"
-      @click="navigateTo(-1)"
+    <button v-if="currentCf && !props.isCopy && hasNext" type="button" @click="navigateTo(-1)"
       class="hidden md:flex fixed right-4 lg:right-8 top-1/2 -translate-y-1/2 z-[100] w-12 h-12 items-center justify-center rounded-full bg-surface/90 border border-line text-ink hover:text-pri-strategic hover:bg-surface shadow-xl transition-all focus:outline-none cursor-pointer"
       title="Next month">
       <ChevronRight class="w-6 h-6" />
@@ -424,7 +422,8 @@ const scopeMeta = {
                   {{ scopeMeta[scope].label }}
                 </span>
               </div>
-              <span class="cf-section-total" :class="totals[scope] !== 0 ? scopeMeta[scope].textClass : 'text-ink-3/40'">
+              <span class="cf-section-total"
+                :class="totals[scope] !== 0 ? scopeMeta[scope].textClass : 'text-ink-3/40'">
                 {{ totals[scope] !== 0 ? inr(totals[scope]) : '—' }}
               </span>
             </div>
@@ -454,27 +453,21 @@ const scopeMeta = {
 
                 <!-- Rows — single-column stacked list -->
                 <div v-show="!collapsed[`${scope}::${group.name}`]" class="cf-rows-list">
-                  <div v-for="c in group.cats" :key="c.id" class="cf-row-single group/row relative" :class="`cf-row-hover-${scope}`"
-                    :data-testid="`cf-input-${scope}-${c.name}`">
+                  <div v-for="c in group.cats" :key="c.id" class="cf-row-single group/row relative"
+                    :class="`cf-row-hover-${scope}`" :data-testid="`cf-input-${scope}-${c.name}`">
                     <span class="cf-row-label">{{ label(c.name) }}</span>
-                    
+
                     <div class="relative flex items-center gap-2" @mouseleave="saveNote">
                       <!-- Note bubble (visible if note exists, or on hover of the row) -->
-                      <button 
-                        type="button"
-                        class="btn-ghost !p-1 transition-colors cf-note-container"
-                        :class="[
-                          notesMap[makeKey(scope, c.name)] 
-                            ? '!text-ink-2' 
-                            : '!text-ink-3/30 hover:!text-ink-3 opacity-0 group-hover/row:opacity-100'
-                        ]"
-                        @mouseenter="openNoteEditor(scope, c.name)"
-                        @click.stop="openNoteEditor(scope, c.name)"
-                        title="Add/Edit Note"
-                        tabindex="-1"
-                      >
+                      <button type="button" class="btn-ghost !p-1 transition-colors cf-note-container" :class="[
+                        notesMap[makeKey(scope, c.name)]
+                          ? '!text-ink-2'
+                          : '!text-ink-3/30 hover:!text-ink-3 opacity-0 group-hover/row:opacity-100'
+                      ]" @mouseenter="openNoteEditor(scope, c.name)" @click.stop="openNoteEditor(scope, c.name)"
+                        title="Add/Edit Note" tabindex="-1">
                         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                          <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+                          <path
+                            d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
                         </svg>
                       </button>
 
@@ -487,20 +480,15 @@ const scopeMeta = {
                       </div>
 
                       <!-- Floating Note Editor Popover -->
-                      <div v-if="activeNoteKey === makeKey(scope, c.name)" 
+                      <div v-if="activeNoteKey === makeKey(scope, c.name)"
                         class="absolute right-0 top-full mt-1.5 w-64 p-3 bg-surface border border-line rounded-xl shadow-xl z-50 animate-rise-in text-left cf-note-editor"
-                        @click.stop
-                      >
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-ink-3 mb-1.5">Note for {{ label(c.name) }}</div>
-                        <textarea 
-                          v-model="activeNoteVal" 
-                          placeholder="Write a note..."
+                        @click.stop>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-ink-3 mb-1.5">Note for {{
+                          label(c.name) }}</div>
+                        <textarea v-model="activeNoteVal" placeholder="Write a note..."
                           class="w-full bg-canvas border border-line rounded-lg p-2 text-xs outline-none focus:border-pri-strategic font-sans placeholder-ink-3 resize-none text-ink"
-                          rows="3"
-                          autofocus
-                          @keydown.enter.prevent="saveNote"
-                          @keydown.esc.stop="activeNoteKey = null"
-                        ></textarea>
+                          rows="3" autofocus @keydown.enter.prevent="saveNote"
+                          @keydown.esc.stop="activeNoteKey = null"></textarea>
                       </div>
                     </div>
                   </div>
@@ -512,7 +500,8 @@ const scopeMeta = {
         </div>
         <!-- Notes Row -->
         <div class="px-7 pb-6 pt-2 border-t border-line/40">
-          <input v-model="note" class="cf-note-input-line" placeholder="Add a note for this month…" data-testid="cf-note" />
+          <input v-model="note" class="cf-note-input-line" placeholder="Add a note for this month…"
+            data-testid="cf-note" />
         </div>
       </div>
 

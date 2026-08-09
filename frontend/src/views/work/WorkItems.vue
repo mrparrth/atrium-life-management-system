@@ -25,13 +25,7 @@ const prefillTitle = ref('')
 // Group active items by status
 const groupedActiveItems = computed(() => {
   const list = itemsStore.items.filter(item => {
-    if (itemsStore.isCompleted(item.status)) return false
-    if (item.snoozedUntil) {
-      const until = new Date(item.snoozedUntil); until.setHours(0, 0, 0, 0)
-      const now = new Date(); now.setHours(0, 0, 0, 0)
-      if (until > now) return false
-    }
-    return true
+    return !itemsStore.isCompleted(item.status)
   })
 
   const groups = {
@@ -55,6 +49,8 @@ const groupedActiveItems = computed(() => {
       groups.in_progress.push(item)
     }
   })
+
+  console.log(groups)
 
   return groups
 })

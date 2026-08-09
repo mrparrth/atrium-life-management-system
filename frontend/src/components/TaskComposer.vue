@@ -4,7 +4,7 @@ import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
 import { X, Plus, CheckCheck } from 'lucide-vue-next'
-import PriorityBadge from './PriorityBadge.vue'
+import { derivePriority } from '@/lib/priority'
 import dayjs from 'dayjs'
 import DateField from './DateField.vue'
 import VInput from './VInput.vue'
@@ -33,6 +33,45 @@ const status = ref(props.initialTask?.status || 'open')
 const titleEl = ref(null)
 const focusedFields = ref({})
 
+const enableSubtasks = ref(props.initialTask?.enableSubtasks || (props.initialTask?.subtasks && props.initialTask.subtasks.length > 0) || false)
+const subtasks = ref(props.initialTask?.subtasks ? JSON.parse(JSON.stringify(props.initialTask.subtasks)) : [])
+const newSubtaskTitle = ref('')
+
+function addSubtask() {
+  if (!newSubtaskTitle.value.trim()) return
+  subtasks.value.push({
+    id: Math.random().toString(36).slice(2, 9),
+    title: newSubtaskTitle.value.trim(),
+    done: false
+  })
+  newSubtaskTitle.value = ''
+}
+
+function removeSubtask(id) {
+  subtasks.value = subtasks.value.filter(s => s.id !== id)
+}
+
+const priorityKey = ref('backlog')
+if (props.initialTask) {
+  priorityKey.value = derivePriority(props.initialTask.important, props.initialTask.urgent).key
+}
+
+watch(priorityKey, (newVal) => {
+  if (newVal === 'critical') {
+    important.value = true
+    urgent.value = true
+  } else if (newVal === 'strategic') {
+    important.value = true
+    urgent.value = false
+  } else if (newVal === 'interruptive') {
+    important.value = false
+    urgent.value = true
+  } else {
+    important.value = false
+    urgent.value = false
+  }
+})
+
 watch(titleEl, el => el?.focus())
 
 watch(status, (newVal) => {
@@ -46,8 +85,6 @@ watch(status, (newVal) => {
   }
 })
 
-
-
 async function save() {
   if (!title.value.trim()) return
   const payload = {
@@ -57,6 +94,8 @@ async function save() {
     dueDate: dueDate.value || null,
     important: important.value, urgent: urgent.value,
     status: status.value,
+    enableSubtasks: enableSubtasks.value,
+    subtasks: enableSubtasks.value ? subtasks.value : []
   }
 
   if (props.initialTask) {
@@ -89,62 +128,129 @@ async function toggleCompleteAndSave() {
 <template>
   <form @submit.prevent="save" @keydown.meta.enter.prevent="save" @keydown.ctrl.enter.prevent="save"
     class="space-y-5 relative" data-testid="task-composer">
-    <!-- Header Quick Toggle Complete -->
-    <div v-if="initialTask"
-      class="absolute -top-[55px] right-0 flex items-center gap-1.5 text-xs font-semibold text-ink-3 hover:text-ink cursor-pointer select-none py-1.5 px-2.5 rounded-lg hover:bg-canvas transition-all"
-      @click="toggleCompleteAndSave">
-      <CheckCheck class="w-4 h-4 text-ink-3" />
-      <span>{{ isDone ? 'Mark Incomplete' : 'Mark Complete' }}</span>
-    </div>
 
-    <VInput ref="titleEl" v-model="title" label="What needs to be remembered… *" id="task-title"
-      data-testid="task-title-input" required />
+    <!-- 2-Column Grid -->
+    <div class="flex flex-col md:flex-row gap-6 items-start">
+      <!-- Left Column (Primary Input) -->
+      <div class="flex-1 space-y-4 w-full">
+        <VInput ref="titleEl" v-model="title" label="What needs to be remembered… *" id="task-title"
+          data-testid="task-title-input" required />
 
-    <VTextarea v-model="description" label="A little context (optional)" id="task-desc"
-      data-testid="task-description-input" autogrow />
+        <VTextarea v-model="description" label="A little context (optional)" id="task-desc"
+          data-testid="task-description-input" autogrow />
 
-    <div class="flex flex-wrap items-center justify-end gap-5 ms-1">
-      <VCheckbox v-model="important" label="Important" data-testid="task-important-checkbox" />
-      <VCheckbox v-model="urgent" label="Urgent" data-testid="task-urgent-checkbox" />
-      <div class="ml-2">
-        <PriorityBadge :important="important" :urgent="urgent" />
+        <!-- Subtasks Section -->
+        <div class="border border-line/50 rounded-2xl p-4 bg-canvas/10 space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-ink-2 select-none flex items-center gap-2">
+              <span>Subtasks Checklist</span>
+              <span v-if="enableSubtasks && subtasks.length > 0" class="font-mono text-[10px] text-ink-3">
+                ({{ subtasks.filter(s => s.done).length }}/{{ subtasks.length }})
+              </span>
+            </label>
+            <VCheckbox v-model="enableSubtasks" label="Enable subtasks" id="task-enable-subtasks" />
+          </div>
+
+          <div v-if="enableSubtasks" class="space-y-3 pt-3 border-t border-line/35">
+            <!-- New Subtask Input -->
+            <div class="flex gap-2">
+              <input 
+                v-model="newSubtaskTitle"
+                type="text" 
+                placeholder="Add subtask... (Press Enter)"
+                @keydown.enter.prevent="addSubtask"
+                class="flex-1 bg-surface border border-line rounded-xl px-3.5 py-2 text-xs text-ink outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 font-sans"
+              />
+              <button type="button" @click="addSubtask" class="btn-secondary !py-1.5 !px-3 text-xs flex items-center justify-center shrink-0">
+                <Plus class="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <!-- Subtask List -->
+            <div v-if="subtasks.length > 0" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div v-for="sub in subtasks" :key="sub.id" 
+                class="flex items-center justify-between gap-2.5 p-2 rounded-xl border border-line/45 bg-surface hover:bg-canvas/5 transition-colors">
+                
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <input 
+                    type="checkbox" 
+                    v-model="sub.done" 
+                    class="rounded border-line text-pri-strategic focus:ring-pri-strategic cursor-pointer h-3.5 w-3.5"
+                  />
+                  <input 
+                    v-model="sub.title" 
+                    type="text" 
+                    class="bg-transparent border-0 border-b border-transparent focus:border-line focus:ring-0 p-0 text-xs text-ink font-medium w-full truncate focus:truncate-none outline-none"
+                    :class="{ 'line-through text-ink-3': sub.done }"
+                  />
+                </div>
+
+                <button type="button" @click="removeSubtask(sub.id)" class="text-ink-3 hover:text-pri-critical p-1 rounded transition-colors shrink-0">
+                  <X class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column (Metadata Sidebar) -->
+      <div class="w-full md:w-[280px] space-y-4 shrink-0 bg-canvas/5 border border-line/40 rounded-2xl p-4">
+        <!-- Status Selector -->
+        <VSelect v-model="status" label="Status" id="task-status" data-testid="task-status-select" :options="[
+          { key: 'open', label: 'Yet to start' },
+          { key: 'in_progress', label: 'In progress' },
+          { key: 'done', label: 'Complete' }
+        ]" option-value="key" option-label="label" />
+
+        <!-- Project Selector -->
+        <VSelect v-model="projectId" label="Project" id="task-project" data-testid="task-project-select"
+          :options="projects.items.filter(p => p.status === 'active')" option-value="id" option-label="title" searchable
+          placeholder="---none---" />
+
+        <!-- Consolidated Priority Dropdown -->
+        <VSelect v-model="priorityKey" label="Priority" id="task-priority" data-testid="task-priority-select" :options="[
+          { key: 'critical', label: '1. Do Now (Important & Urgent)' },
+          { key: 'strategic', label: '2. Deep Work (Important · Not Urgent)' },
+          { key: 'interruptive', label: '3. Reactive (Urgent · Not Important)' },
+          { key: 'backlog', label: '4. Low (Neither)' }
+        ]" option-value="key" option-label="label" />
+
+        <!-- Scheduled & Due Dates -->
+        <DateField v-model="scheduledDate" label="Scheduled Date" id="task-scheduled" dataTestid="task-scheduled-input" />
+        
+        <DateField v-model="dueDate" label="Due Date" id="task-due" dataTestid="task-due-input" popoverPosition="top" />
+
+        <!-- Closed Date — only visible when editing a completed task -->
+        <DateField v-if="isDone" v-model="completedAt" label="Closed Date" id="task-closed"
+          dataTestid="task-closed-date-input" popoverPosition="top" />
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
-      <DateField v-model="scheduledDate" label="Scheduled Date" id="task-scheduled" dataTestid="task-scheduled-input" />
-      <DateField v-model="dueDate" label="Due Date" id="task-due" dataTestid="task-due-input" />
-    </div>
+    <!-- Actions -->
+    <div class="flex items-center justify-between gap-2 pt-2 border-t border-line/35">
+      <div>
+        <button v-if="initialTask" type="button"
+          class="btn-secondary !py-1.5 !px-3 text-xs flex items-center gap-1.5 select-none"
+          @click="toggleCompleteAndSave">
+          <CheckCheck class="w-4 h-4" />
+          <span>{{ isDone ? 'Mark Incomplete' : 'Mark Complete' }}</span>
+        </button>
+      </div>
 
-    <!-- Closed Date — only visible when editing a completed task -->
-    <DateField v-if="isDone" v-model="completedAt" label="Closed Date" id="task-closed"
-      dataTestid="task-closed-date-input" />
-
-    <div class="grid grid-cols-2 gap-4">
-      <VSelect v-model="status" label="Status" id="task-status" data-testid="task-status-select" :options="[
-        { key: 'open', label: 'Yet to start' },
-        { key: 'in_progress', label: 'In progress' },
-        { key: 'done', label: 'Complete' }
-      ]" option-value="key" option-label="label" />
-
-      <VSelect v-model="projectId" label="Project" id="task-project" data-testid="task-project-select"
-        :options="projects.items.filter(p => p.status === 'active')" option-value="id" option-label="title" searchable
-        placeholder="---none---" />
-
-    </div>
-
-    <div class="flex items-center justify-end gap-2 pt-2">
-      <button type="button" class="btn-ghost" @click="$emit('close')" data-testid="task-cancel">Cancel</button>
-      <button type="submit" class="btn-primary" data-testid="task-save">
-        <template v-if="initialTask">
-          Save changes <span
-            class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
-        </template>
-        <template v-else>
-          <Plus class="w-4 h-4" /> Capture <span
-            class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
-        </template>
-      </button>
+      <div class="flex items-center gap-2">
+        <button type="button" class="btn-ghost" @click="$emit('close')" data-testid="task-cancel">Cancel</button>
+        <button type="submit" class="btn-primary" data-testid="task-save">
+          <template v-if="initialTask">
+            Save changes <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </template>
+          <template v-else>
+            <Plus class="w-4 h-4" /> Capture <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </template>
+        </button>
+      </div>
     </div>
   </form>
 </template>

@@ -5,6 +5,7 @@ import { useUIStore } from '@/stores/ui'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useGoalsStore } from '@/stores/goals'
+import { useWishlistStore } from '@/stores/wishlist'
 import { useYearsStore } from '@/stores/years'
 import { useNotesStore } from '@/stores/notes'
 import { useWorkNotesStore } from '@/stores/workNotes'
@@ -87,6 +88,7 @@ onMounted(async () => {
   await Promise.all([
     useYearsStore().load(),
     useGoalsStore().load(),
+    useWishlistStore().load(),
     useProjectsStore().load(),
     useTasksStore().load(),
     useNotesStore().load(),
@@ -214,6 +216,7 @@ onMounted(async () => {
       await Promise.all([
         useYearsStore().load(),
         useGoalsStore().load(),
+        useWishlistStore().load(),
         useProjectsStore().load(),
         useTasksStore().load(),
         useNotesStore().load(),
@@ -334,7 +337,7 @@ watch(() => ui.mode, (newMode) => {
     <div v-if="ui.taskEditOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4"
       data-testid="task-edit-overlay">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="ui.closeTaskEdit"></div>
-      <div class="relative w-full max-w-xl card p-8 shadow-xl shadow-black/10 animate-rise-in">
+      <div class="relative w-full max-w-3xl card p-8 shadow-xl shadow-black/10 animate-rise-in">
         <button class="absolute top-4 right-4 btn-ghost !p-1.5" @click="ui.closeTaskEdit" data-testid="task-edit-close">
           <X class="w-4 h-4" />
         </button>

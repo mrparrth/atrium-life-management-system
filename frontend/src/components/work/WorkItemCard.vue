@@ -135,8 +135,21 @@ const isOverran = computed(() => {
 })
 
 const isOverdue = computed(() => {
-  if (itemsStore.isCompleted(props.item.status) || !props.item.dueDate) return false
-  return dayjs(props.item.dueDate).isBefore(dayjs(), 'day')
+  if (itemsStore.isCompleted(props.item.status)) return false
+  
+  const due = props.item.dueDate ? dayjs(props.item.dueDate) : null
+  const snooze = props.item.snoozedUntil ? dayjs(props.item.snoozedUntil) : null
+  
+  if (!due && !snooze) return false
+  
+  let targetDate
+  if (due && snooze) {
+    targetDate = due.isAfter(snooze) ? due : snooze
+  } else {
+    targetDate = due || snooze
+  }
+  
+  return targetDate.isBefore(dayjs(), 'day')
 })
 
 const driveFolderUrl = computed(() => {

@@ -41,24 +41,24 @@ const activeSeries = computed(() => {
 function parseLabel(label) {
   if (!label) return 0
   const str = String(label).trim()
-  
+
   // Case 1: Pure year (e.g., "2020")
   if (/^\d{4}$/.test(str)) {
     return new Date(parseInt(str, 10), 0, 1).getTime()
   }
-  
+
   // Case 2: Standard short date string like "Dec 2020", "Mar 2021"
   const parsed = Date.parse(`1 ${str}`)
   if (!isNaN(parsed)) {
     return parsed
   }
-  
+
   // Case 3: ISO like "2020-12" or similar
   const parsedISO = Date.parse(str)
   if (!isNaN(parsedISO)) {
     return parsedISO
   }
-  
+
   return 0
 }
 
@@ -137,7 +137,7 @@ const chartOptions = computed(() => {
             const value = context[0].parsed.x
             const d = new Date(value)
             if (isNaN(d.getTime())) return ''
-            const allYears = activeSeries.value.every(s => 
+            const allYears = activeSeries.value.every(s =>
               s.data.every(d => /^\d{4}$/.test(String(d.label).trim()))
             )
             if (allYears) {
@@ -168,7 +168,7 @@ const chartOptions = computed(() => {
           callback: function (value) {
             const d = new Date(value)
             if (isNaN(d.getTime())) return value
-            const allYears = activeSeries.value.every(s => 
+            const allYears = activeSeries.value.every(s =>
               s.data.every(d => /^\d{4}$/.test(String(d.label).trim()))
             )
             if (allYears) {
@@ -205,7 +205,7 @@ const chartOptions = computed(() => {
 
 <template>
   <div class="relative w-full" :style="{ height: `${height}px` }">
-    <div v-if="!activeSeries.length || !activeSeries[0].data.length" 
+    <div v-if="!activeSeries.length || !activeSeries[0].data.length"
       class="flex items-center justify-center border border-dashed border-line rounded-xl text-ink-3 font-serif italic h-full">
       No data logged for this view yet.
     </div>

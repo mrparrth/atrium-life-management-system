@@ -58,7 +58,7 @@ const followUpDate = ref(new Date().toISOString().slice(0, 10))
 const notes = ref('')
 const status = ref('lead')
 
-const probMap = { low: 0.2, mid: 0.5, high: 0.8 }
+const probMap = { low: 0.3, mid: 0.75, high: 1 }
 
 function openAddModalForStage(stageKey) {
   status.value = stageKey
@@ -79,7 +79,7 @@ async function createLead() {
     status: status.value,
     estimatedValue: value.value,
     expectedHours: hours.value,
-    probability: probMap[probability.value] || 0.5,
+    probability: probMap[probability.value] || probMap.mid,
     followUpDate: followUpDate.value,
     notes: notes.value,
     archived: false
@@ -288,21 +288,27 @@ onUnmounted(() => {
         <div class="font-serif text-3xl font-extrabold text-pri-strategic leading-tight">
           ${{ Math.round(leadsStore.forecast.high).toLocaleString() }}
         </div>
-        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">High Confidence</div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">High Confidence (Probability
+          ~100%)
+        </div>
       </div>
       <!-- Medium Confidence -->
       <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[84px]">
         <div class="font-serif text-3xl font-extrabold text-pri-interruptive leading-tight">
           ${{ Math.round(leadsStore.forecast.medium).toLocaleString() }}
         </div>
-        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">Medium Confidence</div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">Medium Confidence (Probability
+          ~75%)
+        </div>
       </div>
       <!-- Low Confidence -->
       <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[84px]">
         <div class="font-serif text-3xl font-extrabold text-ink-3 leading-tight">
           ${{ Math.round(leadsStore.forecast.low).toLocaleString() }}
         </div>
-        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">Low Confidence</div>
+        <div class="text-[10px] font-semibold text-ink-3 uppercase tracking-wider mt-1">Low Confidence (Probability
+          ~30%)
+        </div>
       </div>
       <!-- Weighted Opportunity -->
       <div class="bg-surface border border-[#ECE8E2] rounded-xl p-4 flex flex-col justify-between min-h-[84px]">
@@ -491,7 +497,8 @@ onUnmounted(() => {
                     {{ opt }}
                   </button>
                 </div>
-                <label class="v-field-label !text-xs !bg-surface px-1 transform -translate-y-4 scale-75 top-2 left-3 origin-[0_0] pointer-events-none select-none text-ink-3">
+                <label
+                  class="v-field-label !text-xs !bg-surface px-1 transform -translate-y-4 scale-75 top-2 left-3 origin-[0_0] pointer-events-none select-none text-ink-3">
                   Probability
                 </label>
               </div>
@@ -537,7 +544,8 @@ onUnmounted(() => {
         <div class="pt-2">
           <VRow>
             <VCol cols="12" sm="6">
-              <VInput ref="editModalFirstInput" v-model="editForm.clientName" label="Prospect Name *" id="edit-lead-client" required />
+              <VInput ref="editModalFirstInput" v-model="editForm.clientName" label="Prospect Name *"
+                id="edit-lead-client" required />
             </VCol>
             <VCol cols="12" sm="6">
               <VSelect v-model="editForm.status" label="Pipeline Stage" id="edit-lead-status" :options="stages"
@@ -567,7 +575,8 @@ onUnmounted(() => {
                     {{ opt }}
                   </button>
                 </div>
-                <label class="v-field-label !text-xs !bg-surface px-1 transform -translate-y-4 scale-75 top-2 left-3 origin-[0_0] pointer-events-none select-none text-ink-3">
+                <label
+                  class="v-field-label !text-xs !bg-surface px-1 transform -translate-y-4 scale-75 top-2 left-3 origin-[0_0] pointer-events-none select-none text-ink-3">
                   Probability
                 </label>
               </div>

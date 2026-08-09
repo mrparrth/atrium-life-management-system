@@ -5,6 +5,8 @@ import { useSettingsStore } from '@/stores/settings'
 import { inr, inrCompact } from '@/lib/money'
 import { ChevronDown, ChevronRight, Check, TrendingUp, Wallet, Scale } from 'lucide-vue-next'
 
+import VTooltip from '@/components/VTooltip.vue'
+
 const collapsedSubgroups = ref({})
 
 function isSubgroupCollapsed(scope, name) {
@@ -74,7 +76,19 @@ function getYearMonths(year, startMonthNum) {
 }
 
 const summaryMonths = computed(() => {
-  return getYearMonths(selectedSummaryYear.value, parseInt(startMonth.value))
+  const allMonths = getYearMonths(selectedSummaryYear.value, parseInt(startMonth.value))
+  let maxMonthKey = ''
+  finance.cashflowPeriods.forEach(p => {
+    if (p.month && p.month > maxMonthKey) maxMonthKey = p.month
+  })
+  finance.networthLogs.forEach(l => {
+    if (l.date) {
+      const m = l.date.slice(0, 7)
+      if (m > maxMonthKey) maxMonthKey = m
+    }
+  })
+  if (!maxMonthKey) return allMonths
+  return allMonths.filter(m => m.key <= maxMonthKey)
 })
 
 const networthSummaryMonths = computed(() => {
@@ -124,6 +138,11 @@ function groupPrLyTooltip(group) {
   return `Actual YTD: ${inr(group.grandProratedTotal)} / Prorated Last Year: ${inr(group.grandLastYearProrated)} (Last Year Total: ${inr(group.grandLastYearTotal)})`
 }
 
+const prTooltipText = computed(() => {
+  const lastMonth = summaryMonths.value[summaryMonths.value.length - 1]?.monthName
+  return lastMonth ? `PR is pro-rated till the last month (${lastMonth})` : 'PR is pro-rated till the last month'
+})
+
 const cashflowMatrix = computed(() => {
   const targetMonths = summaryMonths.value
   const targetMonthsKeys = targetMonths.map(m => m.key)
@@ -149,10 +168,11 @@ const cashflowMatrix = computed(() => {
   const groups = { income: [], expense: [], investment: [] }
 
   cfCategories.forEach(cat => {
-    const monthsData = Array(12).fill(0)
+    const len = targetMonths.length
+    const monthsData = Array(len).fill(0)
     let total = 0
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < len; i++) {
       const monthKey = targetMonths[i].key
       const p = monthPeriods[monthKey]
       if (p && p.entries) {
@@ -205,7 +225,7 @@ const cashflowMatrix = computed(() => {
 
   return cfScopes.map(s => {
     const rows = groups[s]
-    const colTotals = Array(12).fill(0)
+    const colTotals = Array(targetMonths.length).fill(0)
     let grandTotal = 0
     let grandBudget = 0
     let grandLastYearTotal = 0
@@ -254,7 +274,7 @@ const cashflowMatrix = computed(() => {
 
     const subGroups = Object.keys(subGroupsMap).map(gName => {
       const subgroupRows = subGroupsMap[gName].sort((a, b) => a.category.name.localeCompare(b.category.name))
-      const months = Array(12).fill(0)
+      const months = Array(targetMonths.length).fill(0)
       let total = 0
       let budget = 0
       let proratedBudget = 0
@@ -322,17 +342,18 @@ const cashflowGrandTotals = computed(() => {
   const expenseGroup = matrix.find(g => g.scope === 'expense')
   const investGroup = matrix.find(g => g.scope === 'investment')
 
-  const incomeTotals = incomeGroup ? incomeGroup.colTotals : Array(12).fill(0)
-  const expenseTotals = expenseGroup ? expenseGroup.colTotals : Array(12).fill(0)
-  const investTotals = investGroup ? investGroup.colTotals : Array(12).fill(0)
+  const len = summaryMonths.value.length
+  const incomeTotals = incomeGroup ? incomeGroup.colTotals : Array(len).fill(0)
+  const expenseTotals = expenseGroup ? expenseGroup.colTotals : Array(len).fill(0)
+  const investTotals = investGroup ? investGroup.colTotals : Array(len).fill(0)
 
-  const netTotals = Array(12).fill(0)
+  const netTotals = Array(len).fill(0)
   const grandIncome = incomeGroup ? incomeGroup.grandTotal : 0
   const grandExpense = expenseGroup ? expenseGroup.grandTotal : 0
   const grandInvest = investGroup ? investGroup.grandTotal : 0
   const grandNet = grandIncome - grandExpense - grandInvest
 
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < len; i++) {
     netTotals[i] = incomeTotals[i] - expenseTotals[i] - investTotals[i]
   }
 
@@ -501,8 +522,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
       <div class="overflow-x-auto w-full pb-4">
         <div class="w-max min-w-full flex flex-col gap-2 p-1">
           <!-- Table Columns Header Card -->
-          <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface select-none overflow-clip">
-            <table class="w-[1500px] table-fixed text-xs text-left border-separate border-spacing-0">
+          <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface select-none overflow-clip w-fit">
+            <table :style="{ width: `${620 + summaryMonths.length * 80}px` }" class="table-fixed text-xs text-left border-separate border-spacing-0">
               <colgroup>
                 <col class="col-category" />
                 <col v-for="m in summaryMonths" :key="m.key" class="col-month" />
@@ -511,15 +532,23 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
               <thead>
                 <tr class="text-ink-3 uppercase text-[10px] tracking-wider whitespace-nowrap">
                   <th
-                    class="py-2.5 pl-4 pr-3 col-category sticky-col-header font-semibold text-ink-3 border-r border-line/40">
+                    class="py-2.5 pl-4 pr-3 col-category sticky-col-header font-semibold text-ink-3 border-b border-line/40">
                     Category</th>
-                  <th v-for="m in summaryMonths" :key="m.key" class="py-2.5 text-right font-mono col-month px-2">
+                  <th v-for="m in summaryMonths" :key="m.key" class="py-2.5 text-right font-mono col-month px-2 border-b border-line/40" style="text-align: right;">
                     {{ m.monthName }}
                   </th>
-                  <th class="py-2.5 text-right font-mono col-summary px-3 font-semibold text-ink-3">Total</th>
-                  <th class="py-2.5 text-right font-mono col-summary px-3 font-semibold text-ink-3">Budget</th>
-                  <th class="py-2.5 text-right font-mono col-summary px-3 font-semibold text-ink-3">vs PR Bud</th>
-                  <th class="py-2.5 text-right font-mono col-summary px-3 font-semibold text-ink-3">vs PR LY</th>
+                  <th class="py-2.5 px-3 font-bold text-ink border-b border-line/40 border-l border-slate-200 font-sans" style="text-align: right;">Total</th>
+                  <th class="py-2.5 px-3 font-bold text-ink border-b border-line/40 bg-slate-100 font-sans" style="text-align: right;">Budget</th>
+                  <th class="py-2.5 px-3 font-bold text-ink border-b border-line/40 bg-slate-100 font-sans text-right" style="text-align: right;">
+                    <VTooltip :text="prTooltipText" position="top">
+                      <span class="cursor-help border-b border-dotted border-ink-3/40">vs PR Bud</span>
+                    </VTooltip>
+                  </th>
+                  <th class="py-2.5 px-3 font-bold text-ink border-b border-line/40 bg-slate-100 font-sans text-right" style="text-align: right;">
+                    <VTooltip :text="prTooltipText" position="top">
+                      <span class="cursor-help border-b border-dotted border-ink-3/40">vs PR LY</span>
+                    </VTooltip>
+                  </th>
                 </tr>
               </thead>
             </table>
@@ -529,8 +558,8 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
           <div class="flex flex-col gap-5">
             <!-- Card Blocks for cash flow scopes -->
             <div v-for="group in cashflowMatrix" :key="group.scope"
-              class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
-              <table class="w-[1500px] table-fixed text-xs text-left border-separate border-spacing-0">
+              class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip w-fit">
+              <table :style="{ width: `${620 + summaryMonths.length * 80}px` }" class="table-fixed text-xs text-left border-separate border-spacing-0">
                 <colgroup>
                   <col class="col-category" />
                   <col v-for="m in summaryMonths" :key="m.key" class="col-month" />
@@ -538,12 +567,12 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                 </colgroup>
                 <tbody>
                   <!-- Group Header Row -->
-                  <tr class="group transition-colors" :class="{
-                    'bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 font-bold': group.scope === 'income',
-                    'bg-rose-500/5 text-rose-700 dark:text-rose-400 font-bold': group.scope === 'expense',
-                    'bg-blue-500/5 text-blue-700 dark:text-blue-400 font-bold': group.scope === 'investment'
+                  <tr class="group transition-colors font-bold" :class="{
+                    'text-emerald-700 dark:text-emerald-400': group.scope === 'income',
+                    'text-rose-700 dark:text-rose-400': group.scope === 'expense',
+                    'text-blue-700 dark:text-blue-400': group.scope === 'investment'
                   }">
-                    <td class="py-3 pl-4 pr-3 col-category sticky-col-cell border-r border-b border-line/40 select-none"
+                    <td class="py-3 pl-4 pr-3 col-category sticky-col-cell border-b border-line/40 select-none"
                       :class="{
                         'bg-sticky-income': group.scope === 'income',
                         'bg-sticky-investment': group.scope === 'investment',
@@ -566,20 +595,23 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                       </span>
                     </td>
                     <td v-for="(val, idx) in group.colTotals" :key="idx"
-                      class="py-3 text-right font-mono col-month px-2 text-xs border-b border-line/40">
-                      {{ val !== 0 ? inrCompact(val) : '—' }}
+                      class="py-3 text-right font-mono col-month px-2 text-xs border-b border-line/40 text-ink font-semibold">
+                      <template v-if="val !== 0">{{ inrCompact(val) }}</template>
+                      <span v-else class="text-[#CBD5E1]">—</span>
                     </td>
-                    <td class="py-3 text-right font-mono col-summary px-3 text-xs font-bold border-b border-line/40">
-                      {{ group.grandTotal !== 0 ? inrCompact(group.grandTotal) : '—' }}
+                    <td class="py-3 text-right font-mono col-summary px-3 text-xs font-bold border-b border-line/40 text-ink border-l border-slate-200">
+                      <template v-if="group.grandTotal !== 0">{{ inrCompact(group.grandTotal) }}</template>
+                      <span v-else class="text-[#CBD5E1]">—</span>
                     </td>
-                    <td class="py-3 text-right font-mono col-summary px-3 text-xs border-b border-line/40">
-                      {{ group.grandBudget !== 0 ? inrCompact(group.grandBudget) : '—' }}
+                    <td class="py-3 text-right font-mono col-summary px-3 text-xs border-b border-line/40 text-ink-2 font-bold bg-slate-100/60">
+                      <template v-if="group.grandBudget !== 0">{{ inrCompact(group.grandBudget) }}</template>
+                      <span v-else class="text-[#CBD5E1]">—</span>
                     </td>
-                    <td class="py-3 text-right font-mono col-summary px-3 text-xs border-b border-line/40"
+                    <td class="py-3 text-right font-mono col-summary px-3 text-xs border-b border-line/40 bg-slate-100/60"
                       :class="diffClass(group.grandVsProratedBudgetPct, group.scope)">
                       {{ group.grandBudget !== 0 ? formatPctDiff(group.grandVsProratedBudgetPct) : '—' }}
                     </td>
-                    <td class="py-3 text-right font-mono col-summary px-3 text-xs border-b border-line/40"
+                    <td class="py-3 text-right font-mono col-summary px-3 text-xs border-b border-line/40 bg-slate-100/60"
                       :class="diffClass(group.grandVsLastYearProratedPct, group.scope)">
                       {{ group.grandLastYearProrated !== 0 ? formatPctDiff(group.grandVsLastYearProratedPct) : '—' }}
                     </td>
@@ -588,36 +620,36 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                   <!-- Subgroups -->
                   <template v-for="sub in group.subGroups" :key="sub.name">
                     <tr @click="toggleSubgroup(group.scope, sub.name)"
-                      class="hover:bg-canvas/30 cursor-pointer transition-colors font-semibold select-none text-ink group">
+                      class="hover:bg-canvas/30 cursor-pointer transition-colors font-medium select-none text-[#64748B] text-[11px] group">
                       <td
-                        class="py-2.5 pl-4 pr-3 col-category sticky-col-cell bg-sticky-subgroup border-r border-b border-line/40 flex items-center gap-1.5">
+                        class="py-2.5 pl-4 pr-3 col-category sticky-col-cell bg-sticky-subgroup border-b border-line/40 flex items-center gap-1.5">
                         <component :is="isSubgroupCollapsed(group.scope, sub.name) ? ChevronRight : ChevronDown"
                           class="w-3 h-3 text-ink-3 shrink-0" />
-                        <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0 animate-pulse" :class="{
-                          'bg-emerald-500/70': group.scope === 'income',
-                          'bg-rose-500/70': group.scope === 'expense',
-                          'bg-blue-500/70': group.scope === 'investment'
+                        <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" :class="{
+                          'bg-emerald-500/40': group.scope === 'income',
+                          'bg-rose-500/40': group.scope === 'expense',
+                          'bg-blue-500/40': group.scope === 'investment'
                         }"></span>
-                        <span class="text-xs font-semibold tracking-wide text-ink-2">{{ sub.name }}</span>
+                        <span class="font-medium tracking-wide text-[#64748B]">{{ sub.name }}</span>
                       </td>
                       <td v-for="(val, idx) in sub.months" :key="idx"
-                        class="py-2.5 text-right font-mono col-month px-2 border-b border-line/40"
-                        :class="[group.scope === 'income' ? 'text-emerald-600/90' : group.scope === 'investment' ? 'text-blue-600/90' : 'text-rose-600/90']">
+                        class="py-2.5 text-right font-mono col-month px-2 border-b border-line/40 text-[#64748B]">
                         <template v-if="val !== 0">{{ inrCompact(val) }}</template>
-                        <span v-else class="text-ink-3/20">—</span>
+                        <span v-else class="text-[#CBD5E1]">—</span>
                       </td>
-                      <td class="py-2.5 text-right font-mono col-summary px-3 font-semibold border-b border-line/40"
-                        :class="[group.scope === 'income' ? 'text-emerald-600/90' : group.scope === 'investment' ? 'text-blue-600/90' : 'text-rose-600/90']">
-                        {{ sub.total !== 0 ? inrCompact(sub.total) : '—' }}
+                      <td class="py-2.5 text-right font-mono col-summary px-3 font-bold border-b border-line/40 text-[#64748B] border-l border-slate-200">
+                        <template v-if="sub.total !== 0">{{ inrCompact(sub.total) }}</template>
+                        <span v-else class="text-[#CBD5E1]">—</span>
                       </td>
-                      <td class="py-2.5 text-right font-mono col-summary px-3 text-ink-2 border-b border-line/40">
-                        {{ sub.budget !== 0 ? inrCompact(sub.budget) : '—' }}
+                      <td class="py-2.5 text-right font-mono col-summary px-3 text-[#64748B]/90 font-semibold border-b border-line/40 bg-slate-100/40">
+                        <template v-if="sub.budget !== 0">{{ inrCompact(sub.budget) }}</template>
+                        <span v-else class="text-[#CBD5E1]">—</span>
                       </td>
-                      <td class="py-2.5 text-right font-mono col-summary px-3 border-b border-line/40"
+                      <td class="py-2.5 text-right font-mono col-summary px-3 border-b border-line/40 bg-slate-100/40"
                         :class="diffClass(sub.vsProratedBudgetPct, group.scope)">
                         {{ sub.budget !== 0 ? formatPctDiff(sub.vsProratedBudgetPct) : '—' }}
                       </td>
-                      <td class="py-2.5 text-right font-mono col-summary px-3 border-b border-line/40"
+                      <td class="py-2.5 text-right font-mono col-summary px-3 border-b border-line/40 bg-slate-100/40"
                         :class="diffClass(sub.vsLastYearProratedPct, group.scope)">
                         {{ sub.lastYearProrated !== 0 ? formatPctDiff(sub.vsLastYearProratedPct) : '—' }}
                       </td>
@@ -625,29 +657,31 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
 
                     <!-- Category Rows -->
                     <tr v-show="!isSubgroupCollapsed(group.scope, sub.name)" v-for="row in sub.rows"
-                      :key="row.category.id" class="hover:bg-canvas/20 transition-colors group">
+                      :key="row.category.id" class="hover:bg-canvas/20 transition-colors group text-[11px]">
                       <td
-                        class="py-2 pl-8 pr-3 col-category sticky-col-cell bg-sticky-category border-r border-b border-line/30 capitalize font-normal text-ink-3 truncate"
+                        class="py-2 pl-8 pr-3 col-category sticky-col-cell bg-sticky-category border-b border-line/30 capitalize font-normal text-ink-3 truncate"
                         :title="label(row.category.name)">
                         {{ label(row.category.name) }}
                       </td>
                       <td v-for="(val, idx) in row.months" :key="idx"
                         class="py-2 text-right font-mono col-month px-2 text-ink-3 border-b border-line/30">
                         <template v-if="val !== 0">{{ inrCompact(val) }}</template>
-                        <span v-else class="text-ink-3/20">—</span>
+                        <span v-else class="text-[#CBD5E1]">—</span>
                       </td>
                       <td
-                        class="py-2 text-right font-mono col-summary px-3 font-medium text-ink-2 border-b border-line/30">
-                        {{ row.total !== 0 ? inrCompact(row.total) : '—' }}
+                        class="py-2 text-right font-mono col-summary px-3 font-semibold text-ink-2 border-b border-line/30 border-l border-slate-200">
+                        <template v-if="row.total !== 0">{{ inrCompact(row.total) }}</template>
+                        <span v-else class="text-[#CBD5E1]">—</span>
                       </td>
-                      <td class="py-2 text-right font-mono col-summary px-3 text-ink-3 border-b border-line/30">
-                        {{ row.budget !== 0 ? inrCompact(row.budget) : '—' }}
+                      <td class="py-2 text-right font-mono col-summary px-3 text-ink-3/80 font-medium border-b border-line/30 bg-slate-100/20">
+                        <template v-if="row.budget !== 0">{{ inrCompact(row.budget) }}</template>
+                        <span v-else class="text-[#CBD5E1]">—</span>
                       </td>
-                      <td class="py-2 text-right font-mono col-summary px-3 border-b border-line/30"
+                      <td class="py-2 text-right font-mono col-summary px-3 border-b border-line/30 bg-slate-100/20"
                         :class="diffClass(row.vsProratedBudgetPct, group.scope)">
                         {{ row.budget !== 0 ? formatPctDiff(row.vsProratedBudgetPct) : '—' }}
                       </td>
-                      <td class="py-2 text-right font-mono col-summary px-3 border-b border-line/30"
+                      <td class="py-2 text-right font-mono col-summary px-3 border-b border-line/30 bg-slate-100/20"
                         :class="diffClass(row.vsLastYearProratedPct, group.scope)">
                         {{ row.lastYearProrated !== 0 ? formatPctDiff(row.vsLastYearProratedPct) : '—' }}
                       </td>
@@ -659,35 +693,37 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
 
             <!-- Net Cash Flow block -->
             <div v-if="cashflowMatrix.length"
-              class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
-              <table class="w-[1500px] table-fixed text-xs text-left border-separate border-spacing-0">
+              class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip w-fit">
+              <table :style="{ width: `${620 + summaryMonths.length * 80}px` }" class="table-fixed text-xs text-left border-separate border-spacing-0">
                 <colgroup>
                   <col class="col-category" />
                   <col v-for="m in summaryMonths" :key="m.key" class="col-month" />
                   <col class="col-summary" v-for="i in 4" :key="i" />
                 </colgroup>
                 <tbody>
-                  <tr class="bg-elevated/40 font-bold">
-                    <td class="py-3 pl-4 pr-3 col-category sticky-col-cell bg-sticky-net border-r border-line/40">
+                  <tr class="font-bold">
+                    <td class="py-3 pl-4 pr-3 col-category sticky-col-cell bg-sticky-net border-b border-line/40">
                       <span class="flex items-center gap-2">
                         <span class="w-5 h-5 rounded-full bg-ink/10 text-ink flex items-center justify-center shrink-0">
                           <Scale class="w-3 h-3 stroke-[2.5]" />
                         </span>
-                        <span class="text-xs font-bold uppercase tracking-wider">Net Cash Flow</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-ink">Net Cash Flow</span>
                       </span>
                     </td>
                     <td v-for="(val, idx) in cashflowGrandTotals.net" :key="idx"
-                      class="py-3 text-right font-mono col-month px-2 text-xs"
+                      class="py-3 text-right font-mono col-month px-2 text-xs border-b border-line/40"
                       :class="val !== 0 ? (val >= 0 ? 'text-emerald-600' : 'text-rose-600') : 'text-ink-3'">
-                      {{ val !== 0 ? inrCompact(val) : '—' }}
+                      <template v-if="val !== 0">{{ inrCompact(val) }}</template>
+                      <span v-else class="text-[#CBD5E1]">—</span>
                     </td>
-                    <td class="py-3 text-right font-mono col-summary px-3 text-xs"
+                    <td class="py-3 text-right font-mono col-summary px-3 text-xs border-b border-line/40 border-l border-slate-200"
                       :class="cashflowGrandTotals.grandNet >= 0 ? 'text-emerald-600' : 'text-rose-600'">
-                      {{ cashflowGrandTotals.grandNet !== 0 ? inrCompact(cashflowGrandTotals.grandNet) : '—' }}
+                      <template v-if="cashflowGrandTotals.grandNet !== 0">{{ inrCompact(cashflowGrandTotals.grandNet) }}</template>
+                      <span v-else class="text-[#CBD5E1]">—</span>
                     </td>
-                    <td class="py-3 text-right font-mono col-summary px-3 text-ink-3/20">—</td>
-                    <td class="py-3 text-right font-mono col-summary px-3 text-ink-3/20">—</td>
-                    <td class="py-3 text-right font-mono col-summary px-3 text-ink-3/20">—</td>
+                    <td class="py-3 text-right font-mono col-summary px-3 border-b border-line/40 bg-slate-100/60 text-ink-3/20"><span class="text-[#CBD5E1]">—</span></td>
+                    <td class="py-3 text-right font-mono col-summary px-3 border-b border-line/40 bg-slate-100/60 text-ink-3/20"><span class="text-[#CBD5E1]">—</span></td>
+                    <td class="py-3 text-right font-mono col-summary px-3 border-b border-line/40 bg-slate-100/60 text-ink-3/20"><span class="text-[#CBD5E1]">—</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -696,6 +732,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
             <div v-if="!cashflowMatrix.length" class="card p-8 text-center text-ink-3 italic">
               No cashflow data logged for {{ selectedSummaryYear }}.
             </div>
+
           </div>
         </div>
       </div>
@@ -715,9 +752,9 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
       <div class="overflow-x-auto w-full pb-4">
         <div v-if="networthSummaryMonths.length" class="w-max min-w-full flex flex-col gap-2 p-1">
           <!-- Table Columns Header Card -->
-          <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface select-none overflow-clip">
+          <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface select-none overflow-clip w-fit">
             <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }"
-              class="table-fixed text-xs text-left border-separate border-spacing-0">
+               class="table-fixed text-xs text-left border-separate border-spacing-0">
               <colgroup>
                 <col class="col-category" />
                 <col v-for="m in networthSummaryMonths" :key="m.key" class="col-month" />
@@ -725,11 +762,11 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
               <thead>
                 <tr class="text-ink-3 uppercase text-[10px] tracking-wider whitespace-nowrap">
                   <th
-                    class="py-2.5 pl-4 pr-3 col-category sticky-col-header font-semibold text-ink-3 border-r border-line/40">
+                    class="py-2.5 pl-4 pr-3 col-category sticky-col-header font-semibold text-ink-3 border-b border-line/40">
                     Category</th>
                   <th v-for="(m, idx) in networthSummaryMonths" :key="m.key"
-                    class="py-2.5 text-right font-mono col-month"
-                    :class="idx === networthSummaryMonths.length - 1 ? 'pr-8 pl-2' : 'px-2'">
+                    class="py-2.5 text-right font-mono col-month border-b border-line/40"
+                    :class="idx === networthSummaryMonths.length - 1 ? 'pr-8 pl-2' : 'px-2'" style="text-align: right;">
                     {{ m.monthName }}
                   </th>
                 </tr>
@@ -741,7 +778,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
           <div class="flex flex-col gap-5">
             <!-- Card Blocks for assets & liabilities -->
             <div v-for="group in networthMatrix" :key="group.scope"
-              class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
+              class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip w-fit">
               <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }"
                 class="table-fixed text-xs text-left border-separate border-spacing-0">
                 <colgroup>
@@ -754,7 +791,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                     'bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 font-bold': group.scope === 'asset',
                     'bg-rose-500/5 text-rose-700 dark:text-rose-400 font-bold': group.scope === 'liability'
                   }">
-                    <td class="py-3 pl-4 pr-3 col-category sticky-col-cell border-r border-b border-line/40 select-none"
+                    <td class="py-3 pl-4 pr-3 col-category sticky-col-cell border-b border-line/40 select-none"
                       :class="{
                         'bg-sticky-asset': group.scope === 'asset',
                         'bg-sticky-liability': group.scope === 'liability'
@@ -772,49 +809,48 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                       </span>
                     </td>
                     <td v-for="(val, idx) in group.colTotals" :key="idx"
-                      class="py-3 text-right font-mono col-month text-xs border-b border-line/40"
-                      :class="[group.scope === 'liability' && val > 0 ? 'text-rose-600' : group.scope === 'asset' && val > 0 ? 'text-emerald-600' : 'text-ink-2', idx === group.colTotals.length - 1 ? 'pr-8 pl-2' : 'px-2']">
-                      {{ val !== 0 ? (group.scope === 'liability' ? '-' : '') + inrCompact(val) : '—' }}
+                      class="py-3 text-right font-mono col-month text-xs border-b border-line/40 text-ink font-semibold"
+                      :class="[idx === group.colTotals.length - 1 ? 'pr-8 pl-2' : 'px-2']">
+                      <template v-if="val !== 0">{{ inrCompact(group.scope === 'liability' ? -val : val) }}</template>
+                      <span v-else class="text-[#CBD5E1]">—</span>
                     </td>
                   </tr>
 
                   <!-- Subgroups -->
                   <template v-for="sub in group.subGroups" :key="sub.name">
                     <tr @click="toggleSubgroup(group.scope, sub.name)"
-                      class="hover:bg-canvas/30 cursor-pointer transition-colors font-semibold select-none text-ink group">
+                      class="hover:bg-canvas/30 cursor-pointer transition-colors font-medium select-none text-[#64748B] text-[11px] group">
                       <td
-                        class="py-2.5 pl-4 pr-3 col-category sticky-col-cell bg-sticky-subgroup border-r border-b border-line/40 flex items-center gap-1.5">
+                        class="py-2.5 pl-4 pr-3 col-category sticky-col-cell bg-sticky-subgroup border-b border-line/40 flex items-center gap-1.5">
                         <component :is="isSubgroupCollapsed(group.scope, sub.name) ? ChevronRight : ChevronDown"
                           class="w-3 h-3 text-ink-3 shrink-0" />
-                        <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0 animate-pulse" :class="{
-                          'bg-emerald-500/70': group.scope === 'asset',
-                          'bg-rose-500/70': group.scope === 'liability'
+                        <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" :class="{
+                          'bg-emerald-500/40': group.scope === 'asset',
+                          'bg-rose-500/40': group.scope === 'liability'
                         }"></span>
-                        <span class="text-xs font-semibold tracking-wide text-ink-2">{{ sub.name }}</span>
+                        <span class="font-medium tracking-wide text-[#64748B]">{{ sub.name }}</span>
                       </td>
                       <td v-for="(val, idx) in sub.months" :key="idx"
-                        class="py-2.5 text-right font-mono col-month border-b border-line/40"
-                        :class="[group.scope === 'liability' && val > 0 ? 'text-rose-600/80' : 'text-ink-2', idx === sub.months.length - 1 ? 'pr-8 pl-2' : 'px-2']">
-                        <template v-if="val !== null">{{ (group.scope === 'liability' ? '-' : '') + inrCompact(val)
-                          }}</template>
-                        <span v-else class="text-ink-3/20">—</span>
+                        class="py-2.5 text-right font-mono col-month border-b border-line/40 text-[#64748B]"
+                        :class="[idx === sub.months.length - 1 ? 'pr-8 pl-2' : 'px-2']">
+                        <template v-if="val !== null">{{ inrCompact(group.scope === 'liability' ? -val : val) }}</template>
+                        <span v-else class="text-[#CBD5E1]">—</span>
                       </td>
                     </tr>
 
                     <!-- Category Rows -->
                     <tr v-show="!isSubgroupCollapsed(group.scope, sub.name)" v-for="row in sub.rows"
-                      :key="row.category.id" class="hover:bg-canvas/20 transition-colors group">
+                      :key="row.category.id" class="hover:bg-canvas/20 transition-colors group text-[11px]">
                       <td
-                        class="py-2 pl-8 pr-3 col-category sticky-col-cell bg-sticky-category border-r border-b border-line/30 capitalize font-normal text-ink-3 truncate"
+                        class="py-2 pl-8 pr-3 col-category sticky-col-cell bg-sticky-category border-b border-line/30 capitalize font-normal text-ink-3 truncate"
                         :title="label(row.category.name)">
                         {{ label(row.category.name) }}
                       </td>
                       <td v-for="(val, idx) in row.months" :key="idx"
                         class="py-2 text-right font-mono col-month text-ink-3 border-b border-line/30"
-                        :class="[group.scope === 'liability' && val > 0 ? 'text-rose-600/70' : '', idx === row.months.length - 1 ? 'pr-8 pl-2' : 'px-2']">
-                        <template v-if="val !== null">{{ (group.scope === 'liability' ? '-' : '') + inrCompact(val)
-                          }}</template>
-                        <span v-else class="text-ink-3/20">—</span>
+                        :class="[idx === row.months.length - 1 ? 'pr-8 pl-2' : 'px-2']">
+                        <template v-if="val !== null">{{ inrCompact(group.scope === 'liability' ? -val : val) }}</template>
+                        <span v-else class="text-[#CBD5E1]">—</span>
                       </td>
                     </tr>
                   </template>
@@ -823,7 +859,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
             </div>
 
             <!-- Net Worth block -->
-            <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip">
+            <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface overflow-clip w-fit">
               <table :style="{ width: `${180 + networthSummaryMonths.length * 80}px` }"
                 class="table-fixed text-xs text-left border-separate border-spacing-0">
                 <colgroup>
@@ -832,19 +868,19 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                 </colgroup>
                 <tbody>
                   <tr class="bg-elevated/40 font-bold">
-                    <td class="py-3 pl-4 pr-3 col-category sticky-col-cell bg-sticky-net border-r border-line/40">
+                    <td class="py-3 pl-4 pr-3 col-category sticky-col-cell bg-sticky-net border-b border-line/40">
                       <span class="flex items-center gap-2">
                         <span class="w-5 h-5 rounded-full bg-ink/10 text-ink flex items-center justify-center shrink-0">
                           <Scale class="w-3 h-3 stroke-[2.5]" />
                         </span>
-                        <span class="text-xs font-bold uppercase tracking-wider">Net Worth</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-ink">Net Worth</span>
                       </span>
                     </td>
                     <td v-for="(val, idx) in networthGrandTotals.netWorth" :key="idx"
-                      class="py-3 text-right font-mono col-month text-xs"
+                      class="py-3 text-right font-mono col-month text-xs border-b border-line/40"
                       :class="[val !== null ? (val >= 0 ? 'text-emerald-600' : 'text-rose-600') : 'text-ink-3', idx === networthGrandTotals.netWorth.length - 1 ? 'pr-8 pl-2' : 'px-2']">
                       <template v-if="val !== null">{{ inrCompact(val) }}</template>
-                      <span v-else class="text-ink-3/20">—</span>
+                      <span v-else class="text-[#CBD5E1]">—</span>
                     </td>
                   </tr>
                 </tbody>

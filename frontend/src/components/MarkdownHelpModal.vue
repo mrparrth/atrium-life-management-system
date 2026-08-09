@@ -50,9 +50,10 @@ const cheatSheet = [
     <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <!-- Backdrop -->
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm transition-opacity" @click="$emit('close')"></div>
-      
+
       <!-- Modal Content -->
-      <div class="relative w-full max-w-xl bg-surface border border-line rounded-2xl shadow-xl shadow-black/15 overflow-hidden animate-rise-in max-h-[85vh] flex flex-col">
+      <div
+        class="relative w-full max-w-xl bg-surface border border-line rounded-2xl shadow-xl shadow-black/15 overflow-hidden animate-rise-in max-h-[85vh] flex flex-col">
         <!-- Header -->
         <div class="px-6 py-4 border-b border-line flex items-center justify-between bg-canvas/30 shrink-0">
           <div class="flex items-center gap-2">
@@ -67,7 +68,7 @@ const cheatSheet = [
         <!-- Body -->
         <div class="p-6 overflow-y-auto space-y-6">
           <p class="text-xs text-ink-2 leading-relaxed">
-            Format your notes as you type using standard Markdown tags. 
+            Format your notes as you type using standard Markdown tags.
             Wiki-links (<code>[[Note Name]]</code>) allow you to link notes together dynamically.
           </p>
 
@@ -78,7 +79,8 @@ const cheatSheet = [
                 <div v-for="item in section.items" :key="item.label" class="flex flex-col gap-0.5">
                   <div class="flex justify-between text-xs font-medium">
                     <span class="text-ink-2">{{ item.label }}</span>
-                    <code class="bg-canvas/60 px-1.5 py-0.5 rounded text-[10px] text-pri-strategic font-mono font-bold select-all">{{ item.syntax }}</code>
+                    <code
+                      class="bg-canvas/60 px-1.5 py-0.5 rounded text-[10px] text-pri-strategic font-mono font-bold select-all">{{ item.syntax }}</code>
                   </div>
                 </div>
               </div>
@@ -100,6 +102,7 @@ const cheatSheet = [
 .fade-leave-active {
   transition: opacity 0.2s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;

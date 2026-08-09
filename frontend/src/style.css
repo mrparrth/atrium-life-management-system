@@ -424,9 +424,9 @@ input[type="number"] {
   max-width: 80px !important;
 }
 .col-summary {
-  width: 90px !important;
-  min-width: 90px !important;
-  max-width: 90px !important;
+  width: 110px !important;
+  min-width: 110px !important;
+  max-width: 110px !important;
 }
 
 

@@ -13,6 +13,7 @@ export const useGoalsStore = defineStore('goals', () => {
       yearId: payload.yearId || null,
       yearIds: payload.yearIds || (payload.yearId ? [payload.yearId] : []),
       useNumeric: payload.useNumeric || false,
+      unit: payload.unit || '',
       targetNumber: Number(payload.targetNumber) || 0,
       achievedNumber: Number(payload.achievedNumber) || 0,
       status: 'active',
