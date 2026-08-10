@@ -169,16 +169,14 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
     return chosen;
   }
 
-  // 1. Goal / Goal-Linked Wish List Resurfacing
+  // 1. Goal & Wish List Resurfacing (max 1 of each per day)
   const activeGoals = (goals || []).filter(g => g.status !== 'completed' && g.status !== 'archived');
-  const activeLinkedWishes = (wishlist || []).filter(w => w.status === 'active' && w.goalId);
-  const goalWishPool = [
-    ...activeGoals.map(g => ({ ...g, type: 'goal' })),
-    ...activeLinkedWishes.map(w => ({ ...w, type: 'wish' }))
-  ];
+  const goalList = selectFromPool(activeGoals.map(g => ({ ...g, type: 'goal' })), 1);
+  const goal = goalList.length > 0 ? goalList[0] : null;
 
-  const goalOrWishList = selectFromPool(goalWishPool, 1);
-  const goalOrWish = goalOrWishList.length > 0 ? goalOrWishList[0] : null;
+  const activeWishes = (wishlist || []).filter(w => w.status === 'active' && !w.purchased);
+  const wishList = selectFromPool(activeWishes.map(w => ({ ...w, type: 'wish' })), 1);
+  const wish = wishList.length > 0 ? wishList[0] : null;
 
   // 2. Note / Bookmark Resurfacing (exactly 2 note/bookmarks in a day)
   const notesAndBookmarksPool = [
@@ -188,7 +186,7 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
 
   const items = selectFromPool(notesAndBookmarksPool, 2);
 
-  return { goalOrWish, items };
+  return { goal, wish, items };
 }
 
 export function criticalCount(tasks) {

@@ -109,14 +109,15 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 
 ### 8. Resurfacing Memory Sidebar Overhaul
 - **Unified Selection Pool**: Combined notes and bookmarks into a unified candidate pool. Selected exactly 2 notes/bookmarks per day.
-- **Goals & Wishes Resurfacing**: Dynamically selects exactly 1 Goal or Goal-linked Wish per day under the overline `remember what you are working towards`.
+- **Goals & Wishes Resurfacing**: Separates Goals and Wishlist items into two independent daily resurfacing card spots (up to one Goal and one Wishlist card per day).
 - **Viewed State & Cooldown Tracking**: Implemented `lastViewedAt` fields and `markViewed` function in Goals and Wishlist pinia stores. Opening a modal or clicking a resurfaced bookmark updates this database field.
 - **Seeded Daily Randomness**: Used mulberry32 daily seeded generator to keep selection stable across refresh cycles within a given day.
 - **15-Day Snooze-Shield Cooldown**: Enforces a strict cooldown. Items viewed < 15 days ago are prioritized at `0.0001` (lowest priority). Candidates are sorted descending by days since last viewed.
 
 ### August 10, 2026
-- FEATURE: Overhauled memoryResurfacing helper to select exactly 1 Goal/Wish and exactly 2 Note/Bookmarks daily using a seeded Mulberry32 random algorithm.
+- FEATURE: Overhauled memoryResurfacing helper to select up to one Goal and one Wishlist card independently each day, alongside exactly 2 Note/Bookmarks.
 - FEATURE: Added `lastViewedAt` attributes and `markViewed` Dexie database handlers in Goals and Wishlist stores.
 - FEATURE: Implemented a 15-day minimum snooze cooldown with a descending age priority sorter for next resurface selection.
+- UX: Styled the resurfaced Goal card in the sidebar to render the "Goal" text and lucide icon at the top, and a glowing, high-contrast `"remember what you are working towards"` subscript at the bottom.
 - UX: Enabled dashboard deep-linking (`/goals?goalId=XYZ` and `/goals?wishId=XYZ`) to automatically trigger edit modals when resurfaced items are clicked.
 - DOCS: Updated context.md and walkthrough.md to reflect the resurfacing memory overhaul.

@@ -22,7 +22,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { ArrowRight, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass, PanelRightClose, PanelRightOpen, Target } from 'lucide-vue-next'
+import { ArrowRight, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass, PanelRightClose, PanelRightOpen, Target, Gift } from 'lucide-vue-next'
 
 const router = useRouter()
 const tasks = useTasksStore()
@@ -394,23 +394,34 @@ async function openDailyJournal() {
                 rf.reason }}</p>
             </a>
 
-            <!-- Goal / Goal-Linked Wish Resurfacing -->
-            <div v-if="memory.goalOrWish" @click="handleGoalOrWishClick(memory.goalOrWish)"
+            <!-- Goal Resurfacing -->
+            <div v-if="memory.goal" @click="handleGoalOrWishClick(memory.goal)"
               class="card p-4 block hover:border-line-2 transition-all duration-300 cursor-pointer relative"
-              :class="clickedMemoryItems.has(memory.goalOrWish.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
-              data-testid="resurface-goal-wish">
-              <div class="flex items-center justify-between gap-2 flex-wrap">
-                <div class="flex items-center gap-2 text-ink-2">
-                  <Target class="w-3.5 h-3.5" />
-                  <span class="overline font-semibold select-none">remember what you are working towards</span>
-                </div>
-                <span class="text-[9px] uppercase tracking-wider font-semibold border px-1.5 py-0.5 rounded-full capitalize text-ink-3 bg-canvas border-line/30">
-                  {{ memory.goalOrWish.type }}
-                </span>
+              :class="clickedMemoryItems.has(memory.goal.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+              data-testid="resurface-goal">
+              <div class="flex items-center gap-2 text-ink-3">
+                <Target class="w-3.5 h-3.5" />
+                <span class="overline font-semibold select-none">Goal</span>
               </div>
-              <div class="font-serif text-lg mt-1.5 leading-snug">{{ memory.goalOrWish.title }}</div>
-              <p v-if="memory.goalOrWish.description" class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">
-                {{ memory.goalOrWish.description }}
+              <div class="font-serif text-lg mt-1.5 leading-snug">{{ memory.goal.title }}</div>
+              <div class="text-[9px] uppercase font-mono tracking-widest text-ink-2 mt-2 select-none"
+                style="text-shadow: 0 0 8px rgba(var(--ink), 0.55); font-weight: 700;">
+                remember what you are working towards
+              </div>
+            </div>
+
+            <!-- Wish List Resurfacing -->
+            <div v-if="memory.wish" @click="handleGoalOrWishClick(memory.wish)"
+              class="card p-4 block hover:border-line-2 transition-all duration-300 cursor-pointer relative"
+              :class="clickedMemoryItems.has(memory.wish.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+              data-testid="resurface-wish">
+              <div class="flex items-center gap-2 text-ink-3">
+                <Gift class="w-3.5 h-3.5" />
+                <span class="overline font-semibold select-none">Wishlist</span>
+              </div>
+              <div class="font-serif text-lg mt-1.5 leading-snug">{{ memory.wish.title }}</div>
+              <p v-if="memory.wish.description" class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">
+                {{ memory.wish.description }}
               </p>
             </div>
 
@@ -449,7 +460,7 @@ async function openDailyJournal() {
               </a>
             </template>
 
-            <EmptyState v-if="!memory.goalOrWish && !memory.items.length && !resurfacedFollows.length"
+            <EmptyState v-if="!memory.goal && !memory.wish && !memory.items.length && !resurfacedFollows.length"
               title="Memory is fresh" hint="Nothing to resurface yet." />
           </div>
         </section>
