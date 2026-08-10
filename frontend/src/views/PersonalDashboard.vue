@@ -399,13 +399,18 @@ async function openDailyJournal() {
               class="card p-4 block hover:border-line-2 transition-all duration-300 cursor-pointer relative"
               :class="clickedMemoryItems.has(memory.goal.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
               data-testid="resurface-goal">
+              <!-- Glowing Green Diamond in Top-Right -->
+              <div class="absolute top-4 right-4 flex items-center justify-center">
+                <div class="w-2 h-2 bg-emerald-500 rotate-45 animate-pulse"
+                  style="box-shadow: 0 0 8px #10b981, 0 0 16px #10b981;"></div>
+              </div>
               <div class="flex items-center gap-2 text-ink-3">
                 <Target class="w-3.5 h-3.5" />
                 <span class="overline font-semibold select-none">Goal</span>
               </div>
               <div class="font-serif text-lg mt-1.5 leading-snug">{{ memory.goal.title }}</div>
-              <div class="text-[9px] uppercase font-mono tracking-widest text-ink-2 mt-2 select-none"
-                style="text-shadow: 0 0 8px rgba(var(--ink), 0.55); font-weight: 700;">
+              <div class="text-[11px] text-ink-2 mt-2 select-none"
+                style="text-shadow: 0 0 8px rgba(var(--ink), 0.35); font-weight: 500;">
                 remember what you are working towards
               </div>
             </div>

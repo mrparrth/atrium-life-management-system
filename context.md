@@ -118,7 +118,8 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - FEATURE: Overhauled memoryResurfacing helper to select up to one Goal and one Wishlist card independently each day, alongside exactly 2 Note/Bookmarks.
 - FEATURE: Added `lastViewedAt` attributes and `markViewed` Dexie database handlers in Goals and Wishlist stores.
 - FEATURE: Implemented a 15-day minimum snooze cooldown with a descending age priority sorter for next resurface selection.
-- UX: Styled the resurfaced Goal card in the sidebar to render the "Goal" text and lucide icon at the top, and a glowing, high-contrast `"remember what you are working towards"` subscript at the bottom.
+- UX: Styled the resurfaced Goal card in the sidebar to render the "Goal" text and lucide icon at the top, and a glowing, high-contrast lowercase `"remember what you are working towards"` subscript at the bottom.
+- UX: Added a glowing green emerald diamond indicator positioned absolutely at the top-right of the daily resurfaced Goal card to grab immediate user attention.
 - UX: Enabled dashboard deep-linking (`/goals?goalId=XYZ` and `/goals?wishId=XYZ`) to automatically trigger edit modals when resurfaced items are clicked.
 - UX: Replaced the native browser confirm() popup for wish deletions on the Goals & Wishes page with the custom, promise-based confirm modal.
 - DOCS: Updated context.md and walkthrough.md to reflect the resurfacing memory overhaul.
