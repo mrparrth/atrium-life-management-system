@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
@@ -51,25 +51,8 @@ function removeSubtask(id) {
   subtasks.value = subtasks.value.filter(s => s.id !== id)
 }
 
-const priorityKey = ref('strategic')
-if (props.initialTask) {
-  priorityKey.value = derivePriority(props.initialTask.important, props.initialTask.urgent).key
-}
-
-watch(priorityKey, (newVal) => {
-  if (newVal === 'critical') {
-    important.value = true
-    urgent.value = true
-  } else if (newVal === 'strategic') {
-    important.value = true
-    urgent.value = false
-  } else if (newVal === 'interruptive') {
-    important.value = false
-    urgent.value = true
-  } else {
-    important.value = false
-    urgent.value = false
-  }
+const computedPriority = computed(() => {
+  return derivePriority(important.value, urgent.value)
 })
 
 watch(titleEl, el => el?.focus())
@@ -208,13 +191,38 @@ async function toggleCompleteAndSave() {
           :options="projects.items.filter(p => p.status === 'active')" option-value="id" option-label="title" searchable
           placeholder="---none---" />
 
-        <!-- Consolidated Priority Dropdown -->
-        <VSelect v-model="priorityKey" label="Priority" id="task-priority" data-testid="task-priority-select" :options="[
-          { key: 'critical', label: '1. Do Now (Important & Urgent)' },
-          { key: 'strategic', label: '2. Deep Work (Important · Not Urgent)' },
-          { key: 'interruptive', label: '3. Reactive (Urgent · Not Important)' },
-          { key: 'backlog', label: '4. Low (Neither)' }
-        ]" option-value="key" option-label="label" />
+        <!-- Priority parameters (2 checkbox system) -->
+        <div class="card p-4 space-y-3 bg-canvas/10 border border-line/50 rounded-2xl" data-testid="task-priority-checkboxes">
+          <div class="text-xs font-bold uppercase tracking-wider text-ink-2 select-none">Priority Parameters</div>
+          <div class="space-y-3.5 pt-3 border-t border-line/35">
+            <!-- Checkboxes side-by-side -->
+            <div class="flex items-center gap-6">
+              <VCheckbox v-model="important" label="Important" id="task-important" data-testid="task-important-checkbox" />
+              <VCheckbox v-model="urgent" label="Urgent" id="task-urgent" data-testid="task-urgent-checkbox" />
+            </div>
+            
+            <!-- Derived Priority Text -->
+            <div class="flex items-center gap-2 text-xs font-medium border-t border-line/20 pt-2.5">
+              <span class="text-ink-3 select-none">Derived priority:</span>
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize border select-none"
+                :class="[
+                  computedPriority.key === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : '',
+                  computedPriority.key === 'strategic' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' : '',
+                  computedPriority.key === 'interruptive' ? 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400' : '',
+                  computedPriority.key === 'backlog' ? 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400' : ''
+                ]">
+                <span class="w-1.5 h-1.5 rounded-full shrink-0"
+                  :class="[
+                    computedPriority.key === 'critical' ? 'bg-red-500' : '',
+                    computedPriority.key === 'strategic' ? 'bg-amber-500' : '',
+                    computedPriority.key === 'interruptive' ? 'bg-blue-500' : '',
+                    computedPriority.key === 'backlog' ? 'bg-slate-500' : ''
+                  ]"></span>
+                {{ computedPriority.label }}
+              </span>
+            </div>
+          </div>
+        </div>
 
         <!-- Scheduled & Due Dates -->
         <DateField v-model="scheduledDate" label="Scheduled Date" id="task-scheduled" dataTestid="task-scheduled-input" />
