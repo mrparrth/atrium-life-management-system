@@ -402,16 +402,20 @@ async function openDailyJournal() {
               data-testid="resurface-goal">
               <!-- Glowing Green Diamond in Top-Right -->
               <div class="absolute top-4 right-4 flex items-center justify-center">
-                <svg viewBox="0 0 8 14" class="w-2.5 h-4.5 animate-pulse"
-                  style="filter: drop-shadow(0 0 5px rgba(16,185,129,0.95)) drop-shadow(0 0 2px rgba(255,255,255,0.7));">
-                  <defs>
-                    <radialGradient id="diamond-glow" cx="50%" cy="50%" r="60%">
-                      <stop offset="0%" stop-color="#ffffff" />
-                      <stop offset="35%" stop-color="#d1fae5" />
-                      <stop offset="100%" stop-color="#10b981" />
-                    </radialGradient>
-                  </defs>
-                  <path d="M 4,0 L 8,7 L 4,14 L 0,7 Z" fill="url(#diamond-glow)" />
+                <svg viewBox="0 0 100 170" class="w-3.5 h-6 animate-pulse" style="filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.8));">
+                  <!-- Top facets -->
+                  <polygon points="50,5 10,85 37,85" fill="#bef264" /> <!-- Left Top -->
+                  <polygon points="50,5 37,85 63,85" fill="#a3e635" /> <!-- Center Top -->
+                  <polygon points="50,5 63,85 90,85" fill="#65a30d" /> <!-- Right Top -->
+                  
+                  <!-- Bottom facets -->
+                  <polygon points="50,165 10,85 37,85" fill="#84cc16" /> <!-- Left Bottom -->
+                  <polygon points="50,165 37,85 63,85" fill="#65a30d" /> <!-- Center Bottom -->
+                  <polygon points="50,165 63,85 90,85" fill="#3f6212" /> <!-- Right Bottom -->
+                  
+                  <!-- Glossy white sheen highlight overlays -->
+                  <polygon points="50,5 10,85 37,85" fill="#ffffff" opacity="0.35" />
+                  <polygon points="50,5 37,85 50,85" fill="#ffffff" opacity="0.2" />
                 </svg>
               </div>
               <div class="flex items-center gap-2 text-ink-3">
