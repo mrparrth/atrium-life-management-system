@@ -120,4 +120,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - FEATURE: Implemented a 15-day minimum snooze cooldown with a descending age priority sorter for next resurface selection.
 - UX: Styled the resurfaced Goal card in the sidebar to render the "Goal" text and lucide icon at the top, and a glowing, high-contrast `"remember what you are working towards"` subscript at the bottom.
 - UX: Enabled dashboard deep-linking (`/goals?goalId=XYZ` and `/goals?wishId=XYZ`) to automatically trigger edit modals when resurfaced items are clicked.
+- UX: Replaced the native browser confirm() popup for wish deletions on the Goals & Wishes page with the custom, promise-based confirm modal.
 - DOCS: Updated context.md and walkthrough.md to reflect the resurfacing memory overhaul.

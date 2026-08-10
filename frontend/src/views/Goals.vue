@@ -332,7 +332,7 @@ async function toggleWishPurchased(w) {
 }
 
 async function deleteWish(w) {
-  if (confirm(`Are you sure you want to delete "${w.title}"?`)) {
+  if (await ui.confirm({ message: `Delete wish "${w.title}"?`, title: 'Delete Wish' })) {
     await wishlist.remove(w.id)
     ui.showToast('Wish deleted', 'info')
   }
