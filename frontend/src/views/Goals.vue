@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useGoalsStore } from '@/stores/goals'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useYearsStore } from '@/stores/years'
@@ -17,12 +18,32 @@ import VRow from '@/components/VRow.vue'
 import VCol from '@/components/VCol.vue'
 import { Plus, X, Target, Trash2, Folder, CheckSquare, Check, Pencil, ExternalLink, Camera, Laptop, PiggyBank, FileText, Gift } from 'lucide-vue-next'
 
+const route = useRoute()
 const goals = useGoalsStore()
 const wishlist = useWishlistStore()
 const years = useYearsStore()
 const projects = useProjectsStore()
 const tasks = useTasksStore()
 const ui = useUIStore()
+
+onMounted(async () => {
+  await goals.load()
+  await wishlist.load()
+  const goalId = route.query.goalId
+  if (goalId) {
+    const found = goals.items.find(g => g.id === goalId)
+    if (found) {
+      openDetails(found)
+    }
+  }
+  const wishId = route.query.wishId
+  if (wishId) {
+    const found = wishlist.items.find(w => w.id === wishId)
+    if (found) {
+      openEditWish(found)
+    }
+  }
+})
 
 const showNew = ref(false)
 const selectedGoal = ref(null)
@@ -78,6 +99,7 @@ function openDetails(g) {
   editAchievedNumber.value = g.achievedNumber || 0
   editImageUrl.value = g.imageUrl || ''
   newTaskTitle.value = ''
+  goals.markViewed(g.id)
 }
 
 function toggleEditYear(yid) {
@@ -282,6 +304,7 @@ function openEditWish(w) {
   editWishGoal.value = w.goalValue || 0
   editWishCurrent.value = w.currentValue || 0
   editWishPurchased.value = w.purchased || false
+  wishlist.markViewed(w.id)
 }
 
 async function saveWish() {
@@ -425,26 +448,30 @@ function getWishFallbackIcon(w) {
 
           <!-- Inner Card Content Area -->
           <div class="relative bg-surface rounded-[14px] p-5 flex flex-col gap-2 h-full z-1">
-            <div class="flex items-start gap-3 min-w-0">
-              <!-- Left decorative thumbnail or icon -->
-              <img v-if="g.imageUrl" :src="g.imageUrl" class="w-10 h-10 rounded-xl object-cover border border-line bg-canvas shrink-0" @error="g.imageUrl = ''" />
-              <div v-else
-                class="w-10 h-10 rounded-xl bg-canvas border border-line flex flex-col items-center justify-center text-ink-2 shrink-0 relative overflow-hidden">
-                <component :is="getGoalIcon(g)" class="w-5 h-5 stroke-[1.5]" />
-                <span v-if="g.useNumeric && g.targetNumber"
-                  class="text-[8px] font-mono font-bold mt-0.5 bg-ink/5 px-1 py-0.25 rounded border border-line/10">
-                  {{ g.targetNumber }}+
+            <div class="flex items-center gap-4 min-w-0">
+              <!-- Left decorative thumbnail or icon wrapper -->
+              <div class="relative shrink-0">
+                <img v-if="g.imageUrl" :src="g.imageUrl" class="w-24 h-24 rounded-2xl object-cover border border-line bg-canvas" @error="g.imageUrl = ''" />
+                <div v-else
+                  class="w-24 h-24 rounded-2xl bg-canvas border border-line flex flex-col items-center justify-center text-ink-2 relative overflow-hidden">
+                  <component :is="getGoalIcon(g)" class="w-8 h-8 stroke-[1.25]" />
+                  <span v-if="g.useNumeric && g.targetNumber"
+                    class="absolute bottom-1.5 text-[9px] font-mono font-bold bg-ink/5 px-1.5 py-0.5 rounded border border-line/10">
+                    {{ g.targetNumber }}+
+                  </span>
+                </div>
+                <!-- Year Overlay Badge -->
+                <span class="absolute -top-1.5 -left-1.5 px-1.5 py-0.5 text-[8px] font-mono font-bold bg-ink text-surface rounded-md border border-line/10 shadow-sm select-none z-10">
+                  {{ yearsOf(g).map(y => y.year).join(', ') || '2026' }}
                 </span>
               </div>
 
               <!-- Middle details -->
               <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-1.5 text-[10px] text-ink-3 font-semibold font-mono">
-                  <span>@</span>
-                  <span>{{yearsOf(g).map(y => y.year).join(', ') || '2026'}}</span>
-                </div>
-                <h4 class="font-serif text-base font-bold text-ink mt-1.5 leading-snug break-words">{{ g.title }}</h4>
-                <p v-if="g.description" class="text-xs text-ink-2 mt-1 line-clamp-2 leading-relaxed">
+                <h4 class="font-serif text-base font-bold text-ink leading-snug break-words">
+                  {{ g.title }}
+                </h4>
+                <p v-if="g.description" class="text-xs text-ink-2 mt-2 line-clamp-2 leading-relaxed">
                   {{ g.description }}
                 </p>
               </div>

@@ -18,7 +18,8 @@ export const useGoalsStore = defineStore('goals', () => {
       achievedNumber: Number(payload.achievedNumber) || 0,
       status: 'active',
       createdAt: now(),
-      updatedAt: now()
+      updatedAt: now(),
+      lastViewedAt: now()
     }
     await db.goals.add(g); items.value.unshift(g); return g
   }
@@ -27,6 +28,10 @@ export const useGoalsStore = defineStore('goals', () => {
     Object.assign(g, patch, { updatedAt: now() })
     await db.goals.put(plain(g))
   }
+  async function markViewed(id) {
+    const g = items.value.find(x => x.id === id); if (!g) return
+    g.lastViewedAt = now(); await db.goals.put(plain(g))
+  }
   async function remove(id) { await db.goals.delete(id); items.value = items.value.filter(g => g.id !== id) }
-  return { items, load, add, update, remove }
+  return { items, load, add, update, markViewed, remove }
 })

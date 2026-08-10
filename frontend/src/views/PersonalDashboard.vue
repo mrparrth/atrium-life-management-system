@@ -6,6 +6,8 @@ import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useNotesStore } from '@/stores/notes'
 import { useBookmarksStore } from '@/stores/bookmarks'
+import { useGoalsStore } from '@/stores/goals'
+import { useWishlistStore } from '@/stores/wishlist'
 import { useFinanceStore } from '@/stores/finance'
 import { useReviewsStore } from '@/stores/reviews'
 import { useYearsStore } from '@/stores/years'
@@ -20,13 +22,15 @@ import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { ArrowRight, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass, PanelRightClose, PanelRightOpen } from 'lucide-vue-next'
+import { ArrowRight, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass, PanelRightClose, PanelRightOpen, Target } from 'lucide-vue-next'
 
 const router = useRouter()
 const tasks = useTasksStore()
 const projects = useProjectsStore()
 const notes = useNotesStore()
 const bookmarks = useBookmarksStore()
+const goals = useGoalsStore()
+const wishlist = useWishlistStore()
 const finance = useFinanceStore()
 const reviews = useReviewsStore()
 const years = useYearsStore()
@@ -56,6 +60,8 @@ const currentDate = ref(dayjs())
 let timer = null
 
 onMounted(async () => {
+  await goals.load()
+  await wishlist.load()
   await follows.load()
   window.addEventListener('keydown', handleKeydown, { capture: true })
   // Check for updates every 60 seconds to automatically transition dates and rotate creator inspiration
@@ -202,13 +208,29 @@ const stale = computed(() => {
 
 const memory = computed(() => {
   currentDate.value
-  return memoryResurfacing(notes.items, bookmarks.items)
+  return memoryResurfacing(notes.items, bookmarks.items, goals.items, wishlist.items, currentDate.value)
 })
 
 const clickedMemoryItems = ref(new Set())
 function markClicked(id) {
   clickedMemoryItems.value.add(id)
   clickedMemoryItems.value = new Set(clickedMemoryItems.value)
+}
+
+async function handleGoalOrWishClick(item) {
+  markClicked(item.id)
+  if (item.type === 'goal') {
+    await goals.markViewed(item.id)
+    router.push(`/goals?goalId=${item.id}`)
+  } else {
+    await wishlist.markViewed(item.id)
+    router.push(`/goals?wishId=${item.id}`)
+  }
+}
+
+async function handleBookmarkClick(item) {
+  markClicked(item.id)
+  await bookmarks.markViewed(item.id)
 }
 
 const lastWeeklyReview = computed(() => reviews.items.find(r => r.type === 'weekly'))
@@ -372,40 +394,62 @@ async function openDailyJournal() {
                 rf.reason }}</p>
             </a>
 
-            <!-- Notes (up to 3) -->
-            <RouterLink v-for="n in memory.notes.slice(0, 3)" :key="n.id" :to="`/notes/${n.id}`"
-              @click="markClicked(n.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
-              :class="clickedMemoryItems.has(n.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
-              :data-testid="`resurface-note-${n.id}`">
-              <div class="flex items-center gap-2">
-                <NotebookPen class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Note · {{ fromNow(n.lastViewedAt)
-                }}</span>
-              </div>
-              <div class="font-serif text-lg mt-1.5 leading-snug">{{ n.title }}</div>
-              <p class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ n.body }}</p>
-            </RouterLink>
-
-            <!-- Bookmarks (up to 3) -->
-            <a v-for="b in memory.bookmarks.slice(0, 3)" :key="b.id" :href="b.url" target="_blank"
-              @click="markClicked(b.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
-              :class="clickedMemoryItems.has(b.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
-              :data-testid="`resurface-bookmark-${b.id}`">
+            <!-- Goal / Goal-Linked Wish Resurfacing -->
+            <div v-if="memory.goalOrWish" @click="handleGoalOrWishClick(memory.goalOrWish)"
+              class="card p-4 block hover:border-line-2 transition-all duration-300 cursor-pointer relative"
+              :class="clickedMemoryItems.has(memory.goalOrWish.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+              data-testid="resurface-goal-wish">
               <div class="flex items-center justify-between gap-2 flex-wrap">
-                <div class="flex items-center gap-2">
-                  <Bookmark class="w-3.5 h-3.5 text-ink-3" /><span class="overline">Bookmark · {{
-                    fromNow(b.lastViewedAt)
-                    }}</span>
+                <div class="flex items-center gap-2 text-ink-2">
+                  <Target class="w-3.5 h-3.5" />
+                  <span class="overline font-semibold select-none">remember what you are working towards</span>
                 </div>
-                <span v-if="b.category"
-                  class="text-[9px] uppercase tracking-wider text-ink-3 font-semibold bg-canvas border border-line px-1.5 py-0.5 rounded-full capitalize">
-                  {{ b.category }}
+                <span class="text-[9px] uppercase tracking-wider font-semibold border px-1.5 py-0.5 rounded-full capitalize text-ink-3 bg-canvas border-line/30">
+                  {{ memory.goalOrWish.type }}
                 </span>
               </div>
-              <div class="font-serif text-lg mt-1.5 leading-snug">{{ b.title }}</div>
-              <p class="text-sm text-ink-2 mt-1 truncate">{{ b.url }}</p>
-            </a>
+              <div class="font-serif text-lg mt-1.5 leading-snug">{{ memory.goalOrWish.title }}</div>
+              <p v-if="memory.goalOrWish.description" class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">
+                {{ memory.goalOrWish.description }}
+              </p>
+            </div>
 
-            <EmptyState v-if="!memory.notes.length && !memory.bookmarks.length && !resurfacedFollows.length"
+            <!-- Notes & Bookmarks Resurfacing (exactly 2 in a day) -->
+            <template v-for="item in memory.items" :key="item.id">
+              <!-- Note Item -->
+              <RouterLink v-if="item.type === 'note'" :to="`/notes/${item.id}`"
+                @click="markClicked(item.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
+                :class="clickedMemoryItems.has(item.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+                :data-testid="`resurface-note-${item.id}`">
+                <div class="flex items-center gap-2">
+                  <NotebookPen class="w-3.5 h-3.5 text-ink-3" />
+                  <span class="overline">Note · {{ fromNow(item.lastViewedAt) }}</span>
+                </div>
+                <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
+                <p class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ item.body }}</p>
+              </RouterLink>
+
+              <!-- Bookmark Item -->
+              <a v-else :href="item.url" target="_blank"
+                @click="handleBookmarkClick(item)" class="card p-4 block hover:border-line-2 transition-all duration-300"
+                :class="clickedMemoryItems.has(item.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+                :data-testid="`resurface-bookmark-${item.id}`">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <div class="flex items-center gap-2">
+                    <Bookmark class="w-3.5 h-3.5 text-ink-3" />
+                    <span class="overline">Bookmark · {{ fromNow(item.lastViewedAt) }}</span>
+                  </div>
+                  <span v-if="item.category"
+                    class="text-[9px] uppercase tracking-wider text-ink-3 font-semibold bg-canvas border border-line px-1.5 py-0.5 rounded-full capitalize">
+                    {{ item.category }}
+                  </span>
+                </div>
+                <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
+                <p class="text-sm text-ink-2 mt-1 truncate">{{ item.url }}</p>
+              </a>
+            </template>
+
+            <EmptyState v-if="!memory.goalOrWish && !memory.items.length && !resurfacedFollows.length"
               title="Memory is fresh" hint="Nothing to resurface yet." />
           </div>
         </section>

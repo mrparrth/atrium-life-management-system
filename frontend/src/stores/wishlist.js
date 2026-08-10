@@ -22,7 +22,8 @@ export const useWishlistStore = defineStore('wishlist', () => {
       currentValue: Number(payload.currentValue) || 0,
       status: payload.status || 'active',
       createdAt: now(),
-      updatedAt: now()
+      updatedAt: now(),
+      lastViewedAt: now()
     }
     await db.wishlist.add(item)
     items.value.unshift(item)
@@ -36,10 +37,15 @@ export const useWishlistStore = defineStore('wishlist', () => {
     await db.wishlist.put(plain(item))
   }
 
+  async function markViewed(id) {
+    const item = items.value.find(x => x.id === id); if (!item) return
+    item.lastViewedAt = now(); await db.wishlist.put(plain(item))
+  }
+
   async function remove(id) {
     await db.wishlist.delete(id)
     items.value = items.value.filter(x => x.id !== id)
   }
 
-  return { items, load, add, update, remove }
+  return { items, load, add, update, markViewed, remove }
 })

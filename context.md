@@ -106,3 +106,17 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Removed card checkboxes, task/project counts, text summaries, and headers' Goal/Wish pills to enforce a premium, monochromatic look.
 - UX: Widened wishlist modals to `max-w-lg` and resolved the goal edit modal dismiss bug after clicking save changes.
 - DOCS: Synchronized context.md and walkthrough.md to document the goals/wishlist overhaul.
+
+### 8. Resurfacing Memory Sidebar Overhaul
+- **Unified Selection Pool**: Combined notes and bookmarks into a unified candidate pool. Selected exactly 2 notes/bookmarks per day.
+- **Goals & Wishes Resurfacing**: Dynamically selects exactly 1 Goal or Goal-linked Wish per day under the overline `remember what you are working towards`.
+- **Viewed State & Cooldown Tracking**: Implemented `lastViewedAt` fields and `markViewed` function in Goals and Wishlist pinia stores. Opening a modal or clicking a resurfaced bookmark updates this database field.
+- **Seeded Daily Randomness**: Used mulberry32 daily seeded generator to keep selection stable across refresh cycles within a given day.
+- **15-Day Snooze-Shield Cooldown**: Enforces a strict cooldown. Items viewed < 15 days ago are prioritized at `0.0001` (lowest priority). Candidates are sorted descending by days since last viewed.
+
+### August 10, 2026
+- FEATURE: Overhauled memoryResurfacing helper to select exactly 1 Goal/Wish and exactly 2 Note/Bookmarks daily using a seeded Mulberry32 random algorithm.
+- FEATURE: Added `lastViewedAt` attributes and `markViewed` Dexie database handlers in Goals and Wishlist stores.
+- FEATURE: Implemented a 15-day minimum snooze cooldown with a descending age priority sorter for next resurface selection.
+- UX: Enabled dashboard deep-linking (`/goals?goalId=XYZ` and `/goals?wishId=XYZ`) to automatically trigger edit modals when resurfaced items are clicked.
+- DOCS: Updated context.md and walkthrough.md to reflect the resurfacing memory overhaul.

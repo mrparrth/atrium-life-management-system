@@ -123,10 +123,72 @@ export function staleProjects(projects, tasks) {
     .map((p) => ({ ...p, openTaskCount: tasks.filter((t) => t.projectId === p.id && isTaskOpen(t)).length }));
 }
 
-export function memoryResurfacing(notes, bookmarks) {
-  const staleNotes = notes.filter((n) => daysSince(n.lastViewedAt) >= RESURFACE.noteResurfaceDays);
-  const staleBookmarks = bookmarks.filter((b) => daysSince(b.lastViewedAt) >= RESURFACE.bookmarkResurfaceDays);
-  return { notes: staleNotes, bookmarks: staleBookmarks };
+export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate) {
+  const currentDateStr = currentDate ? currentDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0];
+
+  function hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash;
+  }
+
+  function mulberry32(a) {
+    return function () {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+  }
+
+  const seed = hashString(currentDateStr);
+  const randGen = mulberry32(seed);
+
+  function selectFromPool(pool, count) {
+    if (!pool || pool.length === 0) return [];
+    
+    const poolWithPriority = pool.map(item => {
+      const D = daysSince(item.lastViewedAt);
+      const priority = D >= 15 ? D : D * 0.0001;
+      return { item, D, priority };
+    });
+
+    poolWithPriority.sort((a, b) => b.priority - a.priority);
+
+    const candidates = poolWithPriority.slice(0, 8);
+    const chosen = [];
+    const tempCandidates = [...candidates];
+
+    while (chosen.length < count && tempCandidates.length > 0) {
+      const idx = Math.floor(randGen() * tempCandidates.length);
+      chosen.push(tempCandidates.splice(idx, 1)[0].item);
+    }
+    return chosen;
+  }
+
+  // 1. Goal / Goal-Linked Wish List Resurfacing
+  const activeGoals = (goals || []).filter(g => g.status !== 'completed' && g.status !== 'archived');
+  const activeLinkedWishes = (wishlist || []).filter(w => w.status === 'active' && w.goalId);
+  const goalWishPool = [
+    ...activeGoals.map(g => ({ ...g, type: 'goal' })),
+    ...activeLinkedWishes.map(w => ({ ...w, type: 'wish' }))
+  ];
+
+  const goalOrWishList = selectFromPool(goalWishPool, 1);
+  const goalOrWish = goalOrWishList.length > 0 ? goalOrWishList[0] : null;
+
+  // 2. Note / Bookmark Resurfacing (exactly 2 note/bookmarks in a day)
+  const notesAndBookmarksPool = [
+    ...(notes || []).map(n => ({ ...n, type: 'note' })),
+    ...(bookmarks || []).map(b => ({ ...b, type: 'bookmark' }))
+  ];
+
+  const items = selectFromPool(notesAndBookmarksPool, 2);
+
+  return { goalOrWish, items };
 }
 
 export function criticalCount(tasks) {
