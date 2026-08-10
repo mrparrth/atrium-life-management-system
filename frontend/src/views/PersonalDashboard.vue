@@ -268,7 +268,8 @@ async function openDailyJournal() {
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="dashboard">
     <PageHeader :overline="todayDate" :title="`${greeting}.`" :sub="'Clear today. Start tomorrow lighter.'">
       <template #right>
-        <button class="btn-ghost" @click="openDailyJournal" title="Open or create today's daily journal entry" data-testid="dash-journal-btn">
+        <button class="btn-ghost" @click="openDailyJournal" title="Open or create today's daily journal entry"
+          data-testid="dash-journal-btn">
           <BookOpen class="w-4 h-4" /> Today's Journal <span class="kbd ml-1.5 select-none">⌘2</span>
         </button>
 
@@ -320,7 +321,7 @@ async function openDailyJournal() {
               <p v-if="p.description" class="text-sm text-ink-2 line-clamp-2">{{ p.description }}</p>
               <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(getProjectLastTouched(p)) }} · {{
                 p.openTaskCount
-              }}
+                }}
                 open
                 task<template v-if="p.openTaskCount !== 1">s</template></div>
             </RouterLink>
@@ -337,7 +338,7 @@ async function openDailyJournal() {
               <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
               <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
                 fromNow(lastWeeklyReview.createdAt)
-              }}</p>
+                }}</p>
             </div>
             <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
           </div>
@@ -401,8 +402,17 @@ async function openDailyJournal() {
               data-testid="resurface-goal">
               <!-- Glowing Green Diamond in Top-Right -->
               <div class="absolute top-4 right-4 flex items-center justify-center">
-                <div class="w-2 h-2 bg-emerald-500 rotate-45 animate-pulse"
-                  style="box-shadow: 0 0 8px #10b981, 0 0 16px #10b981;"></div>
+                <svg viewBox="0 0 8 14" class="w-2.5 h-4.5 animate-pulse"
+                  style="filter: drop-shadow(0 0 5px rgba(16,185,129,0.95)) drop-shadow(0 0 2px rgba(255,255,255,0.7));">
+                  <defs>
+                    <radialGradient id="diamond-glow" cx="50%" cy="50%" r="60%">
+                      <stop offset="0%" stop-color="#ffffff" />
+                      <stop offset="35%" stop-color="#d1fae5" />
+                      <stop offset="100%" stop-color="#10b981" />
+                    </radialGradient>
+                  </defs>
+                  <path d="M 4,0 L 8,7 L 4,14 L 0,7 Z" fill="url(#diamond-glow)" />
+                </svg>
               </div>
               <div class="flex items-center gap-2 text-ink-3">
                 <Target class="w-3.5 h-3.5" />
@@ -411,7 +421,7 @@ async function openDailyJournal() {
               <div class="font-serif text-lg mt-1.5 leading-snug">{{ memory.goal.title }}</div>
               <div class="text-[11px] text-ink-2 mt-2 select-none"
                 style="text-shadow: 0 0 8px rgba(var(--ink), 0.35); font-weight: 500;">
-                remember what you are working towards
+                Remember what you are working towards
               </div>
             </div>
 
@@ -433,8 +443,8 @@ async function openDailyJournal() {
             <!-- Notes & Bookmarks Resurfacing (exactly 2 in a day) -->
             <template v-for="item in memory.items" :key="item.id">
               <!-- Note Item -->
-              <RouterLink v-if="item.type === 'note'" :to="`/notes/${item.id}`"
-                @click="markClicked(item.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
+              <RouterLink v-if="item.type === 'note'" :to="`/notes/${item.id}`" @click="markClicked(item.id)"
+                class="card p-4 block hover:border-line-2 transition-all duration-300"
                 :class="clickedMemoryItems.has(item.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
                 :data-testid="`resurface-note-${item.id}`">
                 <div class="flex items-center gap-2">
@@ -446,8 +456,8 @@ async function openDailyJournal() {
               </RouterLink>
 
               <!-- Bookmark Item -->
-              <a v-else :href="item.url" target="_blank"
-                @click="handleBookmarkClick(item)" class="card p-4 block hover:border-line-2 transition-all duration-300"
+              <a v-else :href="item.url" target="_blank" @click="handleBookmarkClick(item)"
+                class="card p-4 block hover:border-line-2 transition-all duration-300"
                 :class="clickedMemoryItems.has(item.id) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
                 :data-testid="`resurface-bookmark-${item.id}`">
                 <div class="flex items-center justify-between gap-2 flex-wrap">
