@@ -124,5 +124,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Enabled dashboard deep-linking (`/goals?goalId=XYZ` and `/goals?wishId=XYZ`) to automatically trigger edit modals when resurfaced items are clicked.
 - UX: Replaced the native browser confirm() popup for wish deletions on the Goals & Wishes page with the custom, promise-based confirm modal.
 - FEATURE: Changed task creation defaults inside the TaskComposer and tasks store so that new tasks default to Priority 2 (important = true, urgent = false, strategic).
-- UX: Replaced the task composer priority dropdown with two checkboxes (Important and Urgent) shown side-by-side, plus a dynamic "Derived priority" status badge directly below.
+- UX: Replaced the task composer priority dropdown with two checkboxes (Important and Urgent) shown side-by-side, plus a direct computed priority chip positioned immediately below under a clean "Priority" card label.
 - DOCS: Updated context.md and walkthrough.md to reflect the resurfacing memory overhaul and task priority default additions.

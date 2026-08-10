@@ -193,7 +193,7 @@ async function toggleCompleteAndSave() {
 
         <!-- Priority parameters (2 checkbox system) -->
         <div class="card p-4 space-y-3 bg-canvas/10 border border-line/50 rounded-2xl" data-testid="task-priority-checkboxes">
-          <div class="text-xs font-bold uppercase tracking-wider text-ink-2 select-none">Priority Parameters</div>
+          <div class="text-xs font-bold uppercase tracking-wider text-ink-2 select-none">Priority</div>
           <div class="space-y-3.5 pt-3 border-t border-line/35">
             <!-- Checkboxes side-by-side -->
             <div class="flex items-center gap-6">
@@ -201,9 +201,8 @@ async function toggleCompleteAndSave() {
               <VCheckbox v-model="urgent" label="Urgent" id="task-urgent" data-testid="task-urgent-checkbox" />
             </div>
             
-            <!-- Derived Priority Text -->
-            <div class="flex items-center gap-2 text-xs font-medium border-t border-line/20 pt-2.5">
-              <span class="text-ink-3 select-none">Derived priority:</span>
+            <!-- Derived Priority Chip -->
+            <div class="border-t border-line/20 pt-2.5 flex justify-start">
               <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize border select-none"
                 :class="[
                   computedPriority.key === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : '',
