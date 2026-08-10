@@ -25,7 +25,7 @@ const description = ref(props.initialTask?.description || '')
 const projectId = ref(props.initialTask?.projectId || props.defaultProjectId)
 const scheduledDate = ref(props.initialTask?.scheduledDate || '')
 const dueDate = ref(props.initialTask?.dueDate || dayjs().format('YYYY-MM-DD'))
-const important = ref(props.initialTask?.important || false)
+const important = ref(props.initialTask ? props.initialTask.important : true)
 const urgent = ref(props.initialTask?.urgent || false)
 const completedAt = ref(props.initialTask?.completedAt || '')
 const isDone = ref(props.initialTask?.status === 'done')
@@ -51,7 +51,7 @@ function removeSubtask(id) {
   subtasks.value = subtasks.value.filter(s => s.id !== id)
 }
 
-const priorityKey = ref('backlog')
+const priorityKey = ref('strategic')
 if (props.initialTask) {
   priorityKey.value = derivePriority(props.initialTask.important, props.initialTask.urgent).key
 }

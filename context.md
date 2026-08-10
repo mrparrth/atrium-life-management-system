@@ -123,4 +123,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Added a tall-and-thin 3D faceted green Plumbob bipyramid SVG diamond indicator with specular highlight overlays, positioned absolutely at the top-right of the daily resurfaced Goal card.
 - UX: Enabled dashboard deep-linking (`/goals?goalId=XYZ` and `/goals?wishId=XYZ`) to automatically trigger edit modals when resurfaced items are clicked.
 - UX: Replaced the native browser confirm() popup for wish deletions on the Goals & Wishes page with the custom, promise-based confirm modal.
-- DOCS: Updated context.md and walkthrough.md to reflect the resurfacing memory overhaul.
+- FEATURE: Changed task creation defaults inside the TaskComposer and tasks store so that new tasks default to Priority 2 (important = true, urgent = false, strategic).
+- DOCS: Updated context.md and walkthrough.md to reflect the resurfacing memory overhaul and task priority default additions.

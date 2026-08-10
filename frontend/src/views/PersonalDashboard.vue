@@ -352,7 +352,7 @@ async function openDailyJournal() {
               <p v-if="p.description" class="text-sm text-ink-2 line-clamp-2">{{ p.description }}</p>
               <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(getProjectLastTouched(p)) }} · {{
                 p.openTaskCount
-                }}
+              }}
                 open
                 task<template v-if="p.openTaskCount !== 1">s</template></div>
             </RouterLink>
@@ -369,7 +369,7 @@ async function openDailyJournal() {
               <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
               <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
                 fromNow(lastWeeklyReview.createdAt)
-                }}</p>
+              }}</p>
             </div>
             <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
           </div>
@@ -435,17 +435,18 @@ async function openDailyJournal() {
                 data-testid="resurface-goal">
                 <!-- Glowing Green Diamond in Top-Right -->
                 <div class="absolute top-4 right-4 flex items-center justify-center">
-                  <svg viewBox="0 0 100 170" class="w-3.5 h-6 animate-pulse" :style="isItemClicked(item) ? 'opacity: 0.35; filter: grayscale(1);' : 'filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.8));'">
+                  <svg viewBox="0 0 100 170" class="w-3.5 h-6 animate-pulse"
+                    :style="isItemClicked(item) ? 'opacity: 0.35; filter: grayscale(1);' : 'filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.8));'">
                     <!-- Top facets -->
                     <polygon points="50,5 10,85 37,85" fill="#bef264" /> <!-- Left Top -->
                     <polygon points="50,5 37,85 63,85" fill="#a3e635" /> <!-- Center Top -->
                     <polygon points="50,5 63,85 90,85" fill="#65a30d" /> <!-- Right Top -->
-                    
+
                     <!-- Bottom facets -->
                     <polygon points="50,165 10,85 37,85" fill="#84cc16" /> <!-- Left Bottom -->
                     <polygon points="50,165 37,85 63,85" fill="#65a30d" /> <!-- Center Bottom -->
                     <polygon points="50,165 63,85 90,85" fill="#3f6212" /> <!-- Right Bottom -->
-                    
+
                     <!-- Glossy white sheen highlight overlays -->
                     <polygon points="50,5 10,85 37,85" fill="#ffffff" opacity="0.35" />
                     <polygon points="50,5 37,85 50,85" fill="#ffffff" opacity="0.2" />
@@ -458,7 +459,7 @@ async function openDailyJournal() {
                 <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
                 <div class="text-[11px] text-ink-2 mt-2 select-none"
                   style="text-shadow: 0 0 8px rgba(var(--ink), 0.35); font-weight: 500;">
-                  remember what you are working towards
+                  Remember what you are working towards
                 </div>
               </div>
 
@@ -478,8 +479,8 @@ async function openDailyJournal() {
               </div>
 
               <!-- Note Item -->
-              <RouterLink v-else-if="item.contentType === 'note'" :to="`/notes/${item.id}`" @click="markClicked(item.id)"
-                class="card p-4 block hover:border-line-2 transition-all duration-300"
+              <RouterLink v-else-if="item.contentType === 'note'" :to="`/notes/${item.id}`"
+                @click="markClicked(item.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
                 :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
                 :data-testid="`resurface-note-${item.id}`">
                 <div class="flex items-center gap-2">
@@ -491,7 +492,8 @@ async function openDailyJournal() {
               </RouterLink>
 
               <!-- Bookmark Item -->
-              <a v-else-if="item.contentType === 'bookmark'" :href="item.url" target="_blank" @click="handleBookmarkClick(item)"
+              <a v-else-if="item.contentType === 'bookmark'" :href="item.url" target="_blank"
+                @click="handleBookmarkClick(item)"
                 class="card p-4 block hover:border-line-2 transition-all duration-300"
                 :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
                 :data-testid="`resurface-bookmark-${item.id}`">
