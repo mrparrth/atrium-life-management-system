@@ -193,32 +193,31 @@ async function toggleCompleteAndSave() {
 
         <!-- Priority parameters (2 checkbox system) -->
         <div class="card p-4 space-y-3 bg-canvas/10 border border-line/50 rounded-2xl" data-testid="task-priority-checkboxes">
-          <div class="text-xs font-bold uppercase tracking-wider text-ink-2 select-none">Priority</div>
-          <div class="space-y-3.5 pt-3 border-t border-line/35">
+          <div class="flex items-center justify-between">
+            <div class="text-xs font-bold uppercase tracking-wider text-ink-2 select-none">Priority</div>
+            <!-- Derived Priority Chip in Header -->
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize border select-none"
+              :class="[
+                computedPriority.key === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : '',
+                computedPriority.key === 'strategic' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' : '',
+                computedPriority.key === 'interruptive' ? 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400' : '',
+                computedPriority.key === 'backlog' ? 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400' : ''
+              ]">
+              <span class="w-1.5 h-1.5 rounded-full shrink-0"
+                :class="[
+                  computedPriority.key === 'critical' ? 'bg-red-500' : '',
+                  computedPriority.key === 'strategic' ? 'bg-amber-500' : '',
+                  computedPriority.key === 'interruptive' ? 'bg-blue-500' : '',
+                  computedPriority.key === 'backlog' ? 'bg-slate-500' : ''
+                ]"></span>
+              {{ computedPriority.label }}
+            </span>
+          </div>
+          <div class="space-y-3 pt-3 border-t border-line/35">
             <!-- Checkboxes side-by-side -->
             <div class="flex items-center gap-6">
               <VCheckbox v-model="important" label="Important" id="task-important" data-testid="task-important-checkbox" />
               <VCheckbox v-model="urgent" label="Urgent" id="task-urgent" data-testid="task-urgent-checkbox" />
-            </div>
-            
-            <!-- Derived Priority Chip -->
-            <div class="border-t border-line/20 pt-2.5 flex justify-start">
-              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize border select-none"
-                :class="[
-                  computedPriority.key === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : '',
-                  computedPriority.key === 'strategic' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' : '',
-                  computedPriority.key === 'interruptive' ? 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400' : '',
-                  computedPriority.key === 'backlog' ? 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400' : ''
-                ]">
-                <span class="w-1.5 h-1.5 rounded-full shrink-0"
-                  :class="[
-                    computedPriority.key === 'critical' ? 'bg-red-500' : '',
-                    computedPriority.key === 'strategic' ? 'bg-amber-500' : '',
-                    computedPriority.key === 'interruptive' ? 'bg-blue-500' : '',
-                    computedPriority.key === 'backlog' ? 'bg-slate-500' : ''
-                  ]"></span>
-                {{ computedPriority.label }}
-              </span>
             </div>
           </div>
         </div>
