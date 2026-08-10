@@ -151,7 +151,10 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
     if (!pool || pool.length === 0) return [];
     
     const poolWithPriority = pool.map(item => {
-      const D = daysSince(item.lastViewedAt);
+      let D = daysSince(item.lastViewedAt);
+      if (item.lastViewedAt && isToday(item.lastViewedAt)) {
+        D = Infinity;
+      }
       const priority = D >= 15 ? D : D * 0.0001;
       return { item, D, priority };
     });

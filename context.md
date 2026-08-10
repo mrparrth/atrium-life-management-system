@@ -115,9 +115,10 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - **15-Day Snooze-Shield Cooldown**: Enforces a strict cooldown. Items viewed < 15 days ago are prioritized at `0.0001` (lowest priority). Candidates are sorted descending by days since last viewed.
 
 ### August 10, 2026
-- FEATURE: Overhauled memoryResurfacing helper to select up to one Goal and one Wishlist card independently each day, alongside exactly 2 Note/Bookmarks.
+- FEATURE: Overhauled memoryResurfacing helper to select up to one Goal and one Wishlist card independently each day, alongside exactly 2 Note/Bookmarks, ensuring selections remain fixed/stable all day even if items are clicked.
 - FEATURE: Added `lastViewedAt` attributes and `markViewed` Dexie database handlers in Goals and Wishlist stores.
 - FEATURE: Implemented a 15-day minimum snooze cooldown with a descending age priority sorter for next resurface selection.
+- UX: Unified daily memory items in the sidebar into a sorted list (`resurfacedMemoryList`) so clicked items immediately gray out and shift to the bottom instead of disappearing.
 - UX: Styled the resurfaced Goal card in the sidebar to render the "Goal" text and lucide icon at the top, and a glowing, high-contrast lowercase `"remember what you are working towards"` subscript at the bottom.
 - UX: Added a tall-and-thin 3D faceted green Plumbob bipyramid SVG diamond indicator with specular highlight overlays, positioned absolutely at the top-right of the daily resurfaced Goal card.
 - UX: Enabled dashboard deep-linking (`/goals?goalId=XYZ` and `/goals?wishId=XYZ`) to automatically trigger edit modals when resurfaced items are clicked.
