@@ -213,13 +213,26 @@ const memory = computed(() => {
 })
 
 const clickedMemoryItems = ref(new Set())
+const sortedMemoryItems = ref(new Set())
+
 function markClicked(id) {
   clickedMemoryItems.value.add(id)
   clickedMemoryItems.value = new Set(clickedMemoryItems.value)
+  
+  setTimeout(() => {
+    sortedMemoryItems.value.add(id)
+    sortedMemoryItems.value = new Set(sortedMemoryItems.value)
+  }, 4000)
 }
 
 function isItemClicked(item) {
   if (clickedMemoryItems.value.has(item.id)) return true
+  if (item.lastViewedAt && isToday(item.lastViewedAt)) return true
+  return false
+}
+
+function isItemSorted(item) {
+  if (sortedMemoryItems.value.has(item.id)) return true
   if (item.lastViewedAt && isToday(item.lastViewedAt)) return true
   return false
 }
@@ -238,11 +251,11 @@ const resurfacedMemoryList = computed(() => {
     })
   }
 
-  // Sort: unclicked first, clicked last
+  // Sort: unsorted first, sorted last
   list.sort((a, b) => {
-    const aClicked = isItemClicked(a) ? 1 : 0
-    const bClicked = isItemClicked(b) ? 1 : 0
-    return aClicked - bClicked
+    const aSorted = isItemSorted(a) ? 1 : 0
+    const bSorted = isItemSorted(b) ? 1 : 0
+    return aSorted - bSorted
   })
 
   return list

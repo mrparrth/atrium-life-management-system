@@ -128,7 +128,7 @@ async function toggleCompleteAndSave() {
             <label class="text-xs font-bold uppercase tracking-wider text-ink-2 select-none flex items-center gap-2">
               <span>Subtasks Checklist</span>
               <span v-if="enableSubtasks && subtasks.length > 0" class="font-mono text-[10px] text-ink-3">
-                ({{ subtasks.filter(s => s.done).length }}/{{ subtasks.length }})
+                ({{subtasks.filter(s => s.done).length}}/{{ subtasks.length }})
               </span>
             </label>
             <VCheckbox v-model="enableSubtasks" label="Enable subtasks" id="task-enable-subtasks" />
@@ -137,38 +137,30 @@ async function toggleCompleteAndSave() {
           <div v-if="enableSubtasks" class="space-y-3 pt-3 border-t border-line/35">
             <!-- New Subtask Input -->
             <div class="flex gap-2">
-              <input 
-                v-model="newSubtaskTitle"
-                type="text" 
-                placeholder="Add subtask... (Press Enter)"
+              <input v-model="newSubtaskTitle" type="text" placeholder="Add subtask... (Press Enter)"
                 @keydown.enter.prevent="addSubtask"
-                class="flex-1 bg-surface border border-line rounded-xl px-3.5 py-2 text-xs text-ink outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 font-sans"
-              />
-              <button type="button" @click="addSubtask" class="btn-secondary !py-1.5 !px-3 text-xs flex items-center justify-center shrink-0">
+                class="flex-1 bg-surface border border-line rounded-xl px-3.5 py-2 text-xs text-ink outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 font-sans" />
+              <button type="button" @click="addSubtask"
+                class="btn-secondary !py-1.5 !px-3 text-xs flex items-center justify-center shrink-0">
                 <Plus class="w-3.5 h-3.5" />
               </button>
             </div>
 
             <!-- Subtask List -->
             <div v-if="subtasks.length > 0" class="space-y-2 max-h-48 overflow-y-auto pr-1">
-              <div v-for="sub in subtasks" :key="sub.id" 
+              <div v-for="sub in subtasks" :key="sub.id"
                 class="flex items-center justify-between gap-2.5 p-2 rounded-xl border border-line/45 bg-surface hover:bg-canvas/5 transition-colors">
-                
+
                 <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <input 
-                    type="checkbox" 
-                    v-model="sub.done" 
-                    class="rounded border-line text-pri-strategic focus:ring-pri-strategic cursor-pointer h-3.5 w-3.5"
-                  />
-                  <input 
-                    v-model="sub.title" 
-                    type="text" 
+                  <input type="checkbox" v-model="sub.done"
+                    class="rounded border-line text-pri-strategic focus:ring-pri-strategic cursor-pointer h-3.5 w-3.5" />
+                  <input v-model="sub.title" type="text"
                     class="bg-transparent border-0 border-b border-transparent focus:border-line focus:ring-0 p-0 text-xs text-ink font-medium w-full truncate focus:truncate-none outline-none"
-                    :class="{ 'line-through text-ink-3': sub.done }"
-                  />
+                    :class="{ 'line-through text-ink-3': sub.done }" />
                 </div>
 
-                <button type="button" @click="removeSubtask(sub.id)" class="text-ink-3 hover:text-pri-critical p-1 rounded transition-colors shrink-0">
+                <button type="button" @click="removeSubtask(sub.id)"
+                  class="text-ink-3 hover:text-pri-critical p-1 rounded transition-colors shrink-0">
                   <X class="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -192,39 +184,42 @@ async function toggleCompleteAndSave() {
           placeholder="---none---" />
 
         <!-- Priority parameters (2 checkbox system) -->
-        <div class="card p-4 space-y-3 bg-canvas/10 border border-line/50 rounded-2xl" data-testid="task-priority-checkboxes">
+        <div class="card p-3 space-y-2 bg-canvas/10 border border-line/50 rounded-2xl"
+          data-testid="task-priority-checkboxes">
           <div class="flex items-center justify-between">
             <div class="text-xs font-bold uppercase tracking-wider text-ink-2 select-none">Priority</div>
             <!-- Derived Priority Chip in Header -->
-            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize border select-none"
+            <span
+              class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize border select-none"
               :class="[
                 computedPriority.key === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : '',
                 computedPriority.key === 'strategic' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' : '',
                 computedPriority.key === 'interruptive' ? 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400' : '',
                 computedPriority.key === 'backlog' ? 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400' : ''
               ]">
-              <span class="w-1.5 h-1.5 rounded-full shrink-0"
-                :class="[
-                  computedPriority.key === 'critical' ? 'bg-red-500' : '',
-                  computedPriority.key === 'strategic' ? 'bg-amber-500' : '',
-                  computedPriority.key === 'interruptive' ? 'bg-blue-500' : '',
-                  computedPriority.key === 'backlog' ? 'bg-slate-500' : ''
-                ]"></span>
+              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="[
+                computedPriority.key === 'critical' ? 'bg-red-500' : '',
+                computedPriority.key === 'strategic' ? 'bg-amber-500' : '',
+                computedPriority.key === 'interruptive' ? 'bg-blue-500' : '',
+                computedPriority.key === 'backlog' ? 'bg-slate-500' : ''
+              ]"></span>
               {{ computedPriority.label }}
             </span>
           </div>
-          <div class="space-y-3 pt-3 border-t border-line/35">
+          <div class="space-y-1 pt-3 border-t border-line/35">
             <!-- Checkboxes side-by-side -->
             <div class="flex items-center gap-6">
-              <VCheckbox v-model="important" label="Important" id="task-important" data-testid="task-important-checkbox" />
+              <VCheckbox v-model="important" label="Important" id="task-important"
+                data-testid="task-important-checkbox" />
               <VCheckbox v-model="urgent" label="Urgent" id="task-urgent" data-testid="task-urgent-checkbox" />
             </div>
           </div>
         </div>
 
         <!-- Scheduled & Due Dates -->
-        <DateField v-model="scheduledDate" label="Scheduled Date" id="task-scheduled" dataTestid="task-scheduled-input" />
-        
+        <DateField v-model="scheduledDate" label="Scheduled Date" id="task-scheduled"
+          dataTestid="task-scheduled-input" />
+
         <DateField v-model="dueDate" label="Due Date" id="task-due" dataTestid="task-due-input" popoverPosition="top" />
 
         <!-- Closed Date — only visible when editing a completed task -->

@@ -4,11 +4,11 @@ export const PRIORITY = {
   strategic: { key: "strategic", label: "2. Deep Work", sub: "Important · Not urgent", tone: "pri-strategic" },
   interruptive: {
     key: "interruptive",
-    label: "3. Reactive",
+    label: "3. Quick Hits",
     sub: "Urgent · Not important",
     tone: "pri-interruptive",
   },
-  backlog: { key: "backlog", label: "4. Low", sub: "Neither important nor urgent", tone: "pri-backlog" },
+  backlog: { key: "backlog", label: "4. Backburner", sub: "Neither important nor urgent", tone: "pri-backlog" },
 };
 
 export function derivePriority(important, urgent) {

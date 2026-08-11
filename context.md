@@ -125,4 +125,8 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Replaced the native browser confirm() popup for wish deletions on the Goals & Wishes page with the custom, promise-based confirm modal.
 - FEATURE: Changed task creation defaults inside the TaskComposer and tasks store so that new tasks default to Priority 2 (important = true, urgent = false, strategic).
 - UX: Replaced the task composer priority dropdown with two checkboxes (Important and Urgent) shown side-by-side, plus a dynamic computed priority chip positioned at the top-right in the Priority card header.
-- DOCS: Updated context.md and walkthrough.md to reflect the resurfacing memory overhaul and task priority default additions.
+
+### August 11, 2026
+- FEATURE: Strict once-in-15-days goal and wishlist item selections. If an item was viewed within the last 15 days (excluding today), it is completely omitted from the candidates pool.
+- UX: Added a 4-second transition delay (`setTimeout`) for moving clicked daily memory items to the bottom of the sidebar list, keeping them grayed out instantly to avoid sudden layout shifts.
+- DOCS: Updated context.md and walkthrough.md.
