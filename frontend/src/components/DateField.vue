@@ -67,6 +67,15 @@ function setToday() {
   currentMonth.value = target
 }
 
+function setNextMonday() {
+  const today = dayjs()
+  const currentDay = today.day()
+  const daysUntilNextMonday = currentDay === 1 ? 7 : (8 - currentDay) % 7
+  const target = today.add(daysUntilNextMonday, 'day')
+  dateVal.value = target.format('YYYY-MM-DD')
+  currentMonth.value = target
+}
+
 function clearDate() {
   dateVal.value = ''
 }
@@ -135,11 +144,11 @@ function closeHelpers(e) {
 }
 
 onMounted(() => {
-  window.addEventListener('click', closeHelpers)
+  window.addEventListener('click', closeHelpers, true)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('click', closeHelpers)
+  window.removeEventListener('click', closeHelpers, true)
 })
 </script>
 
@@ -204,6 +213,9 @@ onUnmounted(() => {
           <button type="button" @click.stop="setRelativeToToday(7)"
             class="text-[9px] font-bold text-ink-3 hover:text-ink hover:bg-canvas border border-line/50 px-2 py-1 rounded-lg uppercase transition-colors"
             title="Add 7 days">+7D</button>
+          <button type="button" @click.stop="setNextMonday"
+            class="text-[9px] font-bold text-ink-3 hover:text-ink hover:bg-canvas border border-line/50 px-2 py-1 rounded-lg uppercase transition-colors"
+            title="Set to Next Monday">Next Mon</button>
         </div>
         <button type="button" @click.stop="clearDate"
           class="text-[9px] font-bold text-pri-critical hover:bg-pri-critical-bg/20 px-2 py-1 rounded-lg uppercase transition-colors"
