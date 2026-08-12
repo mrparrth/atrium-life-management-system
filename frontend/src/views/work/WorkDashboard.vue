@@ -69,32 +69,38 @@ const todayDate = computed(() => dayjs().format('dddd, MMMM D'))
 const todayStr = computed(() => dayjs().format('YYYY-MM-DD'))
 const tomorrowStr = computed(() => dayjs().add(1, 'day').format('YYYY-MM-DD'))
 
-// All active (non-completed, non-snoozed) tasks
-const activeItems = computed(() => {
-  return itemsStore.items.filter(item => {
-    if (itemsStore.isCompleted(item.status)) return false
-    if (item.snoozedUntil) {
-      const until = new Date(item.snoozedUntil); until.setHours(0, 0, 0, 0)
-      const now = new Date(); now.setHours(0, 0, 0, 0)
-      if (until > now) return false
-    }
-    return true
-  })
-})
-
-// Today's Tasks: due on/before today or no due date
+// Today's Tasks: active today (snooze is over or not snoozed) and (due today/before or no due date)
 const todayTasksAll = computed(() => {
   const today = todayStr.value
-  return activeItems.value.filter(item => {
+  return itemsStore.items.filter(item => {
+    if (itemsStore.isCompleted(item.status)) return false
+    
+    if (item.snoozedUntil) {
+      const until = dayjs(item.snoozedUntil).startOf('day')
+      const now = dayjs().startOf('day')
+      if (until.isAfter(now)) return false
+    }
+    
     return !item.dueDate || item.dueDate <= today
   })
 })
 
-// Tomorrow's Tasks: due exactly tomorrow
+// Tomorrow's Tasks: active tomorrow (snooze is over on/before tomorrow) and (due tomorrow or snoozed until tomorrow)
 const tomorrowTasksAll = computed(() => {
   const tomorrow = tomorrowStr.value
-  return activeItems.value.filter(item => {
-    return item.dueDate === tomorrow
+  return itemsStore.items.filter(item => {
+    if (itemsStore.isCompleted(item.status)) return false
+    
+    if (item.snoozedUntil) {
+      const until = dayjs(item.snoozedUntil).startOf('day')
+      const tomorrowDay = dayjs().add(1, 'day').startOf('day')
+      if (until.isAfter(tomorrowDay)) return false
+    }
+    
+    const isDueTomorrow = item.dueDate === tomorrow
+    const isSnoozedUntilTomorrow = item.snoozedUntil === tomorrow
+    
+    return isDueTomorrow || isSnoozedUntilTomorrow
   })
 })
 
