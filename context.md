@@ -135,4 +135,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Updated tab switcher keyboard helper tips to display Option + Arrow Up/Down (`⌥↑`/`⌥↓`) next to Option + number switch options.
 - UX: Restructured the Overview tab of WorkClientDetail.vue. Moved the Client Memory Profile block to the right sidebar column, removed the calendar logs block, and populated the main area with active deliverables, recent documents, and recent references.
 - UX: Improved the DateField component calendar popover. Changed click-outside event listeners to capture-phase (`true`) to guarantee closing on outside clicks, and added a "Next Mon" button to programmatically set the target date to the upcoming Monday.
+- UX: Added the "By Due Date" tab to WorkItems.vue sorting active tasks by date criteria. Cleaned up redundant hint text descriptions from status/due date section headers, and renamed the first tab header to "By Priority".
 - DOCS: Updated context.md and walkthrough.md.

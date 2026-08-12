@@ -62,14 +62,14 @@ const activeItemsCount = computed(() => {
 const itemsByDueDate = computed(() => {
   const activeList = itemsStore.items.filter(item => !itemsStore.isCompleted(item.status))
   const today = dayjs().startOf('day')
-  
+
   const groups = {
     overdue: [],
     today: [],
     upcoming: [],
     no_due_date: []
   }
-  
+
   activeList.forEach(item => {
     if (!item.dueDate) {
       groups.no_due_date.push(item)
@@ -84,13 +84,13 @@ const itemsByDueDate = computed(() => {
       }
     }
   })
-  
+
   // Sort sections
   groups.overdue.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
   groups.today.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
   groups.upcoming.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
   groups.no_due_date.sort((a, b) => dayjs(b.updatedAt || b.createdAt).diff(dayjs(a.updatedAt || a.createdAt)))
-  
+
   return groups
 })
 
@@ -99,25 +99,22 @@ const DUE_DATE_SECTIONS = [
     key: 'overdue',
     overline: 'Action Needed',
     title: 'Overdue Deliverables',
-    hint: 'Slipped past deadlines. Resolve these immediately.'
+
   },
   {
     key: 'today',
     overline: 'Focus Today',
     title: 'Due Today',
-    hint: 'Scope committed for completion today.'
   },
   {
     key: 'upcoming',
     overline: 'Ahead',
     title: 'Upcoming Scope',
-    hint: 'Scheduled deliverables for future deadlines.'
   },
   {
     key: 'no_due_date',
     overline: 'Backlog',
     title: 'No Due Date Set',
-    hint: 'Flex scope tasks with no assigned deadlines yet.'
   }
 ]
 
@@ -128,37 +125,31 @@ const STATUS_SECTIONS = [
     key: 'critical',
     overline: 'Priority',
     title: 'Critical Deliverables',
-    hint: 'High-urgency demands. Attend to these immediately.'
   },
   {
     key: 'in_progress',
     overline: 'Active',
     title: 'In Progress',
-    hint: 'Work actively being executed.'
   },
   {
     key: 'waiting_feedback',
     overline: 'Pending',
     title: 'Waiting For Feedback',
-    hint: 'Awaiting client review, approvals, or answers.'
   },
   {
     key: 'on_hold',
     overline: 'Paused',
     title: 'On Hold',
-    hint: 'Temporarily paused or blocked.'
   },
   {
     key: 'ask_milestone',
     overline: 'Milestones',
     title: 'Ask For Next Milestone',
-    hint: 'Ready for milestone sign-off and next phase scope.'
   },
   {
     key: 'pending_closure',
     overline: 'Wrapping Up',
     title: 'Pending Closure',
-    hint: 'Final deliverables ready for client sign-off and billing.'
   }
 ]
 
@@ -238,7 +229,7 @@ onUnmounted(() => {
     <div class="flex border-b border-line gap-6 text-sm font-medium">
       <button @click="activeTab = 'active'" class="pb-3 border-b-2"
         :class="activeTab === 'active' ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
-        Active Scope ({{ activeItemsCount }})
+        By Priority ({{ activeItemsCount }})
       </button>
       <button @click="activeTab = 'due_date'" class="pb-3 border-b-2"
         :class="activeTab === 'due_date' ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
@@ -281,8 +272,7 @@ onUnmounted(() => {
 
       <!-- Empty state check -->
       <div v-if="Object.values(itemsByDueDate).every(list => !list.length)">
-        <EmptyState title="All clear"
-          hint="No active tasks. Create a new work item to begin." />
+        <EmptyState title="All clear" hint="No active tasks. Create a new work item to begin." />
       </div>
     </div>
 
