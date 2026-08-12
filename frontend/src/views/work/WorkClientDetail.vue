@@ -248,7 +248,7 @@ const resourceUrl = ref('')
 const resourceUsername = ref('')
 const resourcePassword = ref('')
 const resourceNotes = ref('')
-const resourceSubType = ref('website')
+const resourceSubType = ref('file')
 const editingResourceId = ref(null)
 
 const linkTypeOptions = [
@@ -266,7 +266,7 @@ function openAddResourceModal(typeVal) {
   resourceUsername.value = ''
   resourcePassword.value = ''
   resourceNotes.value = ''
-  resourceSubType.value = 'website'
+  resourceSubType.value = 'file'
   showAddResourceModal.value = true
 }
 
@@ -920,8 +920,13 @@ watch(showAddResourceModal, (open) => {
             <label for="resource-title" class="v-field-label text-xs">Title/System Name</label>
           </div>
 
-          <!-- URL -->
-          <VUrlInput v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
+          <!-- URL & Link Type (side-by-side for URL resource, URL full-width for credentials) -->
+          <div v-if="resourceType === 'url'" class="grid grid-cols-2 gap-4">
+            <VUrlInput v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
+            <VSelect v-model="resourceSubType" label="Link Type" id="resource-subtype"
+              :options="linkTypeOptions" option-value="value" option-label="label" />
+          </div>
+          <VUrlInput v-else v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
 
           <!-- Credential specific fields -->
           <div v-if="resourceType === 'credentials'" class="grid grid-cols-2 gap-4">
@@ -936,10 +941,6 @@ watch(showAddResourceModal, (open) => {
               <label for="resource-password" class="v-field-label text-xs">Password</label>
             </div>
           </div>
-
-          <!-- Link Type (Subtype) -->
-          <VSelect v-if="resourceType === 'url'" v-model="resourceSubType" label="Link Type" id="resource-subtype"
-            :options="linkTypeOptions" option-value="value" option-label="label" />
 
           <!-- Notes -->
           <div class="v-field-group">
