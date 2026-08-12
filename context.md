@@ -132,4 +132,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 
 ### August 12, 2026
 - UX: Redesigned the Reference Links tab in WorkClientDetail.vue. Created a clean flex header with a bold `"Reference Links"` h3 heading on the left and the Add Link button floating on the right to match Billing Ledger. Reduced card container width to max-w-3xl, and configured card clicks to open the edit resource modal. Introduced separate external link action icons (`ExternalLink`) to open the resource URL. Simplified categories and badges to website, file, folder, and document chips, and updated card titles to font-normal with a 2-line clamp. Integrated VUrlInput and VSelect form controls positioned side-by-side inside the Add/Edit resource modal, where the URL input spans 3/4ths of the width and Link Type spans 1/4th.
+- UX: Updated tab switcher keyboard helper tips to display Option + Arrow Up/Down (`⌥↑`/`⌥↓`) next to Option + number switch options.
 - DOCS: Updated context.md and walkthrough.md.
