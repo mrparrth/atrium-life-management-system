@@ -55,6 +55,74 @@ const groupedActiveItems = computed(() => {
   return groups
 })
 
+const activeItemsCount = computed(() => {
+  return itemsStore.items.filter(item => !itemsStore.isCompleted(item.status)).length
+})
+
+const itemsByDueDate = computed(() => {
+  const activeList = itemsStore.items.filter(item => !itemsStore.isCompleted(item.status))
+  const today = dayjs().startOf('day')
+  
+  const groups = {
+    overdue: [],
+    today: [],
+    upcoming: [],
+    no_due_date: []
+  }
+  
+  activeList.forEach(item => {
+    if (!item.dueDate) {
+      groups.no_due_date.push(item)
+    } else {
+      const due = dayjs(item.dueDate).startOf('day')
+      if (due.isBefore(today)) {
+        groups.overdue.push(item)
+      } else if (due.isSame(today, 'day')) {
+        groups.today.push(item)
+      } else {
+        groups.upcoming.push(item)
+      }
+    }
+  })
+  
+  // Sort sections
+  groups.overdue.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
+  groups.today.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
+  groups.upcoming.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
+  groups.no_due_date.sort((a, b) => dayjs(b.updatedAt || b.createdAt).diff(dayjs(a.updatedAt || a.createdAt)))
+  
+  return groups
+})
+
+const DUE_DATE_SECTIONS = [
+  {
+    key: 'overdue',
+    overline: 'Action Needed',
+    title: 'Overdue Deliverables',
+    hint: 'Slipped past deadlines. Resolve these immediately.'
+  },
+  {
+    key: 'today',
+    overline: 'Focus Today',
+    title: 'Due Today',
+    hint: 'Scope committed for completion today.'
+  },
+  {
+    key: 'upcoming',
+    overline: 'Ahead',
+    title: 'Upcoming Scope',
+    hint: 'Scheduled deliverables for future deadlines.'
+  },
+  {
+    key: 'no_due_date',
+    overline: 'Backlog',
+    title: 'No Due Date Set',
+    hint: 'Flex scope tasks with no assigned deadlines yet.'
+  }
+]
+
+import dayjs from 'dayjs'
+
 const STATUS_SECTIONS = [
   {
     key: 'critical',
@@ -123,7 +191,7 @@ function handleEscKey(e) {
   }
   if (e.altKey && !e.metaKey && !e.ctrlKey && e.code?.startsWith('Digit')) {
     const idx = parseInt(e.code.replace('Digit', '')) - 1
-    const TABS = ['active', 'completed']
+    const TABS = ['active', 'due_date', 'completed']
     if (idx >= 0 && idx < TABS.length) {
       e.preventDefault()
       activeTab.value = TABS[idx]
@@ -131,7 +199,7 @@ function handleEscKey(e) {
     }
   }
   if (e.altKey && !e.metaKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-    const TABS = ['active', 'completed']
+    const TABS = ['active', 'due_date', 'completed']
     const currentIdx = TABS.indexOf(activeTab.value)
     if (currentIdx !== -1) {
       e.preventDefault()
@@ -170,7 +238,11 @@ onUnmounted(() => {
     <div class="flex border-b border-line gap-6 text-sm font-medium">
       <button @click="activeTab = 'active'" class="pb-3 border-b-2"
         :class="activeTab === 'active' ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
-        Active Scope ({{Object.values(groupedActiveItems).reduce((sum, list) => sum + list.length, 0)}})
+        Active Scope ({{ activeItemsCount }})
+      </button>
+      <button @click="activeTab = 'due_date'" class="pb-3 border-b-2"
+        :class="activeTab === 'due_date' ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
+        By Due Date ({{ activeItemsCount }})
       </button>
       <button @click="activeTab = 'completed'" class="pb-3 border-b-2"
         :class="activeTab === 'completed' ? 'border-ink text-ink font-semibold' : 'border-transparent text-ink-3 hover:text-ink-2'">
@@ -193,6 +265,24 @@ onUnmounted(() => {
       <div v-if="Object.values(groupedActiveItems).every(list => !list.length)">
         <EmptyState title="All scopes clear"
           hint="Add tasks using the quick composer or click 'Create Work Item' above." />
+      </div>
+    </div>
+
+    <!-- BY DUE DATE VIEW -->
+    <div v-else-if="activeTab === 'due_date'" class="space-y-8 animate-fade-in">
+      <template v-for="sec in DUE_DATE_SECTIONS" :key="sec.key">
+        <div v-if="itemsByDueDate[sec.key] && itemsByDueDate[sec.key].length" class="space-y-3">
+          <SectionHeader :overline="sec.overline" :title="sec.title" :hint="sec.hint" />
+          <div class="space-y-2.5">
+            <WorkItemCard v-for="item in itemsByDueDate[sec.key]" :key="item.id" :item="item" />
+          </div>
+        </div>
+      </template>
+
+      <!-- Empty state check -->
+      <div v-if="Object.values(itemsByDueDate).every(list => !list.length)">
+        <EmptyState title="All clear"
+          hint="No active tasks. Create a new work item to begin." />
       </div>
     </div>
 
