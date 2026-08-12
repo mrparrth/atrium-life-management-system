@@ -246,35 +246,61 @@ const resourceUrl = ref('')
 const resourceUsername = ref('')
 const resourcePassword = ref('')
 const resourceNotes = ref('')
-const resourceSubType = ref('link')
+const resourceSubType = ref('website')
+const editingResourceId = ref(null)
 
 function openAddResourceModal(typeVal) {
+  editingResourceId.value = null
   resourceType.value = typeVal
   resourceTitle.value = ''
   resourceUrl.value = ''
   resourceUsername.value = ''
   resourcePassword.value = ''
   resourceNotes.value = ''
-  resourceSubType.value = 'link'
+  resourceSubType.value = 'website'
+  showAddResourceModal.value = true
+}
+
+function openEditResourceModal(res) {
+  editingResourceId.value = res.id
+  resourceType.value = res.type
+  resourceTitle.value = res.title
+  resourceUrl.value = res.url || ''
+  resourceUsername.value = res.username || ''
+  resourcePassword.value = res.password || ''
+  resourceNotes.value = res.notes || ''
+  resourceSubType.value = res.subType || 'website'
   showAddResourceModal.value = true
 }
 
 async function submitNewResource() {
   if (!resourceTitle.value.trim()) return
 
-  await resourcesStore.add({
-    clientId: props.id,
-    type: resourceType.value,
-    title: resourceTitle.value.trim(),
-    url: resourceUrl.value.trim(),
-    username: resourceUsername.value.trim(),
-    password: resourcePassword.value.trim(),
-    notes: resourceNotes.value.trim(),
-    subType: resourceSubType.value
-  })
+  if (editingResourceId.value) {
+    await resourcesStore.update(editingResourceId.value, {
+      title: resourceTitle.value.trim(),
+      url: resourceUrl.value.trim(),
+      username: resourceUsername.value.trim(),
+      password: resourcePassword.value.trim(),
+      notes: resourceNotes.value.trim(),
+      subType: resourceSubType.value
+    })
+    ui.showToast('Resource updated', 'success')
+  } else {
+    await resourcesStore.add({
+      clientId: props.id,
+      type: resourceType.value,
+      title: resourceTitle.value.trim(),
+      url: resourceUrl.value.trim(),
+      username: resourceUsername.value.trim(),
+      password: resourcePassword.value.trim(),
+      notes: resourceNotes.value.trim(),
+      subType: resourceSubType.value
+    })
+    ui.showToast(`${resourceType.value === 'url' ? 'Reference' : 'Credential'} resource added`, 'success')
+  }
 
   showAddResourceModal.value = false
-  ui.showToast(`${resourceType.value === 'url' ? 'Reference' : 'Credential'} resource added`, 'success')
 }
 
 async function deleteResource(id) {
@@ -715,15 +741,13 @@ watch(showAddResourceModal, (open) => {
       </div>
 
       <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl">
-        <component :is="res.url ? 'a' : 'div'"
-          v-for="res in clientReferences" :key="res.id"
-          :href="res.url || undefined"
-          :target="res.url ? '_blank' : undefined"
+        <div v-for="res in clientReferences" :key="res.id"
+          @click="openEditResourceModal(res)"
           class="card p-4 border bg-surface flex items-center justify-between hover:border-line-2 hover:bg-canvas/5 transition-all duration-300 relative group cursor-pointer">
           <div class="flex items-center gap-3.5 min-w-0 flex-1">
             <!-- Icon container representing the link/resource -->
             <div class="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center shrink-0 border border-line/40 group-hover:border-pri-strategic/30 transition-all">
-              <component :is="getSubtypeIcon(res.subType || 'link')" class="w-5 h-5 text-ink-3 group-hover:text-pri-strategic transition-colors" />
+              <component :is="getSubtypeIcon(res.subType || 'website')" class="w-5 h-5 text-ink-3 group-hover:text-pri-strategic transition-colors" />
             </div>
             
             <!-- Details: Title & Domain -->
@@ -735,8 +759,8 @@ watch(showAddResourceModal, (open) => {
               <div v-if="res.url" class="text-[11px] font-mono text-ink-3 mt-1.5 flex items-center gap-2 select-none flex-wrap">
                 <!-- Subtype Badge -->
                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border shrink-0"
-                  :class="getSubtypeConfig(res.subType || 'link').colorClass">
-                  {{ getSubtypeConfig(res.subType || 'link').label }}
+                  :class="getSubtypeConfig(res.subType || 'website').colorClass">
+                  {{ getSubtypeConfig(res.subType || 'website').label }}
                 </span>
                 <span class="text-ink-4">•</span>
                 <span>{{ getDomainName(res.url) }}</span>
@@ -744,12 +768,18 @@ watch(showAddResourceModal, (open) => {
             </div>
           </div>
 
-          <!-- Fade-in Trash Button -->
-          <button @click.prevent.stop="deleteResource(res.id)" 
-            class="text-ink-3 hover:text-pri-critical p-2 rounded-xl hover:bg-canvas transition-all shrink-0 ml-3 md:opacity-0 group-hover:opacity-100 focus:opacity-100">
-            <Trash2 class="w-4 h-4" />
-          </button>
-        </component>
+          <!-- Actions: Open link & Trash -->
+          <div class="flex items-center gap-1.5 shrink-0 ml-3">
+            <a v-if="res.url" :href="res.url" target="_blank" @click.stop
+              class="text-ink-3 hover:text-pri-strategic p-2 rounded-xl hover:bg-canvas transition-all shrink-0">
+              <ExternalLink class="w-4 h-4" />
+            </a>
+            <button @click.prevent.stop="deleteResource(res.id)" 
+              class="text-ink-3 hover:text-pri-critical p-2 rounded-xl hover:bg-canvas transition-all shrink-0 md:opacity-0 group-hover:opacity-100 focus:opacity-100">
+              <Trash2 class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
       <EmptyState v-else title="No reference links" hint="Link references by clicking 'Add Link' above." />
     </div>
@@ -766,14 +796,15 @@ watch(showAddResourceModal, (open) => {
 
       <div v-if="clientCredentials.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div v-for="res in clientCredentials" :key="res.id"
-          class="card p-5 border bg-surface flex flex-col justify-between hover:border-line-2 transition-all duration-300">
+          @click="openEditResourceModal(res)"
+          class="card p-5 border bg-surface flex flex-col justify-between hover:border-line-2 transition-all duration-300 cursor-pointer">
           <div class="space-y-2">
             <div class="flex justify-between items-start">
               <span
                 class="text-[9px] uppercase tracking-wider font-bold text-ink-3 bg-canvas border px-2 py-0.5 rounded">
                 Account/Key
               </span>
-              <button @click="deleteResource(res.id)" class="text-ink-3 hover:text-pri-critical p-1">
+              <button @click.stop="deleteResource(res.id)" class="text-ink-3 hover:text-pri-critical p-1">
                 <Trash2 class="w-3.5 h-3.5" />
               </button>
             </div>
@@ -785,10 +816,10 @@ watch(showAddResourceModal, (open) => {
 
             <p v-if="res.notes" class="text-xs text-ink-2 leading-relaxed">{{ res.notes }}</p>
 
-            <div class="space-y-2 pt-2 text-xs font-mono bg-canvas/40 p-3 rounded-xl border border-line">
+            <div class="space-y-2 pt-2 text-xs font-mono bg-canvas/40 p-3 rounded-xl border border-line" @click.stop>
               <div v-if="res.url" class="pb-1.5 mb-1.5 border-b border-line/40 flex justify-between items-center">
                 <span class="text-ink-3 text-[10px]">URL</span>
-                <a :href="res.url" target="_blank"
+                <a :href="res.url" target="_blank" @click.stop
                   class="text-pri-strategic hover:underline inline-flex items-center gap-1 truncate max-w-[200px]">
                   {{ res.url }}
                   <ExternalLink class="w-2.5 h-2.5" />
@@ -798,7 +829,7 @@ watch(showAddResourceModal, (open) => {
                 <span class="text-ink-3 text-[10px]">USER</span>
                 <div class="flex items-center gap-1.5">
                   <span class="text-ink font-semibold">{{ res.username }}</span>
-                  <button @click="copyToClipboard(res.username)" class="text-ink-3 hover:text-ink">
+                  <button @click.stop="copyToClipboard(res.username)" class="text-ink-3 hover:text-ink">
                     <Copy class="w-3 h-3" />
                   </button>
                 </div>
@@ -809,11 +840,11 @@ watch(showAddResourceModal, (open) => {
                   <span class="text-ink font-semibold">
                     {{ revealedPasswords[res.id] ? res.password : '••••••••' }}
                   </span>
-                  <button @click="togglePassword(res.id)" class="text-ink-3 hover:text-ink">
+                  <button @click.stop="togglePassword(res.id)" class="text-ink-3 hover:text-ink">
                     <EyeOff v-if="revealedPasswords[res.id]" class="w-3.5 h-3.5" />
                     <Eye v-else class="w-3.5 h-3.5" />
                   </button>
-                  <button @click="copyToClipboard(res.password)" class="text-ink-3 hover:text-ink">
+                  <button @click.stop="copyToClipboard(res.password)" class="text-ink-3 hover:text-ink">
                     <Copy class="w-3 h-3" />
                   </button>
                 </div>
@@ -865,9 +896,9 @@ watch(showAddResourceModal, (open) => {
       <div class="relative w-full max-w-lg card p-8 shadow-xl bg-surface z-50 animate-rise-in space-y-6"
         @keydown.meta.enter.prevent="submitNewResource" @keydown.ctrl.enter.prevent="submitNewResource">
         <div>
-          <div class="overline">New Vault Resource</div>
+          <div class="overline">{{ editingResourceId ? 'Edit Resource' : 'New Vault Resource' }}</div>
           <h2 class="font-serif text-2xl mt-1">
-            {{ resourceType === 'url' ? 'Add Reference Link' : 'Add Credential' }}
+            {{ editingResourceId ? (resourceType === 'url' ? 'Edit Reference Link' : 'Edit Credential') : (resourceType === 'url' ? 'Add Reference Link' : 'Add Credential') }}
           </h2>
         </div>
 
@@ -903,12 +934,10 @@ watch(showAddResourceModal, (open) => {
           <div v-if="resourceType === 'url'" class="space-y-1 bg-canvas/30 p-3 rounded-xl border border-line/40">
             <label for="resource-subtype" class="block text-[10px] font-bold uppercase tracking-wider text-ink-3 select-none">Link Type</label>
             <select v-model="resourceSubType" class="w-full bg-surface border border-line/70 focus:border-line-2 rounded-lg px-2.5 py-1.5 text-xs outline-none transition-colors" id="resource-subtype">
-              <option value="link">General Link</option>
-              <option value="sheet">Google Sheet</option>
-              <option value="doc">Google Doc</option>
-              <option value="folder">Drive Folder</option>
-              <option value="design">Figma / Design</option>
-              <option value="github">GitHub / Repo</option>
+              <option value="website">website</option>
+              <option value="file">file</option>
+              <option value="folder">folder</option>
+              <option value="doc">document</option>
             </select>
           </div>
 
@@ -923,7 +952,7 @@ watch(showAddResourceModal, (open) => {
         <div class="flex justify-end gap-3 pt-2">
           <button @click="showAddResourceModal = false" class="btn-ghost">Cancel</button>
           <button @click="submitNewResource" class="btn-primary">
-            Add Resource <span
+            {{ editingResourceId ? 'Save Changes' : 'Add Resource' }} <span
               class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
