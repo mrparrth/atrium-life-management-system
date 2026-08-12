@@ -333,31 +333,26 @@ function getDomainName(url) {
 
 function getSubtypeConfig(subType) {
   switch (subType) {
-    case 'sheet':
-      return { label: 'Google Sheet', colorClass: 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400' }
-    case 'doc':
-      return { label: 'Google Doc', colorClass: 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400' }
+    case 'file':
+      return { label: 'file', colorClass: 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400' }
     case 'folder':
-      return { label: 'Drive Folder', colorClass: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' }
-    case 'design':
-      return { label: 'Figma / Design', colorClass: 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400' }
-    case 'github':
-      return { label: 'GitHub / Repo', colorClass: 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400' }
-    case 'link':
+      return { label: 'folder', colorClass: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' }
+    case 'doc':
+      return { label: 'document', colorClass: 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400' }
+    case 'website':
     default:
-      return { label: 'General Link', colorClass: 'bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400' }
+      return { label: 'website', colorClass: 'bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400' }
   }
 }
 
 function getSubtypeIcon(subType) {
   switch (subType) {
-    case 'sheet':
+    case 'file':
     case 'doc':
       return FileText
     case 'folder':
       return FolderKanban
-    case 'design':
-      return Sparkles
+    case 'website':
     default:
       return LinkIcon
   }
@@ -750,7 +745,7 @@ watch(showAddResourceModal, (open) => {
         </button>
       </div>
 
-      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl">
+      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
         <div v-for="res in clientReferences" :key="res.id"
           @click="openEditResourceModal(res)"
           class="card p-4 border bg-surface flex items-center justify-between hover:border-line-2 hover:bg-canvas/5 transition-all duration-300 relative group cursor-pointer">
