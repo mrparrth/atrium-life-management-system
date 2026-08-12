@@ -129,4 +129,7 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 ### August 11, 2026
 - FEATURE: Strict once-in-15-days goal and wishlist item selections. If an item was viewed within the last 15 days (excluding today), it is completely omitted from the candidates pool.
 - UX: Added a 4-second transition delay (`setTimeout`) for moving clicked daily memory items to the bottom of the sidebar list, keeping them grayed out instantly to avoid sudden layout shifts.
+
+### August 12, 2026
+- UX: Redesigned the Reference Links tab in WorkClientDetail.vue. Removed the bold text heading, eliminated the redundant Reference badge, replaced vertical cards with clickable horizontal layouts containing domain indicators, and configured the delete button to fade-in on hover.
 - DOCS: Updated context.md and walkthrough.md.

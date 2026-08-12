@@ -283,6 +283,16 @@ async function deleteResource(id) {
   })
 }
 
+function getDomainName(url) {
+  if (!url) return ''
+  try {
+    const parsed = new URL(url)
+    return parsed.hostname.replace('www.', '')
+  } catch (e) {
+    return url
+  }
+}
+
 function togglePassword(id) {
   revealedPasswords.value[id] = !revealedPasswords.value[id]
 }
@@ -662,43 +672,42 @@ watch(showAddResourceModal, (open) => {
 
     <!-- REFERENCE TAB -->
     <div v-else-if="activeTab === 'reference'" class="space-y-6">
-      <div class="flex items-center justify-between">
-        <h3 class="font-serif text-lg font-semibold text-ink">Reference Links & Folders</h3>
+      <div class="flex items-center justify-end">
         <button @click="openAddResourceModal('url')" class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
           <Plus class="w-3.5 h-3.5" /> Add Link
         </button>
       </div>
 
-      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div v-for="res in clientReferences" :key="res.id"
-          class="card p-5 border bg-surface flex flex-col justify-between hover:border-line-2 transition-all duration-300">
-          <div class="space-y-2">
-            <div class="flex justify-between items-start">
-              <span
-                class="text-[9px] uppercase tracking-wider font-bold text-ink-3 bg-canvas border px-2 py-0.5 rounded">
-                Reference
-              </span>
-              <button @click="deleteResource(res.id)" class="text-ink-3 hover:text-pri-critical p-1">
-                <Trash2 class="w-3.5 h-3.5" />
-              </button>
+      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <component :is="res.url ? 'a' : 'div'"
+          v-for="res in clientReferences" :key="res.id"
+          :href="res.url || undefined"
+          :target="res.url ? '_blank' : undefined"
+          class="card p-4 border bg-surface flex items-center justify-between hover:border-line-2 hover:bg-canvas/5 transition-all duration-300 relative group cursor-pointer">
+          <div class="flex items-center gap-3.5 min-w-0 flex-1">
+            <!-- Icon container representing the link/resource -->
+            <div class="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center shrink-0 border border-line/40 group-hover:border-pri-strategic/30 transition-all">
+              <LinkIcon class="w-5 h-5 text-ink-3 group-hover:text-pri-strategic transition-colors" />
             </div>
-
-            <h4 class="font-serif text-base text-ink font-semibold flex items-center gap-1.5">
-              <LinkIcon class="w-4 h-4 text-ink-3 shrink-0" />
-              {{ res.title }}
-            </h4>
-
-            <p v-if="res.notes" class="text-xs text-ink-2 leading-relaxed">{{ res.notes }}</p>
-
-            <div v-if="res.url" class="pt-2">
-              <a :href="res.url" target="_blank"
-                class="text-xs font-mono text-pri-strategic hover:underline inline-flex items-center gap-1 truncate max-w-full">
-                {{ res.url }}
-                <ExternalLink class="w-3 h-3" />
-              </a>
+            
+            <!-- Details: Title & Domain -->
+            <div class="min-w-0 flex-1">
+              <h4 class="text-sm font-serif font-semibold text-ink truncate group-hover:text-pri-strategic transition-colors leading-snug">
+                {{ res.title }}
+              </h4>
+              <p v-if="res.notes" class="text-xs text-ink-2 mt-0.5 line-clamp-1 leading-normal">{{ res.notes }}</p>
+              <div v-if="res.url" class="text-[11px] font-mono text-ink-3 mt-1 flex items-center gap-1 select-none">
+                <span>{{ getDomainName(res.url) }}</span>
+              </div>
             </div>
           </div>
-        </div>
+
+          <!-- Fade-in Trash Button -->
+          <button @click.prevent.stop="deleteResource(res.id)" 
+            class="text-ink-3 hover:text-pri-critical p-2 rounded-xl hover:bg-canvas transition-all shrink-0 ml-3 md:opacity-0 group-hover:opacity-100 focus:opacity-100">
+            <Trash2 class="w-4 h-4" />
+          </button>
+        </component>
       </div>
       <EmptyState v-else title="No reference links" hint="Link references by clicking 'Add Link' above." />
     </div>
