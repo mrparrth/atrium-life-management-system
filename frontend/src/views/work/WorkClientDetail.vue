@@ -246,6 +246,7 @@ const resourceUrl = ref('')
 const resourceUsername = ref('')
 const resourcePassword = ref('')
 const resourceNotes = ref('')
+const resourceSubType = ref('link')
 
 function openAddResourceModal(typeVal) {
   resourceType.value = typeVal
@@ -254,6 +255,7 @@ function openAddResourceModal(typeVal) {
   resourceUsername.value = ''
   resourcePassword.value = ''
   resourceNotes.value = ''
+  resourceSubType.value = 'link'
   showAddResourceModal.value = true
 }
 
@@ -267,7 +269,8 @@ async function submitNewResource() {
     url: resourceUrl.value.trim(),
     username: resourceUsername.value.trim(),
     password: resourcePassword.value.trim(),
-    notes: resourceNotes.value.trim()
+    notes: resourceNotes.value.trim(),
+    subType: resourceSubType.value
   })
 
   showAddResourceModal.value = false
@@ -292,6 +295,39 @@ function getDomainName(url) {
     return url
   }
 }
+
+function getSubtypeConfig(subType) {
+  switch (subType) {
+    case 'sheet':
+      return { label: 'Google Sheet', colorClass: 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400' }
+    case 'doc':
+      return { label: 'Google Doc', colorClass: 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400' }
+    case 'folder':
+      return { label: 'Drive Folder', colorClass: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' }
+    case 'design':
+      return { label: 'Figma / Design', colorClass: 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400' }
+    case 'github':
+      return { label: 'GitHub / Repo', colorClass: 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400' }
+    case 'link':
+    default:
+      return { label: 'General Link', colorClass: 'bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400' }
+  }
+}
+
+function getSubtypeIcon(subType) {
+  switch (subType) {
+    case 'sheet':
+    case 'doc':
+      return FileText
+    case 'folder':
+      return FolderKanban
+    case 'design':
+      return Sparkles
+    default:
+      return LinkIcon
+  }
+}
+
 
 function togglePassword(id) {
   revealedPasswords.value[id] = !revealedPasswords.value[id]
@@ -672,13 +708,13 @@ watch(showAddResourceModal, (open) => {
 
     <!-- REFERENCE TAB -->
     <div v-else-if="activeTab === 'reference'" class="space-y-6">
-      <div class="flex items-center justify-end">
+      <div class="flex items-center gap-4">
         <button @click="openAddResourceModal('url')" class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
           <Plus class="w-3.5 h-3.5" /> Add Link
         </button>
       </div>
 
-      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl">
         <component :is="res.url ? 'a' : 'div'"
           v-for="res in clientReferences" :key="res.id"
           :href="res.url || undefined"
@@ -687,16 +723,22 @@ watch(showAddResourceModal, (open) => {
           <div class="flex items-center gap-3.5 min-w-0 flex-1">
             <!-- Icon container representing the link/resource -->
             <div class="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center shrink-0 border border-line/40 group-hover:border-pri-strategic/30 transition-all">
-              <LinkIcon class="w-5 h-5 text-ink-3 group-hover:text-pri-strategic transition-colors" />
+              <component :is="getSubtypeIcon(res.subType || 'link')" class="w-5 h-5 text-ink-3 group-hover:text-pri-strategic transition-colors" />
             </div>
             
             <!-- Details: Title & Domain -->
             <div class="min-w-0 flex-1">
-              <h4 class="text-sm font-serif font-semibold text-ink truncate group-hover:text-pri-strategic transition-colors leading-snug">
+              <h4 class="text-sm font-sans font-normal text-ink line-clamp-2 leading-relaxed group-hover:text-pri-strategic transition-colors">
                 {{ res.title }}
               </h4>
               <p v-if="res.notes" class="text-xs text-ink-2 mt-0.5 line-clamp-1 leading-normal">{{ res.notes }}</p>
-              <div v-if="res.url" class="text-[11px] font-mono text-ink-3 mt-1 flex items-center gap-1 select-none">
+              <div v-if="res.url" class="text-[11px] font-mono text-ink-3 mt-1.5 flex items-center gap-2 select-none flex-wrap">
+                <!-- Subtype Badge -->
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border shrink-0"
+                  :class="getSubtypeConfig(res.subType || 'link').colorClass">
+                  {{ getSubtypeConfig(res.subType || 'link').label }}
+                </span>
+                <span class="text-ink-4">•</span>
                 <span>{{ getDomainName(res.url) }}</span>
               </div>
             </div>
@@ -855,6 +897,19 @@ watch(showAddResourceModal, (open) => {
                 id="resource-password" />
               <label for="resource-password" class="v-field-label text-xs">Password</label>
             </div>
+          </div>
+
+          <!-- Link Type (Subtype) -->
+          <div v-if="resourceType === 'url'" class="space-y-1 bg-canvas/30 p-3 rounded-xl border border-line/40">
+            <label for="resource-subtype" class="block text-[10px] font-bold uppercase tracking-wider text-ink-3 select-none">Link Type</label>
+            <select v-model="resourceSubType" class="w-full bg-surface border border-line/70 focus:border-line-2 rounded-lg px-2.5 py-1.5 text-xs outline-none transition-colors" id="resource-subtype">
+              <option value="link">General Link</option>
+              <option value="sheet">Google Sheet</option>
+              <option value="doc">Google Doc</option>
+              <option value="folder">Drive Folder</option>
+              <option value="design">Figma / Design</option>
+              <option value="github">GitHub / Repo</option>
+            </select>
           </div>
 
           <!-- Notes -->

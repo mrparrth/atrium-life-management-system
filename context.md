@@ -131,5 +131,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Added a 4-second transition delay (`setTimeout`) for moving clicked daily memory items to the bottom of the sidebar list, keeping them grayed out instantly to avoid sudden layout shifts.
 
 ### August 12, 2026
-- UX: Redesigned the Reference Links tab in WorkClientDetail.vue. Removed the bold text heading, eliminated the redundant Reference badge, replaced vertical cards with clickable horizontal layouts containing domain indicators, and configured the delete button to fade-in on hover.
+- UX: Redesigned the Reference Links tab in WorkClientDetail.vue. Removed the bold text heading, placed the Add Link button on the left, widened cards in a 2-column layout, added a Link Type dropdown selector in the form, rendered dynamic resource type badges and icons on the cards, and styled the title as font-normal with a 2-line clamp.
 - DOCS: Updated context.md and walkthrough.md.
