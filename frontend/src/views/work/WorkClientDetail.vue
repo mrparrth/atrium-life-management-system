@@ -921,10 +921,14 @@ watch(showAddResourceModal, (open) => {
           </div>
 
           <!-- URL & Link Type (side-by-side for URL resource, URL full-width for credentials) -->
-          <div v-if="resourceType === 'url'" class="grid grid-cols-2 gap-4">
-            <VUrlInput v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
-            <VSelect v-model="resourceSubType" label="Link Type" id="resource-subtype"
-              :options="linkTypeOptions" option-value="value" option-label="label" />
+          <div v-if="resourceType === 'url'" class="grid grid-cols-4 gap-4">
+            <div class="col-span-3">
+              <VUrlInput v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
+            </div>
+            <div class="col-span-1">
+              <VSelect v-model="resourceSubType" label="Link Type" id="resource-subtype"
+                :options="linkTypeOptions" option-value="value" option-label="label" />
+            </div>
           </div>
           <VUrlInput v-else v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
 
