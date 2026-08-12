@@ -13,6 +13,8 @@ import EmptyState from '@/components/EmptyState.vue'
 import { createClientDriveFolder, createClientDriveFolderInParent, extractFolderIdFromUrl } from '@/services/drive'
 import ClientPopup from '@/components/work/ClientPopup.vue'
 import VTooltip from '@/components/VTooltip.vue'
+import VUrlInput from '@/components/VUrlInput.vue'
+import VSelect from '@/components/VSelect.vue'
 
 import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
@@ -248,6 +250,13 @@ const resourcePassword = ref('')
 const resourceNotes = ref('')
 const resourceSubType = ref('website')
 const editingResourceId = ref(null)
+
+const linkTypeOptions = [
+  { value: 'website', label: 'website' },
+  { value: 'file', label: 'file' },
+  { value: 'folder', label: 'folder' },
+  { value: 'doc', label: 'document' }
+]
 
 function openAddResourceModal(typeVal) {
   editingResourceId.value = null
@@ -912,10 +921,7 @@ watch(showAddResourceModal, (open) => {
           </div>
 
           <!-- URL -->
-          <div class="v-field-group">
-            <input type="text" v-model="resourceUrl" placeholder=" " class="v-field-input text-sm" id="resource-url" />
-            <label for="resource-url" class="v-field-label text-xs">URL/Folder Link</label>
-          </div>
+          <VUrlInput v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
 
           <!-- Credential specific fields -->
           <div v-if="resourceType === 'credentials'" class="grid grid-cols-2 gap-4">
@@ -932,15 +938,8 @@ watch(showAddResourceModal, (open) => {
           </div>
 
           <!-- Link Type (Subtype) -->
-          <div v-if="resourceType === 'url'" class="space-y-1 bg-canvas/30 p-3 rounded-xl border border-line/40">
-            <label for="resource-subtype" class="block text-[10px] font-bold uppercase tracking-wider text-ink-3 select-none">Link Type</label>
-            <select v-model="resourceSubType" class="w-full bg-surface border border-line/70 focus:border-line-2 rounded-lg px-2.5 py-1.5 text-xs outline-none transition-colors" id="resource-subtype">
-              <option value="website">website</option>
-              <option value="file">file</option>
-              <option value="folder">folder</option>
-              <option value="doc">document</option>
-            </select>
-          </div>
+          <VSelect v-if="resourceType === 'url'" v-model="resourceSubType" label="Link Type" id="resource-subtype"
+            :options="linkTypeOptions" option-value="value" option-label="label" />
 
           <!-- Notes -->
           <div class="v-field-group">
