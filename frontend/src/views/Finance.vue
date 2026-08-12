@@ -120,7 +120,8 @@ watch(() => route.query, handleQuery)
           }}</button>
       </div>
       <div class="text-xs text-ink-3 select-none">
-        Tip: Use <span class="kbd">⌥1</span>–<span class="kbd">⌥7</span> or <span class="kbd">⌥ Up</span> / <span class="kbd">⌥ Down</span> to switch tabs
+        Tip: Use <span class="kbd">⌥1</span>–<span class="kbd">⌥7</span> or <span class="kbd">⌥ Up</span> / <span
+          class="kbd">⌥ Down</span> to switch tabs
       </div>
     </div>
 

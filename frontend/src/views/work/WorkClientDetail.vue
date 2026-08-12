@@ -552,19 +552,95 @@ watch(showAddResourceModal, (open) => {
     <!-- OVERVIEW TAB -->
     <div v-if="activeTab === 'overview'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-      <!-- Preferences / Settings View -->
-      <!-- Preferences / Settings View -->
+      <!-- Main Dashboard Overview Panel -->
       <div class="lg:col-span-2 space-y-6">
-        <div class="card p-6 border bg-surface space-y-6">
+        <!-- Active Tasks Block -->
+        <div class="card p-6 border bg-surface space-y-4">
           <div class="flex items-center justify-between">
-            <h3 class="font-serif text-xl font-bold text-ink">Client Memory Profile</h3>
+            <h4 class="font-serif text-lg font-bold text-ink">Active Deliverables</h4>
+            <button @click="activeTab = 'work'" class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
+              View All <span class="text-[10px]">➔</span>
+            </button>
+          </div>
+          <div v-if="openItems.length" class="space-y-2.5">
+            <div v-for="item in openItems.slice(0, 3)" :key="item.id" 
+              @click="activeTab = 'work'"
+              class="p-3 bg-canvas/40 border border-line rounded-xl hover:border-line-2 transition-all flex items-center justify-between cursor-pointer group">
+              <div class="min-w-0 flex-1 pr-3">
+                <div class="text-sm text-ink truncate group-hover:text-pri-strategic transition-colors">{{ item.title }}</div>
+                <div class="text-[10px] text-ink-3 mt-1 flex items-center gap-1.5 font-mono">
+                  <span class="capitalize">{{ item.status }}</span>
+                  <span v-if="item.dueDate" class="text-ink-4">•</span>
+                  <span v-if="item.dueDate">Due {{ dayjs(item.dueDate).format('MMM D') }}</span>
+                </div>
+              </div>
+              <span class="text-[10px] bg-surface border px-2 py-0.5 rounded text-ink-3">active</span>
+            </div>
+          </div>
+          <p v-else class="text-xs text-ink-3 italic bg-canvas/20 p-4 rounded-xl text-center">No active deliverables at this time.</p>
+        </div>
+
+        <!-- Linked Documents & Reference Links Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Documents -->
+          <div class="card p-6 border bg-surface space-y-4">
+            <div class="flex items-center justify-between">
+              <h4 class="font-serif text-base font-semibold text-ink">Recent Documents</h4>
+              <button @click="activeTab = 'notes'" class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
+                View All <span class="text-[10px]">➔</span>
+              </button>
+            </div>
+            <div v-if="clientNotes.length" class="space-y-2">
+              <div v-for="n in clientNotes.slice(0, 3)" :key="n.id"
+                @click="router.push(`/work/notes?id=${n.id}`)"
+                class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center gap-2.5 group">
+                <FileText class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
+                <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{ n.title }}</span>
+              </div>
+            </div>
+            <p v-else class="text-xs text-ink-3 italic bg-canvas/20 p-4 rounded-xl text-center">No linked documents.</p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+          <!-- Reference Links -->
+          <div class="card p-6 border bg-surface space-y-4">
+            <div class="flex items-center justify-between">
+              <h4 class="font-serif text-base font-semibold text-ink">Recent References</h4>
+              <button @click="activeTab = 'reference'" class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
+                View All <span class="text-[10px]">➔</span>
+              </button>
+            </div>
+            <div v-if="clientReferences.length" class="space-y-2">
+              <div v-for="res in clientReferences.slice(0, 3)" :key="res.id"
+                @click="openEditResourceModal(res)"
+                class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center justify-between group">
+                <div class="min-w-0 flex-1 flex items-center gap-2.5">
+                  <component :is="getSubtypeIcon(res.subType || 'website')" class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
+                  <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{ res.title }}</span>
+                </div>
+                <a v-if="res.url" :href="res.url" target="_blank" @click.stop
+                  class="text-ink-3 hover:text-pri-strategic p-1 rounded hover:bg-canvas transition-colors shrink-0">
+                  <ExternalLink class="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+            <p v-else class="text-xs text-ink-3 italic bg-canvas/20 p-4 rounded-xl text-center">No reference links.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Profile Sidebar Column -->
+      <div class="space-y-6">
+        <div class="card p-6 border bg-surface space-y-6">
+          <div class="flex items-center justify-between">
+            <h3 class="font-serif text-lg font-semibold text-ink">Memory Profile</h3>
+            <button @click="isEditingPrefs = true" class="text-xs text-pri-strategic hover:underline">Edit</button>
+          </div>
+
+          <div class="space-y-4 text-xs">
             <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Client Status</span>
+              <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold">Client Status</span>
               <p class="font-medium text-ink">
-                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold border"
                   :class="clientsStore.getStatusStyle(client.status).color">
                   {{ clientsStore.getStatusStyle(client.status).label }}
                 </span>
@@ -572,64 +648,47 @@ watch(showAddResourceModal, (open) => {
             </div>
 
             <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Timezone</span>
+              <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold">Timezone</span>
               <p class="font-medium text-ink">
                 {{ client.timezone || 'Not specified' }}
                 <span v-if="getClientLocalTime(client.timezone)"
-                  class="ml-1.5 text-[10px] bg-pri-strategic-bg text-pri-strategic px-1.5 py-0.5 rounded border border-pri-strategic-bd/50 font-normal">
+                  class="block mt-1 text-[9px] bg-pri-strategic-bg text-pri-strategic px-1.5 py-0.5 rounded border border-pri-strategic-bd/50 font-normal w-fit">
                   Their Time: {{ getClientLocalTime(client.timezone) }}
                 </span>
               </p>
             </div>
+
             <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Communication Channel</span>
+              <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold">Communication Channel</span>
               <p class="font-medium text-ink">{{ client.preferredCommunication || 'Not specified' }}</p>
             </div>
+
             <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Pricing Sensitivity</span>
+              <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold">Pricing Sensitivity</span>
               <p class="font-medium text-ink">{{ client.pricingSensitivity || 'Not specified' }}</p>
             </div>
+
             <div class="space-y-1">
-              <span class="text-xs uppercase tracking-overline text-ink-3">Source</span>
+              <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold">Source</span>
               <p class="font-medium text-ink">{{ client.clientSource || 'Not specified' }}</p>
             </div>
           </div>
 
           <div v-if="client.tags && client.tags.length" class="pt-4 border-t border-line space-y-2">
-            <span class="text-xs uppercase tracking-overline text-ink-3 block">Tags</span>
+            <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Tags</span>
             <div class="flex flex-wrap gap-1.5">
               <span v-for="tag in client.tags" :key="tag"
-                class="text-xs text-ink-2 bg-canvas px-2.5 py-1 rounded-lg border border-line">
+                class="text-[10px] text-ink-2 bg-canvas px-2 py-0.5 rounded border border-line">
                 #{{ tag }}
               </span>
             </div>
           </div>
 
           <div class="pt-4 border-t border-line space-y-2">
-            <span class="text-xs uppercase tracking-overline text-ink-3 block">Relationship Details</span>
-            <p class="text-sm text-ink-2 leading-relaxed whitespace-pre-line">
+            <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Relationship Details</span>
+            <p class="text-xs text-ink-2 leading-relaxed whitespace-pre-line">
               {{ client.relationshipNotes || `No notes added yet.` }}</p>
           </div>
-        </div>
-      </div>
-
-      <!-- Sidebar Column -->
-      <div class="space-y-6">
-        <!-- Associated Calendar Logs -->
-        <div class="card p-6 border bg-surface">
-          <h3 class="font-serif text-lg font-semibold text-ink mb-4">Associated Calendar Logs</h3>
-          <ul v-if="clientMeetings.length" class="space-y-3">
-            <li v-for="m in clientMeetings" :key="m.id"
-              class="text-xs flex justify-between items-center bg-canvas p-2.5 rounded-xl border border-line">
-              <div class="min-w-0">
-                <div class="font-medium text-ink truncate">{{ m.title }}</div>
-                <div class="text-[10px] text-ink-3 mt-0.5">{{ dayjs(m.startDateTime).format('MMM D, YYYY · h:mm A') }}
-                </div>
-              </div>
-              <span class="text-[10px] bg-surface border px-2 py-0.5 rounded text-ink-2 shrink-0">Synced</span>
-            </li>
-          </ul>
-          <p v-else class="text-xs text-ink-3 italic">No meetings synced with keywords matching this client.</p>
         </div>
       </div>
     </div>
