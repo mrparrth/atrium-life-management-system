@@ -546,7 +546,7 @@ watch(showAddResourceModal, (open) => {
       </div>
       <span class="text-[10px] text-ink-3 pb-3 select-none italic">Press <kbd
           class="kbd !text-[9px] !px-1 !py-0">⌥1</kbd>–<kbd class="kbd !text-[9px] !px-1 !py-0">⌥6</kbd> or <kbd
-          class="kbd !text-[9px] !px-1 !py-0">⌥↑</kbd>/<kbd class="kbd !text-[9px] !px-1 !py-0">⌥↓</kbd> to switch tabs</span>
+          class="kbd !text-[9px] !px-1 !py-0">⌥ Up</kbd>/<kbd class="kbd !text-[9px] !px-1 !py-0">⌥ Down</kbd> to switch tabs</span>
     </div>
 
     <!-- OVERVIEW TAB -->
