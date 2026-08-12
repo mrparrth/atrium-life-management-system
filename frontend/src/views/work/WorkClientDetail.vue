@@ -592,7 +592,7 @@ watch(showAddResourceModal, (open) => {
             </div>
             <div v-if="clientNotes.length" class="space-y-2">
               <div v-for="n in clientNotes.slice(0, 3)" :key="n.id"
-                @click="router.push(`/work/notes?id=${n.id}`)"
+                @click="activeTab = 'notes'"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center gap-2.5 group">
                 <FileText class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
                 <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{ n.title }}</span>
@@ -611,7 +611,7 @@ watch(showAddResourceModal, (open) => {
             </div>
             <div v-if="clientReferences.length" class="space-y-2">
               <div v-for="res in clientReferences.slice(0, 3)" :key="res.id"
-                @click="openEditResourceModal(res)"
+                @click="activeTab = 'reference'"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center justify-between group">
                 <div class="min-w-0 flex-1 flex items-center gap-2.5">
                   <component :is="getSubtypeIcon(res.subType || 'website')" class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
