@@ -734,7 +734,8 @@ watch(showAddResourceModal, (open) => {
 
     <!-- REFERENCE TAB -->
     <div v-else-if="activeTab === 'reference'" class="space-y-6">
-      <div class="flex items-center gap-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-serif text-lg font-semibold text-ink">Reference Links</h3>
         <button @click="openAddResourceModal('url')" class="btn-secondary !py-1 px-3 text-xs flex items-center gap-1">
           <Plus class="w-3.5 h-3.5" /> Add Link
         </button>
