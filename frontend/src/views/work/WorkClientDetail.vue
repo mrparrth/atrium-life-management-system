@@ -15,6 +15,7 @@ import ClientPopup from '@/components/work/ClientPopup.vue'
 import VTooltip from '@/components/VTooltip.vue'
 import VUrlInput from '@/components/VUrlInput.vue'
 import VSelect from '@/components/VSelect.vue'
+import WorkItemPopup from '@/components/work/WorkItemPopup.vue'
 
 import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
@@ -250,6 +251,7 @@ const resourcePassword = ref('')
 const resourceNotes = ref('')
 const resourceSubType = ref('file')
 const editingResourceId = ref(null)
+const editingTask = ref(null)
 
 const linkTypeOptions = [
   { value: 'website', label: 'website' },
@@ -564,7 +566,7 @@ watch(showAddResourceModal, (open) => {
           </div>
           <div v-if="openItems.length" class="space-y-2.5">
             <div v-for="item in openItems.slice(0, 3)" :key="item.id" 
-              @click="activeTab = 'work'"
+              @click="editingTask = item"
               class="p-3 bg-canvas/40 border border-line rounded-xl hover:border-line-2 transition-all flex items-center justify-between cursor-pointer group">
               <div class="min-w-0 flex-1 pr-3">
                 <div class="text-sm text-ink truncate group-hover:text-pri-strategic transition-colors">{{ item.title }}</div>
@@ -592,7 +594,7 @@ watch(showAddResourceModal, (open) => {
             </div>
             <div v-if="clientNotes.length" class="space-y-2">
               <div v-for="n in clientNotes.slice(0, 3)" :key="n.id"
-                @click="activeTab = 'notes'"
+                @click="router.push(`/work/notes?id=${n.id}`)"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center gap-2.5 group">
                 <FileText class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
                 <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{ n.title }}</span>
@@ -611,7 +613,7 @@ watch(showAddResourceModal, (open) => {
             </div>
             <div v-if="clientReferences.length" class="space-y-2">
               <div v-for="res in clientReferences.slice(0, 3)" :key="res.id"
-                @click="activeTab = 'reference'"
+                @click="openEditResourceModal(res)"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center justify-between group">
                 <div class="min-w-0 flex-1 flex items-center gap-2.5">
                   <component :is="getSubtypeIcon(res.subType || 'website')" class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
@@ -1015,8 +1017,11 @@ watch(showAddResourceModal, (open) => {
               class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
-      </div>
     </div>
+    </div>
+
+    <!-- WORK ITEM EDIT POPUP -->
+    <WorkItemPopup v-if="editingTask" :item="editingTask" @close="editingTask = null" />
 
   </div>
 </template>
