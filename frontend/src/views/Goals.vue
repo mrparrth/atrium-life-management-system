@@ -641,7 +641,7 @@ function getWishFallbackIcon(w) {
         </template>
       </SectionHeader>
 
-      <div v-if="wishlist.items.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-if="wishlist.items.length" class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div v-for="w in wishlist.items" :key="w.id" @click="openEditWish(w)"
           class="relative p-[1.5px] rounded-2xl overflow-hidden group cursor-pointer transition-all duration-300 bg-line hover:bg-line-2"
           :class="{ 'opacity-55': w.purchased }" :data-testid="`wish-card-${w.id}`">
@@ -655,11 +655,11 @@ function getWishFallbackIcon(w) {
             }"></div>
 
           <!-- Inner Card Content Area -->
-          <div class="relative bg-surface rounded-[14px] p-5 flex flex-col gap-2 h-full z-1">
-            <div class="flex items-center gap-4 min-w-0">
+          <div class="relative bg-surface rounded-[14px] p-6 flex flex-col gap-2 h-full z-1">
+            <div class="flex items-center gap-5 min-w-0">
 
-              <!-- Left image thumbnail or fallback icon (w-24 h-24) -->
-              <div v-if="w.imageUrl" class="w-24 h-24 rounded-2xl border border-line bg-canvas shrink-0 overflow-hidden relative flex items-center justify-center">
+              <!-- Left image thumbnail or fallback icon (w-32 h-32) -->
+              <div v-if="w.imageUrl" class="w-32 h-32 rounded-2xl border border-line bg-canvas shrink-0 overflow-hidden relative flex items-center justify-center shrink-0">
                 <!-- Blurred backdrop -->
                 <img :src="w.imageUrl" class="absolute inset-0 w-full h-full object-cover blur-sm opacity-35 scale-110 pointer-events-none select-none" />
                 <!-- Foreground scaled image -->
@@ -672,13 +672,13 @@ function getWishFallbackIcon(w) {
                   @error="w.imageUrl = ''" />
               </div>
               <div v-else
-                class="w-24 h-24 rounded-2xl border border-line bg-canvas shrink-0 flex items-center justify-center text-ink-3">
-                <component :is="getWishFallbackIcon(w)" class="w-8 h-8 stroke-[1.25]" />
+                class="w-32 h-32 rounded-2xl border border-line bg-canvas shrink-0 flex items-center justify-center text-ink-3">
+                <component :is="getWishFallbackIcon(w)" class="w-10 h-10 stroke-[1.25]" />
               </div>
 
               <!-- Middle details -->
-              <div class="min-w-0 flex-1 pr-3">
-                <h4 class="font-serif text-base font-semibold text-ink mt-1 leading-snug break-words"
+              <div class="min-w-0 flex-1 pr-3 flex flex-col justify-center">
+                <h4 class="font-serif text-lg font-semibold text-ink leading-snug break-words"
                   :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
                 
                 <!-- Dynamic Progress Indicator -->
@@ -772,21 +772,6 @@ function getWishFallbackIcon(w) {
           <VCol cols="12" dense>
             <VInput v-model="newImageUrl" label="Image URL (optional)" id="new-goal-image" />
           </VCol>
-
-          <template v-if="newImageUrl">
-            <VCol cols="6" dense>
-              <div class="space-y-1">
-                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ newGoalZoom }}%)</label>
-                <input type="range" v-model.number="newGoalZoom" min="30" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
-              </div>
-            </VCol>
-            <VCol cols="6" dense>
-              <div class="space-y-1">
-                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ newGoalPositionY }}%)</label>
-                <input type="range" v-model.number="newGoalPositionY" min="0" max="100" step="1" class="w-full accent-pri-strategic cursor-pointer" />
-              </div>
-            </VCol>
-          </template>
 
           <VCol cols="6" dense>
             <DateField v-model="newStartDate" label="Start Date (optional)" id="new-goal-start-date" />
@@ -891,19 +876,6 @@ function getWishFallbackIcon(w) {
             <VTextarea v-model="editDesc" label="Why it matters" id="goal-details-desc" :rows="4" />
             
             <VInput v-model="editImageUrl" label="Image URL (optional)" id="goal-details-image" />
-
-            <template v-if="editImageUrl">
-              <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1">
-                  <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ editGoalZoom }}%)</label>
-                  <input type="range" v-model.number="editGoalZoom" min="30" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ editGoalPositionY }}%)</label>
-                  <input type="range" v-model.number="editGoalPositionY" min="0" max="100" step="1" class="w-full accent-pri-strategic cursor-pointer" />
-                </div>
-              </div>
-            </template>
 
             <div class="grid grid-cols-2 gap-4">
               <DateField v-model="editStartDate" label="Start Date (optional)" id="goal-start-date" />
@@ -1092,20 +1064,6 @@ function getWishFallbackIcon(w) {
           <VCol cols="12" dense>
             <VUrlInput v-model="newWishImageUrl" label="Image URL (optional)" id="new-wish-image" />
           </VCol>
-          <template v-if="newWishImageUrl">
-            <VCol cols="6" dense>
-              <div class="space-y-1">
-                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ newWishZoom }}%)</label>
-                <input type="range" v-model.number="newWishZoom" min="30" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
-              </div>
-            </VCol>
-            <VCol cols="6" dense>
-              <div class="space-y-1">
-                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ newWishPositionY }}%)</label>
-                <input type="range" v-model.number="newWishPositionY" min="0" max="100" step="1" class="w-full accent-pri-strategic cursor-pointer" />
-              </div>
-            </VCol>
-          </template>
           <VCol cols="12" dense>
             <VSelect v-model="newWishGoalId" label="Link to Goal (optional)" id="new-wish-goal-id"
               :options="goals.items" option-value="id" option-label="title" />
@@ -1193,20 +1151,6 @@ function getWishFallbackIcon(w) {
           <VCol cols="12" dense>
             <VUrlInput v-model="editWishImageUrl" label="Image URL (optional)" id="edit-wish-image" />
           </VCol>
-          <template v-if="editWishImageUrl">
-            <VCol cols="6" dense>
-              <div class="space-y-1">
-                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ editWishZoom }}%)</label>
-                <input type="range" v-model.number="editWishZoom" min="30" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
-              </div>
-            </VCol>
-            <VCol cols="6" dense>
-              <div class="space-y-1">
-                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ editWishPositionY }}%)</label>
-                <input type="range" v-model.number="editWishPositionY" min="0" max="100" step="1" class="w-full accent-pri-strategic cursor-pointer" />
-              </div>
-            </VCol>
-          </template>
           <VCol cols="12" dense>
             <VSelect v-model="editWishGoalId" label="Link to Goal (optional)" id="edit-wish-goal-id"
               :options="goals.items" option-value="id" option-label="title" />
