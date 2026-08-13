@@ -1,9 +1,10 @@
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
-import { X, CheckCircle2, Star, Clock, Calendar, CheckCircle } from 'lucide-vue-next'
+import { X, CheckCircle2, Star, Clock, Calendar, CheckCircle, ExternalLink } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import Combobox from '@/components/Combobox.vue'
 import DateField from '@/components/DateField.vue'
@@ -32,6 +33,14 @@ const emit = defineEmits(['close', 'saved'])
 const itemsStore = useWorkItemsStore()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
+const router = useRouter()
+
+function goToClientPage() {
+  if (clientId.value) {
+    emit('close')
+    router.push(`/work/clients/${clientId.value}`)
+  }
+}
 
 const isEdit = computed(() => !!props.item)
 
@@ -310,10 +319,17 @@ onUnmounted(() => {
 
             <!-- Row 2: Client + Status -->
             <VRow>
-              <VCol cols="12" sm="6">
-                <VSelect v-model="clientId" label="Client Association" id="item-client"
-                  :options="clientsStore.items.filter(c => c.status !== 'inactive' || (item && c.id === item.clientId))"
-                  option-value="id" option-label="name" searchable placeholder="---none---" />
+              <VCol cols="12" sm="6" class="flex items-end gap-2">
+                <div class="flex-grow min-w-0">
+                  <VSelect v-model="clientId" label="Client Association" id="item-client"
+                    :options="clientsStore.items.filter(c => c.status !== 'inactive' || (item && c.id === item.clientId))"
+                    option-value="id" option-label="name" searchable placeholder="---none---" />
+                </div>
+                <button v-if="clientId" type="button" @click="goToClientPage"
+                  class="btn-ghost !p-2.5 rounded-xl border border-line shrink-0 h-[38px] flex items-center justify-center hover:bg-canvas hover:text-pri-strategic hover:border-line-2 transition-all"
+                  title="Go to client details">
+                  <ExternalLink class="w-4 h-4 text-ink-3 hover:text-pri-strategic" />
+                </button>
               </VCol>
               <VCol cols="12" sm="6">
                 <VSelect v-model="status" label="Status" id="item-status" :options="[
