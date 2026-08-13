@@ -16,6 +16,8 @@ export const useGoalsStore = defineStore('goals', () => {
       unit: payload.unit || '',
       targetNumber: Number(payload.targetNumber) || 0,
       achievedNumber: Number(payload.achievedNumber) || 0,
+      startDate: payload.startDate || '',
+      targetDate: payload.targetDate || '',
       status: 'active',
       createdAt: now(),
       updatedAt: now(),

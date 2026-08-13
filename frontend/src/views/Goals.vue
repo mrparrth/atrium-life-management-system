@@ -17,6 +17,8 @@ import VCheckbox from '@/components/VCheckbox.vue'
 import VRow from '@/components/VRow.vue'
 import VCol from '@/components/VCol.vue'
 import VUrlInput from '@/components/VUrlInput.vue'
+import DateField from '@/components/DateField.vue'
+import dayjs from 'dayjs'
 import { Plus, X, Target, Trash2, Folder, CheckSquare, Check, Pencil, ExternalLink, Camera, Laptop, PiggyBank, FileText, Gift } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -60,6 +62,8 @@ const newTargetNumber = ref(100)
 const newAchievedNumber = ref(0)
 const newGoalUnit = ref('')
 const newImageUrl = ref('')
+const newStartDate = ref('')
+const newTargetDate = ref('')
 const showCreateYearDropdown = ref(false)
 const newYearsLabel = computed(() => {
   if (newYearIds.value.length === 0) return 'Select Years...'
@@ -87,7 +91,14 @@ const editUseNumeric = ref(false)
 const editTargetNumber = ref(0)
 const editAchievedNumber = ref(0)
 const editImageUrl = ref('')
+const editStartDate = ref('')
+const editTargetDate = ref('')
 const newTaskTitle = ref('')
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  return dayjs(dateStr).format('MMM D, YYYY')
+}
 
 function openDetails(g) {
   selectedGoal.value = g
@@ -99,6 +110,8 @@ function openDetails(g) {
   editTargetNumber.value = g.targetNumber || 0
   editAchievedNumber.value = g.achievedNumber || 0
   editImageUrl.value = g.imageUrl || ''
+  editStartDate.value = g.startDate || ''
+  editTargetDate.value = g.targetDate || ''
   newTaskTitle.value = ''
   goals.markViewed(g.id)
 }
@@ -182,9 +195,11 @@ async function create() {
     unit: newUseNumeric.value ? newGoalUnit.value : '%',
     targetNumber: newUseNumeric.value ? (Number(newTargetNumber.value) || 0) : 100,
     achievedNumber: Number(newAchievedNumber.value) || 0,
-    imageUrl: newImageUrl.value
+    imageUrl: newImageUrl.value,
+    startDate: newStartDate.value,
+    targetDate: newTargetDate.value
   })
-  newTitle.value = ''; newDesc.value = ''; newYearIds.value = []; newUseNumeric.value = false; newTargetNumber.value = 100; newAchievedNumber.value = 0; newGoalUnit.value = ''; newImageUrl.value = ''; showNew.value = false
+  newTitle.value = ''; newDesc.value = ''; newYearIds.value = []; newUseNumeric.value = false; newTargetNumber.value = 100; newAchievedNumber.value = 0; newGoalUnit.value = ''; newImageUrl.value = ''; newStartDate.value = ''; newTargetDate.value = ''; showNew.value = false
 }
 
 async function saveGoalEdits() {
@@ -198,7 +213,9 @@ async function saveGoalEdits() {
     unit: editUseNumeric.value ? editGoalUnit.value : '%',
     targetNumber: editUseNumeric.value ? (Number(editTargetNumber.value) || 0) : 100,
     achievedNumber: Number(editAchievedNumber.value) || 0,
-    imageUrl: editImageUrl.value
+    imageUrl: editImageUrl.value,
+    startDate: editStartDate.value,
+    targetDate: editTargetDate.value
   })
   selectedGoal.value = null
   ui.showToast('Goal updated', 'success')
@@ -487,6 +504,14 @@ function getWishFallbackIcon(w) {
                 <p v-if="g.description" class="text-xs text-ink-2 mt-2 line-clamp-2 leading-relaxed">
                   {{ g.description }}
                 </p>
+                <div v-if="g.startDate || g.targetDate" class="flex flex-wrap items-center gap-3 mt-3 text-[10px] font-mono text-ink-3 font-semibold select-none">
+                  <span v-if="g.startDate" class="inline-flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded text-ink-2">
+                    <span class="text-[8px] uppercase tracking-wider text-ink-3">Start</span> {{ formatDate(g.startDate) }}
+                  </span>
+                  <span v-if="g.targetDate" class="inline-flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded text-ink-2">
+                    <span class="text-[8px] uppercase tracking-wider text-ink-3">Target</span> {{ formatDate(g.targetDate) }}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -628,6 +653,13 @@ function getWishFallbackIcon(w) {
             <VInput v-model="newImageUrl" label="Image URL (optional)" id="new-goal-image" />
           </VCol>
 
+          <VCol cols="6" dense>
+            <DateField v-model="newStartDate" label="Start Date (optional)" id="new-goal-start-date" />
+          </VCol>
+          <VCol cols="6" dense>
+            <DateField v-model="newTargetDate" label="Target Date (optional)" id="new-goal-target-date" />
+          </VCol>
+
           <!-- Tracking Mode Segmented Control -->
           <VCol cols="12" dense class="pt-2">
             <div class="bg-canvas/30 rounded-xl border border-line/50 p-4">
@@ -706,6 +738,11 @@ function getWishFallbackIcon(w) {
             <VTextarea v-model="editDesc" label="Why it matters" id="goal-details-desc" :rows="4" />
             
             <VInput v-model="editImageUrl" label="Image URL (optional)" id="goal-details-image" />
+
+            <div class="grid grid-cols-2 gap-4">
+              <DateField v-model="editStartDate" label="Start Date (optional)" id="goal-start-date" />
+              <DateField v-model="editTargetDate" label="Target Date (optional)" id="goal-target-date" />
+            </div>
 
             <VSelect v-model="editYearIds" label="Years Assigned" id="goal-years" :options="formattedYears"
               option-value="id" option-label="label" multiple />
