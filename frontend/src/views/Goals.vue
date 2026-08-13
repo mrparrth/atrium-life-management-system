@@ -566,19 +566,7 @@ function getWishFallbackIcon(w) {
             <div class="flex items-center gap-4 min-w-0">
               <!-- Left decorative thumbnail or icon wrapper -->
               <div class="relative shrink-0">
-                <div v-if="g.imageUrl" class="w-24 h-24 rounded-2xl border border-line bg-canvas overflow-hidden relative flex items-center justify-center shrink-0">
-                  <!-- Blurred backdrop -->
-                  <img :src="g.imageUrl" class="absolute inset-0 w-full h-full object-cover blur-sm opacity-35 scale-110 pointer-events-none select-none" />
-                  <!-- Foreground scaled image -->
-                  <img :src="g.imageUrl" 
-                    class="w-full h-full object-cover relative transition-transform duration-200" 
-                    :style="{ 
-                      transform: `scale(${ (g.imageZoom || 100) / 100 })`,
-                      objectPosition: `center ${ g.imagePositionY || 50 }%`
-                    }"
-                    @error="g.imageUrl = ''" 
-                  />
-                </div>
+                <img v-if="g.imageUrl" :src="g.imageUrl" class="w-24 h-24 rounded-2xl object-cover border border-line bg-canvas shrink-0" @error="g.imageUrl = ''" />
                 <div v-else
                   class="w-24 h-24 rounded-2xl bg-canvas border border-line flex flex-col items-center justify-center text-ink-2 relative overflow-hidden">
                   <component :is="getGoalIcon(g)" class="w-8 h-8 stroke-[1.25]" />
@@ -659,18 +647,7 @@ function getWishFallbackIcon(w) {
             <div class="flex items-center gap-5 min-w-0">
 
               <!-- Left image thumbnail or fallback icon (w-32 h-32) -->
-              <div v-if="w.imageUrl" class="w-32 h-32 rounded-2xl border border-line bg-canvas shrink-0 overflow-hidden relative flex items-center justify-center shrink-0">
-                <!-- Blurred backdrop -->
-                <img :src="w.imageUrl" class="absolute inset-0 w-full h-full object-cover blur-sm opacity-35 scale-110 pointer-events-none select-none" />
-                <!-- Foreground scaled image -->
-                <img :src="w.imageUrl"
-                  class="w-full h-full object-cover relative transition-transform duration-200"
-                  :style="{ 
-                    transform: `scale(${ (w.imageZoom || 100) / 100 })`,
-                    objectPosition: `center ${ w.imagePositionY || 50 }%`
-                  }"
-                  @error="w.imageUrl = ''" />
-              </div>
+              <img v-if="w.imageUrl" :src="w.imageUrl" class="w-32 h-32 rounded-2xl object-cover border border-line bg-canvas shrink-0" @error="w.imageUrl = ''" />
               <div v-else
                 class="w-32 h-32 rounded-2xl border border-line bg-canvas shrink-0 flex items-center justify-center text-ink-3">
                 <component :is="getWishFallbackIcon(w)" class="w-10 h-10 stroke-[1.25]" />
