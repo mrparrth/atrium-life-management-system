@@ -649,37 +649,40 @@ function getWishFallbackIcon(w) {
             }"></div>
 
           <!-- Inner Card Content Area -->
-          <div class="relative bg-surface rounded-[14px] p-6 flex flex-col gap-2 h-full z-1">
-            <div class="flex items-center gap-5 min-w-0">
+          <div class="relative bg-surface rounded-[14px] overflow-hidden flex flex-col h-full z-1">
+            <!-- Cover image at the top -->
+            <div v-if="w.imageUrl" class="w-full h-36 border-b border-line bg-canvas overflow-hidden relative shrink-0">
+              <img :src="cleanImageUrl(w.imageUrl)" 
+                class="w-full h-full object-cover" 
+                :style="{ objectPosition: `center ${w.imagePositionY || 50}%` }" 
+                @error="w.imageUrl = ''" 
+              />
+            </div>
+            <div v-else
+              class="w-full h-36 border-b border-line bg-canvas/30 flex items-center justify-center text-ink-3 shrink-0">
+              <component :is="getWishFallbackIcon(w)" class="w-10 h-10 stroke-[1.25]" />
+            </div>
 
-              <!-- Left image thumbnail or fallback icon (w-32 h-32) -->
-              <img v-if="w.imageUrl" :src="cleanImageUrl(w.imageUrl)" class="w-32 h-32 rounded-2xl object-cover border border-line bg-canvas shrink-0" :style="{ objectPosition: `center ${w.imagePositionY || 50}%` }" @error="w.imageUrl = ''" />
-              <div v-else
-                class="w-32 h-32 rounded-2xl border border-line bg-canvas shrink-0 flex items-center justify-center text-ink-3">
-                <component :is="getWishFallbackIcon(w)" class="w-10 h-10 stroke-[1.25]" />
+            <!-- Content Area below cover -->
+            <div class="p-5 flex-1 flex flex-col justify-center min-w-0">
+              <h4 class="font-serif text-base font-semibold text-ink leading-snug break-words"
+                :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
+              <p v-if="w.description" class="text-xs text-ink-2 mt-1.5 line-clamp-2 leading-relaxed">
+                {{ w.description }}
+              </p>
+              <!-- URL Link with ExternalIcon -->
+              <div v-if="w.url" class="flex flex-wrap items-center gap-2 mt-2">
+                <a :href="w.url.startsWith('http') ? w.url : 'https://' + w.url" target="_blank" @click.stop
+                  class="inline-flex items-center gap-0.5 text-[11px] text-ink-2 hover:underline font-medium truncate max-w-full">
+                  <span>{{ displayUrl(w.url) }}</span>
+                  <ExternalLink class="w-2.5 h-2.5 shrink-0" />
+                </a>
               </div>
-
-              <!-- Middle details -->
-              <div class="min-w-0 flex-1 pr-3 flex flex-col justify-center">
-                <h4 class="font-serif text-lg font-semibold text-ink leading-snug break-words"
-                  :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
-                <p v-if="w.description" class="text-xs text-ink-2 mt-1.5 line-clamp-2 leading-relaxed">
-                  {{ w.description }}
-                </p>
-                <!-- URL Link with ExternalIcon -->
-                <div v-if="w.url" class="flex flex-wrap items-center gap-2 mt-1">
-                  <a :href="w.url.startsWith('http') ? w.url : 'https://' + w.url" target="_blank" @click.stop
-                    class="inline-flex items-center gap-0.5 text-[11px] text-ink-2 hover:underline font-medium truncate max-w-full">
-                    <span>{{ displayUrl(w.url) }}</span>
-                    <ExternalLink class="w-2.5 h-2.5 shrink-0" />
-                  </a>
-                </div>
-                <!-- Can be purchased now label -->
-                <div v-if="getWishProgress(w) >= 100"
-                  class="flex items-center gap-1 text-[11px] font-bold text-pri-strategic mt-1.5">
-                  <Check class="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Can be purchased now</span>
-                </div>
+              <!-- Can be purchased now label -->
+              <div v-if="getWishProgress(w) >= 100"
+                class="flex items-center gap-1 text-[11px] font-bold text-pri-strategic mt-2">
+                <Check class="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Can be purchased now</span>
               </div>
             </div>
 
