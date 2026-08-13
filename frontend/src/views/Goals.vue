@@ -473,9 +473,36 @@ function formatGoalProgress(g) {
 }
 
 function getWishProgress(w) {
+  if (w.goalId) {
+    const goal = goals.items.find(g => g.id === w.goalId)
+    if (goal) {
+      return getGoalProgress(goal)
+    }
+  }
   if (!w.goalValue) return 0
   const pct = (w.currentValue / w.goalValue) * 100
   return Math.round(pct)
+}
+
+function getWishProgressText(w) {
+  if (w.goalId) {
+    const goal = goals.items.find(g => g.id === w.goalId)
+    if (goal) {
+      return formatGoalProgress(goal)
+    }
+    return ''
+  }
+  if (!w.goalValue) return ''
+  const current = w.currentValue || 0
+  const target = w.goalValue || 0
+  const unit = w.unit || ''
+  if (unit === '$' || unit === '₹' || unit === '€' || unit === '£') {
+    return `${unit}${current.toLocaleString()} / ${unit}${target.toLocaleString()}`
+  }
+  if (unit) {
+    return `${current.toLocaleString()} / ${target.toLocaleString()} ${unit}`
+  }
+  return `${current} / ${target}`
 }
 
 function daysLeftInYear() {
@@ -645,16 +672,18 @@ function getWishFallbackIcon(w) {
 
               <!-- Middle details -->
               <div class="min-w-0 flex-1 pr-3">
-                <div class="flex flex-wrap items-center gap-1.5 text-[10px] text-ink-3 font-semibold font-mono">
-                  <!-- Linked Goal Indicator -->
-                  <span v-if="w.goalId"
-                    class="inline-flex items-center gap-0.5 px-1 rounded bg-canvas text-ink-2 text-[9px] font-bold border border-line"
-                    :title="`Goal: ${goals.items.find(g => g.id === w.goalId)?.title || ''}`">
-                    <Target class="w-2 h-2 text-ink-3" /> Linked
-                  </span>
-                </div>
                 <h4 class="font-serif text-base font-semibold text-ink mt-1 leading-snug break-words"
                   :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
+                
+                <!-- Dynamic Progress Indicator -->
+                <div v-if="getWishProgressText(w)" class="text-xs font-mono font-semibold text-ink-2 mt-1.5 flex items-center gap-2 select-none">
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-canvas border border-line">
+                    {{ getWishProgressText(w) }}
+                  </span>
+                  <span v-if="w.goalId" class="text-[9px] text-ink-3 font-normal font-sans italic truncate max-w-[130px]" :title="`Linked Goal: ${goals.items.find(g => g.id === w.goalId)?.title || ''}`">
+                    Linked Goal
+                  </span>
+                </div>
                 <!-- URL Link with ExternalIcon -->
                 <div v-if="w.url" class="flex flex-wrap items-center gap-2 mt-1">
                   <a :href="w.url.startsWith('http') ? w.url : 'https://' + w.url" target="_blank" @click.stop
