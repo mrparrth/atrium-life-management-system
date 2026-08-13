@@ -641,7 +641,7 @@ function getWishFallbackIcon(w) {
         </template>
       </SectionHeader>
 
-      <div v-if="wishlist.items.length" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div v-if="wishlist.items.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div v-for="w in wishlist.items" :key="w.id" @click="openEditWish(w)"
           class="relative p-[1.5px] rounded-2xl overflow-hidden group cursor-pointer transition-all duration-300 bg-line hover:bg-line-2"
           :class="{ 'opacity-55': w.purchased }" :data-testid="`wish-card-${w.id}`">
@@ -680,16 +680,9 @@ function getWishFallbackIcon(w) {
               <div class="min-w-0 flex-1 pr-3 flex flex-col justify-center">
                 <h4 class="font-serif text-lg font-semibold text-ink leading-snug break-words"
                   :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
-                
-                <!-- Dynamic Progress Indicator -->
-                <div v-if="getWishProgressText(w)" class="text-xs font-mono font-semibold text-ink-2 mt-1.5 flex items-center gap-2 select-none">
-                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-canvas border border-line">
-                    {{ getWishProgressText(w) }}
-                  </span>
-                  <span v-if="w.goalId" class="text-[9px] text-ink-3 font-normal font-sans italic truncate max-w-[130px]" :title="`Linked Goal: ${goals.items.find(g => g.id === w.goalId)?.title || ''}`">
-                    Linked Goal
-                  </span>
-                </div>
+                <p v-if="w.description" class="text-xs text-ink-2 mt-1.5 line-clamp-2 leading-relaxed">
+                  {{ w.description }}
+                </p>
                 <!-- URL Link with ExternalIcon -->
                 <div v-if="w.url" class="flex flex-wrap items-center gap-2 mt-1">
                   <a :href="w.url.startsWith('http') ? w.url : 'https://' + w.url" target="_blank" @click.stop

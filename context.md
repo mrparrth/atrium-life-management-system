@@ -141,7 +141,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 ### August 14, 2026
 - UX: Integrated the custom VUrlInput component inside both the Create Wish and Edit Wish modals in views/Goals.vue for the Product Link and Image URL input fields.
 - UX: Enabled mouse-drag and touch-drag event handlers for Notion-style repositioning of Goal/Wishlist cover images, showing a "Drag to reposition" bar on hover and removing all manual range sliders from the modals.
-- UX: Enlarged wishlist cards in the list view to two columns, increasing the thumbnail and icon placeholder size to w-32 h-32 and centering details.
-- FEATURE: Added support for selecting and persisting Goal Start Date and Target Date fields, displaying them as metadata badges on each goal card.
-- UX: Configured wishlist cards to show dynamic goal progress values when linked to a goal, and removed the redundant "Linked" chip tag.
+- UX: Restored wishlist cards layout to three columns to match goal card widths, rendering the item description block and product URL while removing the progress numbers and "Linked Goal" labels.
 - DOCS: Updated context.md and walkthrough.md.
