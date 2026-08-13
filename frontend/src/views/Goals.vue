@@ -505,6 +505,12 @@ function getWishProgressText(w) {
   return `${current} / ${target}`
 }
 
+function cleanImageUrl(url) {
+  if (!url) return ''
+  // Clean Magento /product/cache/<hash>/ path segment to get the original high-resolution image
+  return url.replace(/\/cache\/[^/]+/gi, '')
+}
+
 function daysLeftInYear() {
   const now = new Date()
   const end = new Date(now.getFullYear(), 12, 0) // Dec 31
@@ -566,7 +572,7 @@ function getWishFallbackIcon(w) {
             <div class="flex items-center gap-4 min-w-0">
               <!-- Left decorative thumbnail or icon wrapper -->
               <div class="relative shrink-0">
-                <img v-if="g.imageUrl" :src="g.imageUrl" class="w-24 h-24 rounded-2xl object-cover border border-line bg-canvas shrink-0" @error="g.imageUrl = ''" />
+                <img v-if="g.imageUrl" :src="cleanImageUrl(g.imageUrl)" class="w-24 h-24 rounded-2xl object-cover border border-line bg-canvas shrink-0" :style="{ objectPosition: `center ${g.imagePositionY || 50}%` }" @error="g.imageUrl = ''" />
                 <div v-else
                   class="w-24 h-24 rounded-2xl bg-canvas border border-line flex flex-col items-center justify-center text-ink-2 relative overflow-hidden">
                   <component :is="getGoalIcon(g)" class="w-8 h-8 stroke-[1.25]" />
@@ -647,7 +653,7 @@ function getWishFallbackIcon(w) {
             <div class="flex items-center gap-5 min-w-0">
 
               <!-- Left image thumbnail or fallback icon (w-32 h-32) -->
-              <img v-if="w.imageUrl" :src="w.imageUrl" class="w-32 h-32 rounded-2xl object-cover border border-line bg-canvas shrink-0" @error="w.imageUrl = ''" />
+              <img v-if="w.imageUrl" :src="cleanImageUrl(w.imageUrl)" class="w-32 h-32 rounded-2xl object-cover border border-line bg-canvas shrink-0" :style="{ objectPosition: `center ${w.imagePositionY || 50}%` }" @error="w.imageUrl = ''" />
               <div v-else
                 class="w-32 h-32 rounded-2xl border border-line bg-canvas shrink-0 flex items-center justify-center text-ink-3">
                 <component :is="getWishFallbackIcon(w)" class="w-10 h-10 stroke-[1.25]" />
@@ -708,15 +714,9 @@ function getWishFallbackIcon(w) {
           @mousedown="startDrag($event, 'new-goal')"
           @touchstart="startDrag($event, 'new-goal')"
         >
-          <!-- Blurred backdrop -->
-          <img :src="newImageUrl" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-105 pointer-events-none select-none" />
-          <!-- Foreground scaled image -->
-          <img :src="newImageUrl" 
-            class="w-full h-full object-cover relative pointer-events-none select-none"
-            :style="{ 
-              transform: `scale(${ (newGoalZoom || 100) / 100 })`,
-              objectPosition: `center ${ newGoalPositionY || 50 }%`
-            }" 
+          <img :src="cleanImageUrl(newImageUrl)" 
+            class="w-full h-full object-cover pointer-events-none select-none"
+            :style="{ objectPosition: `center ${ newGoalPositionY || 50 }%` }" 
           />
           <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             Drag image up/down to reposition
@@ -818,15 +818,9 @@ function getWishFallbackIcon(w) {
           @mousedown="startDrag($event, 'edit-goal')"
           @touchstart="startDrag($event, 'edit-goal')"
         >
-          <!-- Blurred backdrop -->
-          <img :src="editImageUrl" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-105 pointer-events-none select-none" />
-          <!-- Foreground scaled image -->
-          <img :src="editImageUrl" 
-            class="w-full h-full object-cover relative pointer-events-none select-none"
-            :style="{ 
-              transform: `scale(${ (editGoalZoom || 100) / 100 })`,
-              objectPosition: `center ${ editGoalPositionY || 50 }%`
-            }" 
+          <img :src="cleanImageUrl(editImageUrl)" 
+            class="w-full h-full object-cover pointer-events-none select-none"
+            :style="{ objectPosition: `center ${ editGoalPositionY || 50 }%` }" 
           />
           <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             Drag image up/down to reposition
@@ -1001,14 +995,8 @@ function getWishFallbackIcon(w) {
           @mousedown="startDrag($event, 'new-wish')"
           @touchstart="startDrag($event, 'new-wish')"
         >
-          <!-- Blurred backdrop -->
-          <img :src="newWishImageUrl" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-105 pointer-events-none select-none" />
-          <!-- Foreground scaled image -->
-          <img :src="newWishImageUrl" class="w-full h-full object-cover relative transition-transform duration-200 pointer-events-none select-none" 
-            :style="{ 
-              transform: `scale(${ (newWishZoom || 100) / 100 })`,
-              objectPosition: `center ${ newWishPositionY || 50 }%`
-            }" 
+          <img :src="cleanImageUrl(newWishImageUrl)" class="w-full h-full object-cover relative pointer-events-none select-none" 
+            :style="{ objectPosition: `center ${ newWishPositionY || 50 }%` }" 
           />
           <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             Drag image up/down to reposition
@@ -1088,14 +1076,8 @@ function getWishFallbackIcon(w) {
           @mousedown="startDrag($event, 'edit-wish')"
           @touchstart="startDrag($event, 'edit-wish')"
         >
-          <!-- Blurred backdrop -->
-          <img :src="editWishImageUrl" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-105 pointer-events-none select-none" />
-          <!-- Foreground scaled image -->
-          <img :src="editWishImageUrl" class="w-full h-full object-cover relative transition-transform duration-200 pointer-events-none select-none" 
-            :style="{ 
-              transform: `scale(${ (editWishZoom || 100) / 100 })`,
-              objectPosition: `center ${ editWishPositionY || 50 }%`
-            }" 
+          <img :src="cleanImageUrl(editWishImageUrl)" class="w-full h-full object-cover relative pointer-events-none select-none" 
+            :style="{ objectPosition: `center ${ editWishPositionY || 50 }%` }" 
           />
           <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             Drag image up/down to reposition
