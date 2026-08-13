@@ -566,9 +566,12 @@ function getWishFallbackIcon(w) {
             <div class="flex items-center gap-4 min-w-0">
               <!-- Left decorative thumbnail or icon wrapper -->
               <div class="relative shrink-0">
-                <div v-if="g.imageUrl" class="w-24 h-24 rounded-2xl border border-line bg-canvas overflow-hidden relative flex items-center justify-center">
+                <div v-if="g.imageUrl" class="w-24 h-24 rounded-2xl border border-line bg-canvas overflow-hidden relative flex items-center justify-center shrink-0">
+                  <!-- Blurred backdrop -->
+                  <img :src="g.imageUrl" class="absolute inset-0 w-full h-full object-cover blur-sm opacity-35 scale-110 pointer-events-none select-none" />
+                  <!-- Foreground scaled image -->
                   <img :src="g.imageUrl" 
-                    class="w-full h-full object-cover transition-transform duration-200" 
+                    class="w-full h-full object-cover relative transition-transform duration-200" 
                     :style="{ 
                       transform: `scale(${ (g.imageZoom || 100) / 100 })`,
                       objectPosition: `center ${ g.imagePositionY || 50 }%`
@@ -657,8 +660,11 @@ function getWishFallbackIcon(w) {
 
               <!-- Left image thumbnail or fallback icon (w-24 h-24) -->
               <div v-if="w.imageUrl" class="w-24 h-24 rounded-2xl border border-line bg-canvas shrink-0 overflow-hidden relative flex items-center justify-center">
+                <!-- Blurred backdrop -->
+                <img :src="w.imageUrl" class="absolute inset-0 w-full h-full object-cover blur-sm opacity-35 scale-110 pointer-events-none select-none" />
+                <!-- Foreground scaled image -->
                 <img :src="w.imageUrl"
-                  class="w-full h-full object-cover transition-transform duration-200"
+                  class="w-full h-full object-cover relative transition-transform duration-200"
                   :style="{ 
                     transform: `scale(${ (w.imageZoom || 100) / 100 })`,
                     objectPosition: `center ${ w.imagePositionY || 50 }%`
@@ -732,8 +738,11 @@ function getWishFallbackIcon(w) {
           @mousedown="startDrag($event, 'new-goal')"
           @touchstart="startDrag($event, 'new-goal')"
         >
+          <!-- Blurred backdrop -->
+          <img :src="newImageUrl" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-105 pointer-events-none select-none" />
+          <!-- Foreground scaled image -->
           <img :src="newImageUrl" 
-            class="w-full h-full object-cover pointer-events-none select-none"
+            class="w-full h-full object-cover relative pointer-events-none select-none"
             :style="{ 
               transform: `scale(${ (newGoalZoom || 100) / 100 })`,
               objectPosition: `center ${ newGoalPositionY || 50 }%`
@@ -768,7 +777,7 @@ function getWishFallbackIcon(w) {
             <VCol cols="6" dense>
               <div class="space-y-1">
                 <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ newGoalZoom }}%)</label>
-                <input type="range" v-model.number="newGoalZoom" min="100" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+                <input type="range" v-model.number="newGoalZoom" min="30" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
               </div>
             </VCol>
             <VCol cols="6" dense>
@@ -854,8 +863,11 @@ function getWishFallbackIcon(w) {
           @mousedown="startDrag($event, 'edit-goal')"
           @touchstart="startDrag($event, 'edit-goal')"
         >
+          <!-- Blurred backdrop -->
+          <img :src="editImageUrl" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-105 pointer-events-none select-none" />
+          <!-- Foreground scaled image -->
           <img :src="editImageUrl" 
-            class="w-full h-full object-cover pointer-events-none select-none"
+            class="w-full h-full object-cover relative pointer-events-none select-none"
             :style="{ 
               transform: `scale(${ (editGoalZoom || 100) / 100 })`,
               objectPosition: `center ${ editGoalPositionY || 50 }%`
@@ -884,7 +896,7 @@ function getWishFallbackIcon(w) {
               <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-1">
                   <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ editGoalZoom }}%)</label>
-                  <input type="range" v-model.number="editGoalZoom" min="100" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+                  <input type="range" v-model.number="editGoalZoom" min="30" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
                 </div>
                 <div class="space-y-1">
                   <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ editGoalPositionY }}%)</label>
@@ -1047,7 +1059,10 @@ function getWishFallbackIcon(w) {
           @mousedown="startDrag($event, 'new-wish')"
           @touchstart="startDrag($event, 'new-wish')"
         >
-          <img :src="newWishImageUrl" class="w-full h-full object-cover transition-transform duration-200 pointer-events-none select-none" 
+          <!-- Blurred backdrop -->
+          <img :src="newWishImageUrl" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-105 pointer-events-none select-none" />
+          <!-- Foreground scaled image -->
+          <img :src="newWishImageUrl" class="w-full h-full object-cover relative transition-transform duration-200 pointer-events-none select-none" 
             :style="{ 
               transform: `scale(${ (newWishZoom || 100) / 100 })`,
               objectPosition: `center ${ newWishPositionY || 50 }%`
@@ -1081,7 +1096,7 @@ function getWishFallbackIcon(w) {
             <VCol cols="6" dense>
               <div class="space-y-1">
                 <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ newWishZoom }}%)</label>
-                <input type="range" v-model.number="newWishZoom" min="100" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+                <input type="range" v-model.number="newWishZoom" min="30" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
               </div>
             </VCol>
             <VCol cols="6" dense>
@@ -1145,7 +1160,10 @@ function getWishFallbackIcon(w) {
           @mousedown="startDrag($event, 'edit-wish')"
           @touchstart="startDrag($event, 'edit-wish')"
         >
-          <img :src="editWishImageUrl" class="w-full h-full object-cover transition-transform duration-200 pointer-events-none select-none" 
+          <!-- Blurred backdrop -->
+          <img :src="editWishImageUrl" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-105 pointer-events-none select-none" />
+          <!-- Foreground scaled image -->
+          <img :src="editWishImageUrl" class="w-full h-full object-cover relative transition-transform duration-200 pointer-events-none select-none" 
             :style="{ 
               transform: `scale(${ (editWishZoom || 100) / 100 })`,
               objectPosition: `center ${ editWishPositionY || 50 }%`
@@ -1179,7 +1197,7 @@ function getWishFallbackIcon(w) {
             <VCol cols="6" dense>
               <div class="space-y-1">
                 <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ editWishZoom }}%)</label>
-                <input type="range" v-model.number="editWishZoom" min="100" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+                <input type="range" v-model.number="editWishZoom" min="30" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
               </div>
             </VCol>
             <VCol cols="6" dense>
