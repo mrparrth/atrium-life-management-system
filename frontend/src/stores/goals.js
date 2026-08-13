@@ -18,6 +18,8 @@ export const useGoalsStore = defineStore('goals', () => {
       achievedNumber: Number(payload.achievedNumber) || 0,
       startDate: payload.startDate || '',
       targetDate: payload.targetDate || '',
+      imageZoom: payload.imageZoom || 100,
+      imagePositionY: payload.imagePositionY || 50,
       status: 'active',
       createdAt: now(),
       updatedAt: now(),

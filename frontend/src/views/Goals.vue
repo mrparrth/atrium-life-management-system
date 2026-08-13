@@ -64,6 +64,8 @@ const newGoalUnit = ref('')
 const newImageUrl = ref('')
 const newStartDate = ref('')
 const newTargetDate = ref('')
+const newGoalZoom = ref(100)
+const newGoalPositionY = ref(50)
 const showCreateYearDropdown = ref(false)
 const newYearsLabel = computed(() => {
   if (newYearIds.value.length === 0) return 'Select Years...'
@@ -93,11 +95,61 @@ const editAchievedNumber = ref(0)
 const editImageUrl = ref('')
 const editStartDate = ref('')
 const editTargetDate = ref('')
+const editGoalZoom = ref(100)
+const editGoalPositionY = ref(50)
 const newTaskTitle = ref('')
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
   return dayjs(dateStr).format('MMM D, YYYY')
+}
+
+const isDraggingImage = ref(false)
+let dragStartY = 0
+let dragStartPercent = 50
+
+function startDrag(e, type) {
+  // Prevent text selection while dragging
+  e.preventDefault()
+  isDraggingImage.value = true
+  dragStartY = e.clientY || e.touches?.[0]?.clientY || 0
+  
+  if (type === 'new-goal') dragStartPercent = newGoalPositionY.value
+  else if (type === 'edit-goal') dragStartPercent = editGoalPositionY.value
+  else if (type === 'new-wish') dragStartPercent = newWishPositionY.value
+  else if (type === 'edit-wish') dragStartPercent = editWishPositionY.value
+
+  const handleMove = (moveEvent) => {
+    if (!isDraggingImage.value) return
+    const currentY = moveEvent.clientY || moveEvent.touches?.[0]?.clientY || 0
+    const deltaY = currentY - dragStartY
+    
+    // Cover container height is 192px (h-48 = 12rem = 192px)
+    const containerHeight = 192
+    const deltaPercent = (deltaY / containerHeight) * 100
+    
+    // Dragging down shifts image down (so position Y percentage should decrease to show top)
+    let newY = dragStartPercent - deltaPercent
+    newY = Math.max(0, Math.min(100, Math.round(newY)))
+    
+    if (type === 'new-goal') newGoalPositionY.value = newY
+    else if (type === 'edit-goal') editGoalPositionY.value = newY
+    else if (type === 'new-wish') newWishPositionY.value = newY
+    else if (type === 'edit-wish') editWishPositionY.value = newY
+  }
+
+  const handleUp = () => {
+    isDraggingImage.value = false
+    window.removeEventListener('mousemove', handleMove)
+    window.removeEventListener('mouseup', handleUp)
+    window.removeEventListener('touchmove', handleMove)
+    window.removeEventListener('touchend', handleUp)
+  }
+
+  window.addEventListener('mousemove', handleMove)
+  window.addEventListener('mouseup', handleUp)
+  window.addEventListener('touchmove', handleMove)
+  window.addEventListener('touchend', handleUp)
 }
 
 function openDetails(g) {
@@ -112,6 +164,8 @@ function openDetails(g) {
   editImageUrl.value = g.imageUrl || ''
   editStartDate.value = g.startDate || ''
   editTargetDate.value = g.targetDate || ''
+  editGoalZoom.value = g.imageZoom || 100
+  editGoalPositionY.value = g.imagePositionY || 50
   newTaskTitle.value = ''
   goals.markViewed(g.id)
 }
@@ -197,9 +251,11 @@ async function create() {
     achievedNumber: Number(newAchievedNumber.value) || 0,
     imageUrl: newImageUrl.value,
     startDate: newStartDate.value,
-    targetDate: newTargetDate.value
+    targetDate: newTargetDate.value,
+    imageZoom: newGoalZoom.value,
+    imagePositionY: newGoalPositionY.value
   })
-  newTitle.value = ''; newDesc.value = ''; newYearIds.value = []; newUseNumeric.value = false; newTargetNumber.value = 100; newAchievedNumber.value = 0; newGoalUnit.value = ''; newImageUrl.value = ''; newStartDate.value = ''; newTargetDate.value = ''; showNew.value = false
+  newTitle.value = ''; newDesc.value = ''; newYearIds.value = []; newUseNumeric.value = false; newTargetNumber.value = 100; newAchievedNumber.value = 0; newGoalUnit.value = ''; newImageUrl.value = ''; newStartDate.value = ''; newTargetDate.value = ''; newGoalZoom.value = 100; newGoalPositionY.value = 50; showNew.value = false
 }
 
 async function saveGoalEdits() {
@@ -215,7 +271,9 @@ async function saveGoalEdits() {
     achievedNumber: Number(editAchievedNumber.value) || 0,
     imageUrl: editImageUrl.value,
     startDate: editStartDate.value,
-    targetDate: editTargetDate.value
+    targetDate: editTargetDate.value,
+    imageZoom: editGoalZoom.value,
+    imagePositionY: editGoalPositionY.value
   })
   selectedGoal.value = null
   ui.showToast('Goal updated', 'success')
@@ -481,7 +539,16 @@ function getWishFallbackIcon(w) {
             <div class="flex items-center gap-4 min-w-0">
               <!-- Left decorative thumbnail or icon wrapper -->
               <div class="relative shrink-0">
-                <img v-if="g.imageUrl" :src="g.imageUrl" class="w-24 h-24 rounded-2xl object-cover border border-line bg-canvas" @error="g.imageUrl = ''" />
+                <div v-if="g.imageUrl" class="w-24 h-24 rounded-2xl border border-line bg-canvas overflow-hidden relative flex items-center justify-center">
+                  <img :src="g.imageUrl" 
+                    class="w-full h-full object-cover transition-transform duration-200" 
+                    :style="{ 
+                      transform: `scale(${ (g.imageZoom || 100) / 100 })`,
+                      objectPosition: `center ${ g.imagePositionY || 50 }%`
+                    }"
+                    @error="g.imageUrl = ''" 
+                  />
+                </div>
                 <div v-else
                   class="w-24 h-24 rounded-2xl bg-canvas border border-line flex flex-col items-center justify-center text-ink-2 relative overflow-hidden">
                   <component :is="getGoalIcon(g)" class="w-8 h-8 stroke-[1.25]" />
@@ -631,7 +698,22 @@ function getWishFallbackIcon(w) {
       <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create"
         class="relative w-full max-w-md card p-8 animate-rise-in">
         <!-- Banner Image if available -->
-        <img v-if="newImageUrl" :src="newImageUrl" class="w-full h-48 object-cover rounded-xl border border-line mb-6" />
+        <div v-if="newImageUrl" 
+          class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center cursor-ns-resize group select-none"
+          @mousedown="startDrag($event, 'new-goal')"
+          @touchstart="startDrag($event, 'new-goal')"
+        >
+          <img :src="newImageUrl" 
+            class="w-full h-full object-cover pointer-events-none select-none"
+            :style="{ 
+              transform: `scale(${ (newGoalZoom || 100) / 100 })`,
+              objectPosition: `center ${ newGoalPositionY || 50 }%`
+            }" 
+          />
+          <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            Drag image up/down to reposition
+          </div>
+        </div>
         
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false">
           <X class="w-4 h-4" />
@@ -652,6 +734,21 @@ function getWishFallbackIcon(w) {
           <VCol cols="12" dense>
             <VInput v-model="newImageUrl" label="Image URL (optional)" id="new-goal-image" />
           </VCol>
+
+          <template v-if="newImageUrl">
+            <VCol cols="6" dense>
+              <div class="space-y-1">
+                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ newGoalZoom }}%)</label>
+                <input type="range" v-model.number="newGoalZoom" min="100" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+              </div>
+            </VCol>
+            <VCol cols="6" dense>
+              <div class="space-y-1">
+                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ newGoalPositionY }}%)</label>
+                <input type="range" v-model.number="newGoalPositionY" min="0" max="100" step="1" class="w-full accent-pri-strategic cursor-pointer" />
+              </div>
+            </VCol>
+          </template>
 
           <VCol cols="6" dense>
             <DateField v-model="newStartDate" label="Start Date (optional)" id="new-goal-start-date" />
@@ -723,7 +820,22 @@ function getWishFallbackIcon(w) {
       <div class="relative w-full max-w-5xl card p-8 animate-rise-in shadow-2xl bg-surface"
         @keydown.meta.enter.prevent="saveGoalEdits" @keydown.ctrl.enter.prevent="saveGoalEdits">
         <!-- Banner Image if available -->
-        <img v-if="editImageUrl" :src="editImageUrl" class="w-full h-56 object-cover rounded-xl border border-line mb-6" />
+        <div v-if="editImageUrl" 
+          class="w-full h-56 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center cursor-ns-resize group select-none"
+          @mousedown="startDrag($event, 'edit-goal')"
+          @touchstart="startDrag($event, 'edit-goal')"
+        >
+          <img :src="editImageUrl" 
+            class="w-full h-full object-cover pointer-events-none select-none"
+            :style="{ 
+              transform: `scale(${ (editGoalZoom || 100) / 100 })`,
+              objectPosition: `center ${ editGoalPositionY || 50 }%`
+            }" 
+          />
+          <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            Drag image up/down to reposition
+          </div>
+        </div>
 
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="selectedGoal = null">
           <X class="w-4 h-4" />
@@ -738,6 +850,19 @@ function getWishFallbackIcon(w) {
             <VTextarea v-model="editDesc" label="Why it matters" id="goal-details-desc" :rows="4" />
             
             <VInput v-model="editImageUrl" label="Image URL (optional)" id="goal-details-image" />
+
+            <template v-if="editImageUrl">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                  <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ editGoalZoom }}%)</label>
+                  <input type="range" v-model.number="editGoalZoom" min="100" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ editGoalPositionY }}%)</label>
+                  <input type="range" v-model.number="editGoalPositionY" min="0" max="100" step="1" class="w-full accent-pri-strategic cursor-pointer" />
+                </div>
+              </div>
+            </template>
 
             <div class="grid grid-cols-2 gap-4">
               <DateField v-model="editStartDate" label="Start Date (optional)" id="goal-start-date" />
@@ -888,13 +1013,20 @@ function getWishFallbackIcon(w) {
       <form @submit.prevent="createWish" @keydown.meta.enter.prevent="createWish" @keydown.ctrl.prevent="createWish"
         class="relative w-full max-w-lg card p-8 animate-rise-in animate-rise-in overflow-hidden">
         <!-- Banner Image if available -->
-        <div v-if="newWishImageUrl" class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center">
-          <img :src="newWishImageUrl" class="w-full h-full object-cover transition-transform duration-200" 
+        <div v-if="newWishImageUrl" 
+          class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center cursor-ns-resize group select-none"
+          @mousedown="startDrag($event, 'new-wish')"
+          @touchstart="startDrag($event, 'new-wish')"
+        >
+          <img :src="newWishImageUrl" class="w-full h-full object-cover transition-transform duration-200 pointer-events-none select-none" 
             :style="{ 
               transform: `scale(${ (newWishZoom || 100) / 100 })`,
               objectPosition: `center ${ newWishPositionY || 50 }%`
             }" 
           />
+          <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            Drag image up/down to reposition
+          </div>
         </div>
 
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewWish = false">
@@ -920,7 +1052,7 @@ function getWishFallbackIcon(w) {
             <VCol cols="6" dense>
               <div class="space-y-1">
                 <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ newWishZoom }}%)</label>
-                <input type="range" v-model.number="newWishZoom" min="50" max="255" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+                <input type="range" v-model.number="newWishZoom" min="100" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
               </div>
             </VCol>
             <VCol cols="6" dense>
@@ -979,13 +1111,20 @@ function getWishFallbackIcon(w) {
       <form @submit.prevent="saveWish" @keydown.meta.enter.prevent="saveWish" @keydown.ctrl.prevent="saveWish"
         class="relative w-full max-w-lg card p-8 animate-rise-in overflow-hidden">
         <!-- Banner Image if available -->
-        <div v-if="editWishImageUrl" class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center">
-          <img :src="editWishImageUrl" class="w-full h-full object-cover transition-transform duration-200" 
+        <div v-if="editWishImageUrl" 
+          class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center cursor-ns-resize group select-none"
+          @mousedown="startDrag($event, 'edit-wish')"
+          @touchstart="startDrag($event, 'edit-wish')"
+        >
+          <img :src="editWishImageUrl" class="w-full h-full object-cover transition-transform duration-200 pointer-events-none select-none" 
             :style="{ 
               transform: `scale(${ (editWishZoom || 100) / 100 })`,
               objectPosition: `center ${ editWishPositionY || 50 }%`
             }" 
           />
+          <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            Drag image up/down to reposition
+          </div>
         </div>
 
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="selectedWish = null">
@@ -1011,7 +1150,7 @@ function getWishFallbackIcon(w) {
             <VCol cols="6" dense>
               <div class="space-y-1">
                 <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ editWishZoom }}%)</label>
-                <input type="range" v-model.number="editWishZoom" min="50" max="255" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+                <input type="range" v-model.number="editWishZoom" min="100" max="250" step="5" class="w-full accent-pri-strategic cursor-pointer" />
               </div>
             </VCol>
             <VCol cols="6" dense>
