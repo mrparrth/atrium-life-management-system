@@ -16,6 +16,7 @@ import VSelect from '@/components/VSelect.vue'
 import VCheckbox from '@/components/VCheckbox.vue'
 import VRow from '@/components/VRow.vue'
 import VCol from '@/components/VCol.vue'
+import VUrlInput from '@/components/VUrlInput.vue'
 import { Plus, X, Target, Trash2, Folder, CheckSquare, Check, Pencil, ExternalLink, Camera, Laptop, PiggyBank, FileText, Gift } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -848,10 +849,10 @@ function getWishFallbackIcon(w) {
             <VTextarea v-model="newWishDesc" label="Description / notes (optional)" id="new-wish-desc" :rows="2" />
           </VCol>
           <VCol cols="12" dense>
-            <VInput v-model="newWishUrl" label="Product Link / URL (optional)" id="new-wish-url" type="url" />
+            <VUrlInput v-model="newWishUrl" label="Product Link / URL (optional)" id="new-wish-url" />
           </VCol>
           <VCol cols="12" dense>
-            <VInput v-model="newWishImageUrl" label="Image URL (optional)" id="new-wish-image" />
+            <VUrlInput v-model="newWishImageUrl" label="Image URL (optional)" id="new-wish-image" />
           </VCol>
           <VCol cols="12" dense>
             <VSelect v-model="newWishGoalId" label="Link to Goal (optional)" id="new-wish-goal-id"
@@ -918,10 +919,10 @@ function getWishFallbackIcon(w) {
             <VTextarea v-model="editWishDesc" label="Description / notes (optional)" id="edit-wish-desc" :rows="2" />
           </VCol>
           <VCol cols="12" dense>
-            <VInput v-model="editWishUrl" label="Product Link / URL (optional)" id="edit-wish-url" type="url" />
+            <VUrlInput v-model="editWishUrl" label="Product Link / URL (optional)" id="edit-wish-url" />
           </VCol>
           <VCol cols="12" dense>
-            <VInput v-model="editWishImageUrl" label="Image URL (optional)" id="edit-wish-image" />
+            <VUrlInput v-model="editWishImageUrl" label="Image URL (optional)" id="edit-wish-image" />
           </VCol>
           <VCol cols="12" dense>
             <VSelect v-model="editWishGoalId" label="Link to Goal (optional)" id="edit-wish-goal-id"

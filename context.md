@@ -137,5 +137,7 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Improved the DateField component calendar popover. Changed click-outside event listeners to capture-phase (`true`) to guarantee closing on outside clicks, and added a "Next Mon" button to programmatically set the target date to the upcoming Monday.
 - UX: Added the "By Due Date" tab to WorkItems.vue sorting active tasks by date criteria. Cleaned up redundant hint text descriptions from status/due date section headers, and renamed the first tab header to "By Priority".
 - UX: Fixed tomorrow's tasks filter in WorkDashboard.vue to correctly display tasks that are due tomorrow or are active tomorrow (snoozed until tomorrow's date).
-- UX: Added a direct navigation button next to the Client Association selector inside WorkItemPopup.vue to let users jump straight to the client detail view.
+
+### August 14, 2026
+- UX: Integrated the custom VUrlInput component inside both the Create Wish and Edit Wish modals in views/Goals.vue for the Product Link and Image URL input fields.
 - DOCS: Updated context.md and walkthrough.md.
