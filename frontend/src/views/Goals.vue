@@ -251,6 +251,8 @@ const newWishUnit = ref('')
 const newWishGoal = ref(0)
 const newWishCurrent = ref(0)
 const newWishPurchased = ref(false)
+const newWishZoom = ref(100)
+const newWishPositionY = ref(50)
 
 const editWishTitle = ref('')
 const editWishDesc = ref('')
@@ -261,6 +263,8 @@ const editWishUnit = ref('')
 const editWishGoal = ref(0)
 const editWishCurrent = ref(0)
 const editWishPurchased = ref(false)
+const editWishZoom = ref(100)
+const editWishPositionY = ref(50)
 
 const editGoalUnit = ref('')
 
@@ -274,6 +278,8 @@ function openNewWish() {
   newWishGoal.value = 0
   newWishCurrent.value = 0
   newWishPurchased.value = false
+  newWishZoom.value = 100
+  newWishPositionY.value = 50
   showNewWish.value = true
 }
 
@@ -288,7 +294,9 @@ async function createWish() {
     unit: newWishUnit.value || '',
     goalValue: newWishGoal.value,
     currentValue: newWishCurrent.value,
-    purchased: newWishPurchased.value
+    purchased: newWishPurchased.value,
+    imageZoom: newWishZoom.value,
+    imagePositionY: newWishPositionY.value
   })
   showNewWish.value = false
   ui.showToast('Wish added successfully', 'success')
@@ -305,6 +313,8 @@ function openEditWish(w) {
   editWishGoal.value = w.goalValue || 0
   editWishCurrent.value = w.currentValue || 0
   editWishPurchased.value = w.purchased || false
+  editWishZoom.value = w.imageZoom || 100
+  editWishPositionY.value = w.imagePositionY || 50
   wishlist.markViewed(w.id)
 }
 
@@ -319,7 +329,9 @@ async function saveWish() {
     unit: editWishUnit.value || '',
     goalValue: editWishGoal.value,
     currentValue: editWishCurrent.value,
-    purchased: editWishPurchased.value
+    purchased: editWishPurchased.value,
+    imageZoom: editWishZoom.value,
+    imagePositionY: editWishPositionY.value
   })
   selectedWish.value = null
   ui.showToast('Wish updated successfully', 'success')
@@ -525,9 +537,15 @@ function getWishFallbackIcon(w) {
             <div class="flex items-center gap-4 min-w-0">
 
               <!-- Left image thumbnail or fallback icon (w-24 h-24) -->
-              <img v-if="w.imageUrl" :src="w.imageUrl"
-                class="w-24 h-24 rounded-2xl object-cover border border-line bg-canvas shrink-0"
-                @error="w.imageUrl = ''" />
+              <div v-if="w.imageUrl" class="w-24 h-24 rounded-2xl border border-line bg-canvas shrink-0 overflow-hidden relative flex items-center justify-center">
+                <img :src="w.imageUrl"
+                  class="w-full h-full object-cover transition-transform duration-200"
+                  :style="{ 
+                    transform: `scale(${ (w.imageZoom || 100) / 100 })`,
+                    objectPosition: `center ${ w.imagePositionY || 50 }%`
+                  }"
+                  @error="w.imageUrl = ''" />
+              </div>
               <div v-else
                 class="w-24 h-24 rounded-2xl border border-line bg-canvas shrink-0 flex items-center justify-center text-ink-3">
                 <component :is="getWishFallbackIcon(w)" class="w-8 h-8 stroke-[1.25]" />
@@ -833,7 +851,14 @@ function getWishFallbackIcon(w) {
       <form @submit.prevent="createWish" @keydown.meta.enter.prevent="createWish" @keydown.ctrl.prevent="createWish"
         class="relative w-full max-w-lg card p-8 animate-rise-in animate-rise-in overflow-hidden">
         <!-- Banner Image if available -->
-        <img v-if="newWishImageUrl" :src="newWishImageUrl" class="w-full h-48 object-cover rounded-xl border border-line mb-6" />
+        <div v-if="newWishImageUrl" class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center">
+          <img :src="newWishImageUrl" class="w-full h-full object-cover transition-transform duration-200" 
+            :style="{ 
+              transform: `scale(${ (newWishZoom || 100) / 100 })`,
+              objectPosition: `center ${ newWishPositionY || 50 }%`
+            }" 
+          />
+        </div>
 
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewWish = false">
           <X class="w-4 h-4" />
@@ -854,6 +879,20 @@ function getWishFallbackIcon(w) {
           <VCol cols="12" dense>
             <VUrlInput v-model="newWishImageUrl" label="Image URL (optional)" id="new-wish-image" />
           </VCol>
+          <template v-if="newWishImageUrl">
+            <VCol cols="6" dense>
+              <div class="space-y-1">
+                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ newWishZoom }}%)</label>
+                <input type="range" v-model.number="newWishZoom" min="50" max="255" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+              </div>
+            </VCol>
+            <VCol cols="6" dense>
+              <div class="space-y-1">
+                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ newWishPositionY }}%)</label>
+                <input type="range" v-model.number="newWishPositionY" min="0" max="100" step="1" class="w-full accent-pri-strategic cursor-pointer" />
+              </div>
+            </VCol>
+          </template>
           <VCol cols="12" dense>
             <VSelect v-model="newWishGoalId" label="Link to Goal (optional)" id="new-wish-goal-id"
               :options="goals.items" option-value="id" option-label="title" />
@@ -903,7 +942,14 @@ function getWishFallbackIcon(w) {
       <form @submit.prevent="saveWish" @keydown.meta.enter.prevent="saveWish" @keydown.ctrl.prevent="saveWish"
         class="relative w-full max-w-lg card p-8 animate-rise-in overflow-hidden">
         <!-- Banner Image if available -->
-        <img v-if="editWishImageUrl" :src="editWishImageUrl" class="w-full h-48 object-cover rounded-xl border border-line mb-6" />
+        <div v-if="editWishImageUrl" class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center">
+          <img :src="editWishImageUrl" class="w-full h-full object-cover transition-transform duration-200" 
+            :style="{ 
+              transform: `scale(${ (editWishZoom || 100) / 100 })`,
+              objectPosition: `center ${ editWishPositionY || 50 }%`
+            }" 
+          />
+        </div>
 
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="selectedWish = null">
           <X class="w-4 h-4" />
@@ -924,6 +970,20 @@ function getWishFallbackIcon(w) {
           <VCol cols="12" dense>
             <VUrlInput v-model="editWishImageUrl" label="Image URL (optional)" id="edit-wish-image" />
           </VCol>
+          <template v-if="editWishImageUrl">
+            <VCol cols="6" dense>
+              <div class="space-y-1">
+                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Image Zoom ({{ editWishZoom }}%)</label>
+                <input type="range" v-model.number="editWishZoom" min="50" max="255" step="5" class="w-full accent-pri-strategic cursor-pointer" />
+              </div>
+            </VCol>
+            <VCol cols="6" dense>
+              <div class="space-y-1">
+                <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Vertical Position ({{ editWishPositionY }}%)</label>
+                <input type="range" v-model.number="editWishPositionY" min="0" max="100" step="1" class="w-full accent-pri-strategic cursor-pointer" />
+              </div>
+            </VCol>
+          </template>
           <VCol cols="12" dense>
             <VSelect v-model="editWishGoalId" label="Link to Goal (optional)" id="edit-wish-goal-id"
               :options="goals.items" option-value="id" option-label="title" />

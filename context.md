@@ -140,4 +140,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 
 ### August 14, 2026
 - UX: Integrated the custom VUrlInput component inside both the Create Wish and Edit Wish modals in views/Goals.vue for the Product Link and Image URL input fields.
+- UX: Added range sliders inside Create/Edit Wish modals to adjust wishlist item image zoom and Y-axis position coordinates dynamically.
 - DOCS: Updated context.md and walkthrough.md.
