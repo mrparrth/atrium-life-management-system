@@ -328,6 +328,7 @@ const newWishCurrent = ref(0)
 const newWishPurchased = ref(false)
 const newWishZoom = ref(100)
 const newWishPositionY = ref(50)
+const newWishPrice = ref(null)
 
 const editWishTitle = ref('')
 const editWishDesc = ref('')
@@ -340,6 +341,7 @@ const editWishCurrent = ref(0)
 const editWishPurchased = ref(false)
 const editWishZoom = ref(100)
 const editWishPositionY = ref(50)
+const editWishPrice = ref(null)
 
 const editGoalUnit = ref('')
 
@@ -355,6 +357,7 @@ function openNewWish() {
   newWishPurchased.value = false
   newWishZoom.value = 100
   newWishPositionY.value = 50
+  newWishPrice.value = null
   showNewWish.value = true
 }
 
@@ -371,7 +374,8 @@ async function createWish() {
     currentValue: newWishCurrent.value,
     purchased: newWishPurchased.value,
     imageZoom: newWishZoom.value,
-    imagePositionY: newWishPositionY.value
+    imagePositionY: newWishPositionY.value,
+    price: newWishPrice.value
   })
   showNewWish.value = false
   ui.showToast('Wish added successfully', 'success')
@@ -390,6 +394,7 @@ function openEditWish(w) {
   editWishPurchased.value = w.purchased || false
   editWishZoom.value = w.imageZoom || 100
   editWishPositionY.value = w.imagePositionY || 50
+  editWishPrice.value = w.price || null
   wishlist.markViewed(w.id)
 }
 
@@ -406,7 +411,8 @@ async function saveWish() {
     currentValue: editWishCurrent.value,
     purchased: editWishPurchased.value,
     imageZoom: editWishZoom.value,
-    imagePositionY: editWishPositionY.value
+    imagePositionY: editWishPositionY.value,
+    price: editWishPrice.value
   })
   selectedWish.value = null
   ui.showToast('Wish updated successfully', 'success')
@@ -509,6 +515,18 @@ function cleanImageUrl(url) {
   if (!url) return ''
   // Clean Magento /product/cache/<hash>/ path segment to get the original high-resolution image
   return url.replace(/\/cache\/[^/]+/gi, '')
+}
+
+function formatWishPrice(w) {
+  if (w.price === undefined || w.price === null || w.price === '') return ''
+  const unit = w.unit || (w.goalId ? goals.items.find(g => g.id === w.goalId)?.unit : '') || ''
+  if (unit === '$' || unit === '₹' || unit === '€' || unit === '£') {
+    return `${unit}${Number(w.price).toLocaleString()}`
+  }
+  if (unit) {
+    return `${Number(w.price).toLocaleString()} ${unit}`
+  }
+  return `₹${Number(w.price).toLocaleString()}`
 }
 
 function daysLeftInYear() {
@@ -665,8 +683,13 @@ function getWishFallbackIcon(w) {
 
             <!-- Content Area below cover -->
             <div class="p-5 flex-1 flex flex-col justify-center min-w-0">
-              <h4 class="font-serif text-base font-semibold text-ink leading-snug break-words"
-                :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
+              <div class="flex items-baseline justify-between gap-3 min-w-0">
+                <h4 class="font-serif text-base font-semibold text-ink leading-snug break-words"
+                  :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
+                <span v-if="w.price" class="text-xs font-mono font-bold text-ink shrink-0 select-none bg-canvas px-1.5 py-0.5 rounded border border-line">
+                  {{ formatWishPrice(w) }}
+                </span>
+              </div>
               <p v-if="w.description" class="text-xs text-ink-2 mt-1.5 line-clamp-2 leading-relaxed">
                 {{ w.description }}
               </p>
@@ -1026,6 +1049,9 @@ function getWishFallbackIcon(w) {
             <VUrlInput v-model="newWishImageUrl" label="Image URL (optional)" id="new-wish-image" />
           </VCol>
           <VCol cols="12" dense>
+            <VInput v-model.number="newWishPrice" label="Price (optional)" id="new-wish-price" type="number" step="any" min="0" />
+          </VCol>
+          <VCol cols="12" dense>
             <VSelect v-model="newWishGoalId" label="Link to Goal (optional)" id="new-wish-goal-id"
               :options="goals.items" option-value="id" option-label="title" />
           </VCol>
@@ -1105,6 +1131,9 @@ function getWishFallbackIcon(w) {
           </VCol>
           <VCol cols="12" dense>
             <VUrlInput v-model="editWishImageUrl" label="Image URL (optional)" id="edit-wish-image" />
+          </VCol>
+          <VCol cols="12" dense>
+            <VInput v-model.number="editWishPrice" label="Price (optional)" id="edit-wish-price" type="number" step="any" min="0" />
           </VCol>
           <VCol cols="12" dense>
             <VSelect v-model="editWishGoalId" label="Link to Goal (optional)" id="edit-wish-goal-id"

@@ -20,6 +20,7 @@ export const useWishlistStore = defineStore('wishlist', () => {
       unit: payload.unit || '',
       goalValue: Number(payload.goalValue) || 0,
       currentValue: Number(payload.currentValue) || 0,
+      price: (payload.price !== undefined && payload.price !== null && payload.price !== '') ? Number(payload.price) : null,
       status: payload.status || 'active',
       createdAt: now(),
       updatedAt: now(),
