@@ -376,7 +376,7 @@ watch(progress, () => {
 
     <!-- Tree Image Wrapper (Height: 100px) -->
     <div class="w-24 h-24 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 relative select-none pointer-events-none">
-      <!-- Watercolor Fills Layer (visible behind white space of the outline tree sketch via multiply blend mode) -->
+      <!-- Watercolor Fills Layer (visible behind transparent regions of the SVG) -->
       <div 
         class="absolute inset-0 transition-all duration-700 ease-out overflow-hidden" 
         :style="{ clipPath: `inset(${100 - progress}% 0px 0px 0px)` }"
@@ -404,11 +404,11 @@ watch(progress, () => {
       </div>
 
       <!-- The Tree Sketch Outline Image (Renders on top) -->
-      <!-- In light mode, mix-blend-multiply makes white transparent. In dark mode, mix-blend-screen with invert makes black transparent. -->
+      <!-- In light mode, renders the black outline vector. In dark mode, inverts it to a white outline vector. -->
       <img 
-        src="/tree-sketch.png" 
+        src="/progress-tree.svg" 
         class="w-full h-full object-contain absolute inset-0 transition-all duration-300"
-        :class="ui.theme === 'dark' ? 'mix-blend-screen invert brightness-[1.8] contrast-125' : 'mix-blend-multiply contrast-125'"
+        :class="ui.theme === 'dark' ? 'invert brightness-[1.8]' : ''"
         :style="{ opacity: progress === 0 ? '0.15' : '0.95' }"
       />
     </div>
