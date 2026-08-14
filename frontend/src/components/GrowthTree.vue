@@ -28,6 +28,8 @@ const workItemsStore = useWorkItemsStore()
 const workInvoicesStore = useWorkInvoicesStore()
 const workLeadsStore = useWorkLeadsStore()
 const followsStore = useFollowsStore()
+import { useUIStore } from '@/stores/ui'
+const ui = useUIStore()
 
 const currentDate = ref(dayjs())
 let clockTimer = null
@@ -372,198 +374,43 @@ watch(progress, () => {
       </div>
     </div>
 
-    <!-- Tree SVG (Height: 100px) -->
-    <div class="w-24 h-24 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105">
-      <svg viewBox="0 0 200 200" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <!-- Clip path for rising color fill -->
-          <clipPath :id="`tree-clip-${currentDate.format('YYYYMMDD')}`">
-            <rect x="0" :y="200 - (progress * 2)" width="200" height="200" class="transition-all duration-700 ease-out" />
-          </clipPath>
+    <!-- Tree Image Wrapper (Height: 100px) -->
+    <div class="w-24 h-24 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 relative select-none pointer-events-none">
+      <!-- Watercolor Fills Layer (visible behind white space of the outline tree sketch via multiply blend mode) -->
+      <div 
+        class="absolute inset-0 transition-all duration-700 ease-out overflow-hidden" 
+        :style="{ clipPath: `inset(${100 - progress}% 0px 0px 0px)` }"
+      >
+        <!-- Trunk base color block (brownish) -->
+        <div class="absolute bottom-1 left-[43%] right-[43%] top-[38%] bg-amber-800/80 rounded-full blur-[2px]"></div>
+        
+        <!-- Leaves canopy color block (green) -->
+        <div class="absolute top-[6%] left-[6%] right-[6%] bottom-[28%] bg-pri-strategic/90 rounded-full blur-[8px]"></div>
+        
+        <!-- Bouncing Fruits (Red/Yellow circles, only visible when progress grows) -->
+        <!-- Coordinates carefully mapped to the apples inside the sketch -->
+        <!-- Left apples -->
+        <div class="absolute w-3 h-3 bg-pri-critical rounded-full blur-[1px] left-[13%] top-[37%] animate-pulse"></div>
+        <div class="absolute w-3 h-3 bg-pri-critical rounded-full blur-[1px] left-[20%] top-[42%] animate-pulse"></div>
+        
+        <!-- Middle apples -->
+        <div class="absolute w-3.5 h-3.5 bg-pri-critical rounded-full blur-[1px] left-[32%] top-[25%] animate-pulse"></div>
+        <div class="absolute w-3.5 h-3.5 bg-pri-critical rounded-full blur-[1px] left-[52%] top-[30%] animate-pulse"></div>
+        
+        <!-- Right apples -->
+        <div class="absolute w-3 h-3 bg-pri-critical rounded-full blur-[1px] left-[70%] top-[39%] animate-pulse"></div>
+        <div class="absolute w-3 h-3 bg-pri-critical rounded-full blur-[1px] left-[70%] top-[57%] animate-pulse"></div>
+        <div class="absolute w-3.5 h-3.5 bg-pri-critical rounded-full blur-[1px] left-[22%] top-[60%] animate-pulse"></div>
+      </div>
 
-          <!-- Leaf template -->
-          <g id="leaf">
-            <!-- leaf shape -->
-            <path d="M0,0 C-8,-8 -8,-20 0,-26 C8,-20 8,-8 0,0 Z" />
-            <!-- leaf vein -->
-            <path d="M0,0 L0,-24" stroke-width="1.2" stroke-linecap="round" />
-          </g>
-
-          <!-- Apple template -->
-          <g id="apple">
-            <!-- Apple body -->
-            <path d="M0,-8 C-10,-8 -14,-4 -14,4 C-14,12 -5,18 0,18 C5,18 14,12 14,4 C14,-4 10,-8 0,-8 Z" />
-            <!-- Stem -->
-            <path d="M0,-8 Q3,-13 7,-15" fill="none" stroke-width="2" stroke-linecap="round" />
-            <!-- Small Leaf on stem -->
-            <path d="M3,-11 C6,-13 9,-13 11,-10 C9,-7 6,-7 3,-11 Z" />
-          </g>
-        </defs>
-
-        <!-- ==================== FILL LAYER (CLIPPED BY PROGRESS) ==================== -->
-        <g :clip-path="`url(#tree-clip-${currentDate.format('YYYYMMDD')})`">
-          <!-- Trunk Wood Fill -->
-          <path d="M85,195 C88,170 88,150 90,125 C92,110 98,105 100,105 C102,105 108,110 110,125 C112,150 112,170 115,195 Z" fill="#8d7053" />
-          <!-- Branch Fills -->
-          <path d="M88,125 C82,115 75,105 60,95 C45,85 30,75 25,60 L35,55 C40,70 55,80 70,90 C80,98 85,108 88,125 Z" fill="#8d7053" />
-          <path d="M112,125 C118,115 125,105 140,95 C155,85 170,75 175,60 L165,55 C160,70 145,80 130,90 C120,98 115,108 112,125 Z" fill="#8d7053" />
-          
-          <!-- Leaves Green Fill -->
-          <g fill="rgb(var(--pri-strategic))" stroke="rgb(var(--pri-strategic))">
-            <!-- Use leaves at various coordinates (matching outlines) -->
-            <use href="#leaf" x="35" y="65" transform="rotate(-40, 35, 65)" />
-            <use href="#leaf" x="25" y="85" transform="rotate(-80, 25, 85)" />
-            <use href="#leaf" x="52" y="55" transform="rotate(-20, 52, 55)" />
-            <use href="#leaf" x="72" y="45" transform="rotate(-15, 72, 45)" />
-            <use href="#leaf" x="100" y="25" transform="rotate(0, 100, 25)" />
-            <use href="#leaf" x="128" y="45" transform="rotate(15, 128, 45)" />
-            <use href="#leaf" x="148" y="55" transform="rotate(20, 148, 55)" />
-            <use href="#leaf" x="165" y="65" transform="rotate(40, 165, 65)" />
-            <use href="#leaf" x="175" y="85" transform="rotate(80, 175, 85)" />
-            
-            <use href="#leaf" x="48" y="95" transform="rotate(-60, 48, 95)" />
-            <use href="#leaf" x="65" y="85" transform="rotate(-35, 65, 85)" />
-            <use href="#leaf" x="88" y="70" transform="rotate(-10, 88, 70)" />
-            <use href="#leaf" x="112" y="70" transform="rotate(10, 112, 70)" />
-            <use href="#leaf" x="135" y="85" transform="rotate(35, 135, 85)" />
-            <use href="#leaf" x="152" y="95" transform="rotate(60, 152, 95)" />
-          </g>
-
-          <!-- Fruits Red/Yellow Fill (Grows to full color when completed) -->
-          <g fill="rgb(var(--pri-critical))" stroke="rgb(var(--pri-critical))">
-            <!-- Render active apples -->
-            <use href="#apple" x="55" y="95" />
-            <use href="#apple" x="82" y="68" />
-            <use href="#apple" x="118" y="72" />
-            <use href="#apple" x="148" y="95" />
-            <use href="#apple" x="100" y="42" />
-            <use href="#apple" x="70" y="125" />
-            <use href="#apple" x="130" y="125" />
-          </g>
-
-          <!-- Characters Fill -->
-          <!-- Bird Fill -->
-          <path d="M145,85 C145,80 152,80 155,83 C158,85 157,89 153,90 C151,90.5 148,89 145,85 Z" fill="#3b82f6" />
-          <!-- Worm Fill -->
-          <path d="M87,58 Q91,53 95,57" fill="none" stroke="#22c55e" stroke-width="4.5" stroke-linecap="round" />
-        </g>
-
-        <!-- ==================== OUTLINE LAYER (ALWAYS VISIBLE LINE ART) ==================== -->
-        <g stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" class="text-ink">
-          <!-- Tree Trunk and Branches Outline -->
-          <!-- Trunk Outer Left -->
-          <path d="M85,195 C88,170 88,150 90,125 C92,118 90,112 85,108 C78,102 70,98 62,93" />
-          <!-- Trunk Outer Right -->
-          <path d="M115,195 C112,170 112,150 110,125 C108,118 110,112 115,108 C122,102 130,98 138,93" />
-          
-          <!-- Left Main Branch Upper Outline -->
-          <path d="M62,93 C48,83 32,73 25,60" />
-          <!-- Left Main Branch Lower Outline -->
-          <path d="M88,125 C82,115 75,105 60,95 C45,85 30,75 25,60" />
-
-          <!-- Right Main Branch Upper Outline -->
-          <path d="M138,93 C152,83 168,73 175,60" />
-          <!-- Right Main Branch Lower Outline -->
-          <path d="M112,125 C118,115 125,105 140,95 C155,85 170,75 175,60" />
-
-          <!-- Center branch splits -->
-          <path d="M96,120 C98,105 92,90 85,82" />
-          <path d="M104,120 C102,105 108,90 115,82" />
-
-          <!-- Branch details / bark textures -->
-          <path d="M98,190 C98,170 102,150 100,130" stroke-width="1.2" opacity="0.4" />
-          <path d="M95,175 C94,165 96,155 95,145" stroke-width="1.2" opacity="0.3" />
-          <path d="M105,180 C106,170 104,160 105,150" stroke-width="1.2" opacity="0.3" />
-
-          <!-- Leaves Outline -->
-          <!-- Use leaves at same coordinates -->
-          <use href="#leaf" x="35" y="65" transform="rotate(-40, 35, 65)" />
-          <use href="#leaf" x="25" y="85" transform="rotate(-80, 25, 85)" />
-          <use href="#leaf" x="52" y="55" transform="rotate(-20, 52, 55)" />
-          <use href="#leaf" x="72" y="45" transform="rotate(-15, 72, 45)" />
-          <use href="#leaf" x="100" y="25" transform="rotate(0, 100, 25)" />
-          <use href="#leaf" x="128" y="45" transform="rotate(15, 128, 45)" />
-          <use href="#leaf" x="148" y="55" transform="rotate(20, 148, 55)" />
-          <use href="#leaf" x="165" y="65" transform="rotate(40, 165, 65)" />
-          <use href="#leaf" x="175" y="85" transform="rotate(80, 175, 85)" />
-          
-          <use href="#leaf" x="48" y="95" transform="rotate(-60, 48, 95)" />
-          <use href="#leaf" x="65" y="85" transform="rotate(-35, 65, 85)" />
-          <use href="#leaf" x="88" y="70" transform="rotate(-10, 88, 70)" />
-          <use href="#leaf" x="112" y="70" transform="rotate(10, 112, 70)" />
-          <use href="#leaf" x="135" y="85" transform="rotate(35, 135, 85)" />
-          <use href="#leaf" x="152" y="95" transform="rotate(60, 152, 95)" />
-
-          <!-- Apples Outline -->
-          <use href="#apple" x="55" y="95" />
-          <use href="#apple" x="82" y="68" />
-          <use href="#apple" x="118" y="72" />
-          <use href="#apple" x="148" y="95" />
-          <use href="#apple" x="100" y="42" />
-          <use href="#apple" x="70" y="125" />
-          <use href="#apple" x="130" y="125" />
-
-          <!-- Apple Cute Face Overlays -->
-          <!-- Apple 1 (55, 95) -->
-          <circle cx="51" cy="94" r="0.8" fill="currentColor" />
-          <circle cx="59" cy="94" r="0.8" fill="currentColor" />
-          <path d="M53,97 Q55,99 57,97" stroke-width="0.8" />
-
-          <!-- Apple 2 (82, 68) -->
-          <circle cx="78" cy="67" r="0.8" fill="currentColor" />
-          <circle cx="86" cy="67" r="0.8" fill="currentColor" />
-          <path d="M80,70 Q82,72 84,70" stroke-width="0.8" />
-
-          <!-- Apple 3 (118, 72) -->
-          <circle cx="114" cy="71" r="0.8" fill="currentColor" />
-          <circle cx="122" cy="71" r="0.8" fill="currentColor" />
-          <path d="M116,74 Q118,76 120,74" stroke-width="0.8" />
-
-          <!-- Apple 4 (148, 95) -->
-          <circle cx="144" cy="94" r="0.8" fill="currentColor" />
-          <circle cx="152" cy="94" r="0.8" fill="currentColor" />
-          <path d="M146,97 Q148,99 150,97" stroke-width="0.8" />
-
-          <!-- Apple 5 (100, 42) -->
-          <circle cx="96" cy="41" r="0.8" fill="currentColor" />
-          <circle cx="104" cy="41" r="0.8" fill="currentColor" />
-          <path d="M98,44 Q100,46 102,44" stroke-width="0.8" />
-
-          <!-- Apple 6 (70, 125) -->
-          <circle cx="66" cy="124" r="0.8" fill="currentColor" />
-          <circle cx="74" cy="124" r="0.8" fill="currentColor" />
-          <path d="M68,127 Q70,129 72,127" stroke-width="0.8" />
-
-          <!-- Apple 7 (130, 125) -->
-          <circle cx="126" cy="124" r="0.8" fill="currentColor" />
-          <circle cx="134" cy="124" r="0.8" fill="currentColor" />
-          <path d="M128,127 Q130,129 132,127" stroke-width="0.8" />
-
-          <!-- ==================== CUTE CHARACTERS OVERLAY ==================== -->
-          <!-- 1. Friendly sleeping face on Tree Trunk -->
-          <!-- Eyes -->
-          <path d="M93,150 Q96,146 99,150" stroke-width="1.2" />
-          <path d="M101,150 Q104,146 107,150" stroke-width="1.2" />
-          <!-- Cheeks (cute blush lines) -->
-          <path d="M91,153 L92,154" stroke-width="1" opacity="0.5" />
-          <path d="M109,153 L108,154" stroke-width="1" opacity="0.5" />
-          <!-- Mouth -->
-          <path d="M98,154 Q100,157 102,154" stroke-width="1.2" />
-
-          <!-- 2. Tiny worm peeping out of Apple 2 (82, 68) -->
-          <path d="M87,58 Q91,53 95,57" stroke-width="1.5" />
-          <circle cx="89" cy="56" r="0.5" fill="currentColor" />
-          <circle cx="92" cy="55" r="0.5" fill="currentColor" />
-          <path d="M90,58 Q91,59 92,58" stroke-width="0.5" />
-
-          <!-- 3. Cute sleeping bird on Right Branch (140, 90) -->
-          <path d="M145,85 C145,80 152,80 155,83 C158,85 157,89 153,90 C151,90.5 148,89 145,85 Z" stroke-width="1.5" />
-          <!-- Beak -->
-          <polygon points="155,83 158,83 156,85" fill="currentColor" />
-          <!-- Sleeping eye -->
-          <path d="M148,84 Q150,82 152,84" stroke-width="0.8" />
-        </g>
-      </svg>
+      <!-- The Tree Sketch Outline Image (Renders on top) -->
+      <!-- In light mode, mix-blend-multiply makes white transparent. In dark mode, mix-blend-screen with invert makes black transparent. -->
+      <img 
+        src="/tree-sketch.png" 
+        class="w-full h-full object-contain absolute inset-0 transition-all duration-300"
+        :class="ui.theme === 'dark' ? 'mix-blend-screen invert brightness-[1.8] contrast-125' : 'mix-blend-multiply contrast-125'"
+        :style="{ opacity: progress === 0 ? '0.15' : '0.95' }"
+      />
     </div>
   </div>
 </template>
