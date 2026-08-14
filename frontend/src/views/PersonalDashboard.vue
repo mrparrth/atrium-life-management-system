@@ -212,12 +212,14 @@ const memory = computed(() => {
   return memoryResurfacing(notes.items, bookmarks.items, goals.items, wishlist.items, currentDate.value)
 })
 
-const clickedMemoryItems = ref(new Set())
+const clickedMemoryItems = ref(new Set(JSON.parse(localStorage.getItem(`atrium.clicked_memory_${dayjs().format('YYYY-MM-DD')}`) || '[]')))
 const sortedMemoryItems = ref(new Set())
 
 function markClicked(id) {
   clickedMemoryItems.value.add(id)
   clickedMemoryItems.value = new Set(clickedMemoryItems.value)
+  localStorage.setItem(`atrium.clicked_memory_${dayjs().format('YYYY-MM-DD')}`, JSON.stringify([...clickedMemoryItems.value]))
+  window.dispatchEvent(new CustomEvent('atrium-memory-clicked', { detail: { id } }))
   
   setTimeout(() => {
     sortedMemoryItems.value.add(id)

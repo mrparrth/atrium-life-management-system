@@ -34,6 +34,7 @@ import QuickCapture from '@/components/QuickCapture.vue'
 import TaskComposer from '@/components/TaskComposer.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ToastHost from '@/components/ToastHost.vue'
+import GrowthTree from '@/components/GrowthTree.vue'
 import { X } from 'lucide-vue-next'
 
 const ui = useUIStore()
@@ -351,5 +352,6 @@ watch(() => ui.mode, (newMode) => {
 
     <ConfirmDialog v-if="ui.confirmState" />
     <ToastHost />
+    <GrowthTree />
   </div>
 </template>

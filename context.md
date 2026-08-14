@@ -143,4 +143,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Enabled mouse-drag and touch-drag event handlers for Notion-style repositioning of Goal/Wishlist cover images, showing a "Drag to reposition" bar on hover and removing all manual range sliders from the modals.
 - UX: Redesigned wishlist items to render as Notion-style Gallery cards, with the cover image spanning the full width of the card at the top (height h-36), and content details styled in a padded section below.
 - FEATURE: Added support for entering, updating, and displaying a price on wishlist items, adding input fields to Create/Edit Wish modals and showing formatted price badges next to card titles in the Gallery view.
+- FEATURE: Designed and implemented the Tree of Daily Growth floating widget (100px SVG tree) with a hover popover, tracking personal tasks, drifting projects, memory resurfacing, work alerts, and work tasks, growing in color and bearing red fruits at 100%, with dynamic date streak tracking.
 - DOCS: Updated context.md and walkthrough.md.
