@@ -391,7 +391,7 @@ watch(progress, () => {
       <!-- Base faint gray outline (always visible under the green) -->
       <div 
         class="absolute inset-0 transition-all duration-300"
-        :class="ui.theme === 'dark' ? 'bg-white/6' : 'bg-ink/6'"
+        :class="ui.theme === 'dark' ? 'bg-white/10' : 'bg-ink/10'"
       ></div>
 
       <!-- Solid Green Fill (representing progress completed, rising from bottom to top) -->
