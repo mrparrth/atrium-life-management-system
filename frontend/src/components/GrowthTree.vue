@@ -374,43 +374,31 @@ watch(progress, () => {
       </div>
     </div>
 
-    <!-- Tree Image Wrapper (Height: 100px) -->
-    <div class="w-24 h-24 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 relative select-none pointer-events-none">
-      <!-- Watercolor Fills Layer (visible behind transparent regions of the SVG) -->
+    <!-- Tree Image Mask Wrapper (Height: 100px) -->
+    <div 
+      class="w-24 h-24 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 relative select-none pointer-events-none"
+      :style="{
+        maskImage: 'url(/progress-tree.svg)',
+        webkitMaskImage: 'url(/progress-tree.svg)',
+        maskSize: 'contain',
+        webkitMaskSize: 'contain',
+        maskRepeat: 'no-repeat',
+        webkitMaskRepeat: 'no-repeat',
+        maskPosition: 'center',
+        webkitMaskPosition: 'center'
+      }"
+    >
+      <!-- Base faint gray outline (always visible under the green) -->
       <div 
-        class="absolute inset-0 transition-all duration-700 ease-out overflow-hidden" 
-        :style="{ clipPath: `inset(${100 - progress}% 0px 0px 0px)` }"
-      >
-        <!-- Trunk base color block (brownish) -->
-        <div class="absolute bottom-1 left-[43%] right-[43%] top-[38%] bg-amber-800/80 rounded-full blur-[2px]"></div>
-        
-        <!-- Leaves canopy color block (green) -->
-        <div class="absolute top-[6%] left-[6%] right-[6%] bottom-[28%] bg-pri-strategic/90 rounded-full blur-[8px]"></div>
-        
-        <!-- Bouncing Fruits (Red/Yellow circles, only visible when progress grows) -->
-        <!-- Coordinates carefully mapped to the apples inside the sketch -->
-        <!-- Left apples -->
-        <div class="absolute w-3 h-3 bg-pri-critical rounded-full blur-[1px] left-[13%] top-[37%] animate-pulse"></div>
-        <div class="absolute w-3 h-3 bg-pri-critical rounded-full blur-[1px] left-[20%] top-[42%] animate-pulse"></div>
-        
-        <!-- Middle apples -->
-        <div class="absolute w-3.5 h-3.5 bg-pri-critical rounded-full blur-[1px] left-[32%] top-[25%] animate-pulse"></div>
-        <div class="absolute w-3.5 h-3.5 bg-pri-critical rounded-full blur-[1px] left-[52%] top-[30%] animate-pulse"></div>
-        
-        <!-- Right apples -->
-        <div class="absolute w-3 h-3 bg-pri-critical rounded-full blur-[1px] left-[70%] top-[39%] animate-pulse"></div>
-        <div class="absolute w-3 h-3 bg-pri-critical rounded-full blur-[1px] left-[70%] top-[57%] animate-pulse"></div>
-        <div class="absolute w-3.5 h-3.5 bg-pri-critical rounded-full blur-[1px] left-[22%] top-[60%] animate-pulse"></div>
-      </div>
+        class="absolute inset-0 transition-all duration-300"
+        :class="ui.theme === 'dark' ? 'bg-white/15' : 'bg-ink/15'"
+      ></div>
 
-      <!-- The Tree Sketch Outline Image (Renders on top) -->
-      <!-- In light mode, renders the black outline vector. In dark mode, inverts it to a white outline vector. -->
-      <img 
-        src="/progress-tree.svg" 
-        class="w-full h-full object-contain absolute inset-0 transition-all duration-300"
-        :class="ui.theme === 'dark' ? 'invert brightness-[1.8]' : ''"
-        :style="{ opacity: progress === 0 ? '0.15' : '0.95' }"
-      />
+      <!-- Solid Green Fill (representing progress completed, rising from bottom to top) -->
+      <div 
+        class="absolute inset-x-0 bottom-0 bg-pri-strategic transition-all duration-500 ease-out"
+        :style="{ height: `${progress}%` }"
+      ></div>
     </div>
   </div>
 </template>
