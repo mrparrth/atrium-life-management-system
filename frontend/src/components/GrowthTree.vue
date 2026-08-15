@@ -6,6 +6,7 @@ import { useProjectsStore } from '@/stores/projects'
 import { useNotesStore } from '@/stores/notes'
 import { useBookmarksStore } from '@/stores/bookmarks'
 import { useGoalsStore } from '@/stores/goals'
+import { useYearsStore } from '@/stores/years'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
@@ -23,6 +24,7 @@ const projectsStore = useProjectsStore()
 const notesStore = useNotesStore()
 const bookmarksStore = useBookmarksStore()
 const goalsStore = useGoalsStore()
+const yearsStore = useYearsStore()
 const wishlistStore = useWishlistStore()
 const workClientsStore = useWorkClientsStore()
 const workItemsStore = useWorkItemsStore()
@@ -50,6 +52,7 @@ onMounted(() => {
   syncClickedMemory()
   updateStreak()
   reviewsStore.load()
+  yearsStore.load()
   window.addEventListener('atrium-memory-clicked', syncClickedMemory)
 })
 
@@ -311,25 +314,28 @@ const activeReviews = computed(() => {
     })
   }
   
-  // 3. Monthly Review: shows on 1st of month and continues till 10th
+  // 3. Monthly Review: shows on 1st of month and continues till 10th (reviews the previous month)
   const dom = today.date()
   const isMonthlyActive = dom >= 1 && dom <= 10
   if (isMonthlyActive) {
+    const targetMonth = today.subtract(1, 'month')
     const hasMonthly = reviewsStore.items.some(r => r.type === 'monthly' && dayjs(r.date).isSame(today, 'month'))
     list.push({
       id: 'monthly',
-      label: 'Monthly Review',
+      label: `Monthly Review (${targetMonth.format('MMMM')})`,
       completed: hasMonthly,
       show: true
     })
   }
   
-  // 4. Yearly Review: shows on 1st of year and continues until completed for this year
+  // 4. Yearly Review: shows starting Jan 1st and continues until completed (reviews the previous year Y-1)
+  const targetYear = today.subtract(1, 'year').year()
+  const yearExists = yearsStore.items.some(y => y.year === targetYear)
   const hasYearly = reviewsStore.items.some(r => r.type === 'yearly' && dayjs(r.date).year() === today.year())
-  if (!hasYearly) {
+  if (yearExists && !hasYearly) {
     list.push({
       id: 'yearly',
-      label: 'Yearly Review',
+      label: `Yearly Review (${targetYear})`,
       completed: false,
       show: true
     })
