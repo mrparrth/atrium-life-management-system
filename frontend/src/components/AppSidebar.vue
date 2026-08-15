@@ -265,11 +265,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
       <!-- Theme Toggle button positioned to the right of Settings -->
       <button
-        class="p-2 rounded-xl border border-line bg-surface/90 text-ink shadow-sm cursor-pointer hover:border-line-2 transition-colors flex items-center justify-center shrink-0"
+        class="p-2 rounded-xl border border-line bg-surface/90 text-ink-3 hover:text-ink shadow-sm cursor-pointer hover:border-line-2 transition-colors flex items-center justify-center shrink-0"
         @click="ui.toggleTheme" :title="`Switch to ${ui.theme === 'dark' ? 'light' : 'dark'}`"
         data-testid="theme-toggle">
-        <Sun v-if="ui.theme === 'dark'" class="w-4 h-4 text-pri-interruptive" />
-        <Moon v-else class="w-4 h-4 text-pri-strategic" />
+        <Sun v-if="ui.theme === 'dark'" class="w-4 h-4 text-ink-3" />
+        <Moon v-else class="w-4 h-4 text-ink-3" />
       </button>
     </div>
   </aside>
