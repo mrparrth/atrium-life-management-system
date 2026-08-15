@@ -12,8 +12,8 @@ import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkInvoicesStore } from '@/stores/workInvoices'
 import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useFollowsStore } from '@/stores/follows'
-import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing } from '@/lib/resurface'
-import { isToday } from '@/lib/date'
+import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, isSnoozed } from '@/lib/resurface'
+import { isToday, isOverdue } from '@/lib/date'
 
 import { CheckCircle2, Circle, Flame, Sprout, Trophy } from 'lucide-vue-next'
 
@@ -62,13 +62,20 @@ watch(currentDate, () => {
 // 1. Personal Today Focus Tasks
 const personalTasks = computed(() => {
   currentDate.value
-  return todayFocus(tasksStore.items)
+  const today = currentDate.value.format('YYYY-MM-DD')
+  return tasksStore.items.filter(t => {
+    if (t.scheduledDate && t.scheduledDate > today && !isToday(t.scheduledDate)) return false
+    if (t.dueDate && t.dueDate > today && !isToday(t.dueDate) && !isToday(t.scheduledDate)) return false
+    return !t.dueDate || isToday(t.scheduledDate) || isToday(t.dueDate) || isOverdue(t.dueDate)
+  })
 })
 const personalTasksTotal = computed(() => personalTasks.value.length)
-const personalTasksCompleted = computed(() => personalTasks.value.filter(t => t.done).length)
+const personalTasksHandled = computed(() => {
+  return personalTasks.value.filter(t => t.status === 'done' || isSnoozed(t)).length
+})
 const personalScore = computed(() => {
   if (personalTasksTotal.value === 0) return 1
-  return personalTasksCompleted.value / personalTasksTotal.value
+  return personalTasksHandled.value / personalTasksTotal.value
 })
 
 // 2. Drifting Projects
@@ -225,20 +232,22 @@ const workBriefingScore = computed(() => {
 // 5. Work Board Today Operational Tasks
 const workTasks = computed(() => {
   const today = currentDate.value.format('YYYY-MM-DD')
-  const now = new Date(); now.setHours(0, 0, 0, 0)
   return workItemsStore.items.filter(w => {
-    if (w.snoozedUntil) {
-      const until = new Date(w.snoozedUntil); until.setHours(0, 0, 0, 0)
-      if (until > now) return false
-    }
     return !w.dueDate || w.dueDate <= today
   })
 })
 const workTasksTotal = computed(() => workTasks.value.length)
-const workTasksCompleted = computed(() => workTasks.value.filter(w => workItemsStore.isCompleted(w.status)).length)
+const workTasksHandled = computed(() => {
+  const now = new Date()
+  return workTasks.value.filter(w => {
+    const isCompleted = workItemsStore.isCompleted(w.status)
+    const isSnoozed = w.snoozedUntil && new Date(w.snoozedUntil) > now
+    return isCompleted || isSnoozed
+  }).length
+})
 const workTasksScore = computed(() => {
   if (workTasksTotal.value === 0) return 1
-  return workTasksCompleted.value / workTasksTotal.value
+  return workTasksHandled.value / workTasksTotal.value
 })
 
 // Overall combined progress score (0 to 100)
@@ -313,7 +322,7 @@ watch(progress, () => {
           <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
           <div class="min-w-0 flex-1">
             <div class="font-semibold" :class="personalScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Today's Focus Tasks</div>
-            <p class="text-[10px] text-ink-3 mt-0.5">{{ personalTasksCompleted }}/{{ personalTasksTotal }} completed today</p>
+            <p class="text-[10px] text-ink-3 mt-0.5">{{ personalTasksHandled }}/{{ personalTasksTotal }} handled today</p>
           </div>
         </div>
 
@@ -353,7 +362,7 @@ watch(progress, () => {
           <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
           <div class="min-w-0 flex-1">
             <div class="font-semibold" :class="workTasksScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Today's Work Tasks</div>
-            <p class="text-[10px] text-ink-3 mt-0.5">{{ workTasksCompleted }}/{{ workTasksTotal }} completed today</p>
+            <p class="text-[10px] text-ink-3 mt-0.5">{{ workTasksHandled }}/{{ workTasksTotal }} handled today</p>
           </div>
         </div>
       </div>
