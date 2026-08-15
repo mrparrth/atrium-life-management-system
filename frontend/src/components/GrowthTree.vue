@@ -64,9 +64,17 @@ const personalTasks = computed(() => {
   currentDate.value
   const today = currentDate.value.format('YYYY-MM-DD')
   return tasksStore.items.filter(t => {
-    if (t.scheduledDate && t.scheduledDate > today && !isToday(t.scheduledDate)) return false
-    if (t.dueDate && t.dueDate > today && !isToday(t.dueDate) && !isToday(t.scheduledDate)) return false
-    return !t.dueDate || isToday(t.scheduledDate) || isToday(t.dueDate) || isOverdue(t.dueDate)
+    // 1. If it was completed today, it is part of today's focus tasks
+    if (t.status === 'done' && isToday(t.completedAt)) {
+      return true
+    }
+    // 2. Otherwise, if it is open/snoozed, it is part of today's tasks if scheduled/due today, overdue, or has no due date
+    if (t.status !== 'done') {
+      if (t.scheduledDate && t.scheduledDate > today && !isToday(t.scheduledDate)) return false
+      if (t.dueDate && t.dueDate > today && !isToday(t.dueDate) && !isToday(t.scheduledDate)) return false
+      return !t.dueDate || isToday(t.scheduledDate) || isToday(t.dueDate) || isOverdue(t.dueDate)
+    }
+    return false
   })
 })
 const personalTasksTotal = computed(() => personalTasks.value.length)
@@ -233,7 +241,17 @@ const workBriefingScore = computed(() => {
 const workTasks = computed(() => {
   const today = currentDate.value.format('YYYY-MM-DD')
   return workItemsStore.items.filter(w => {
-    return !w.dueDate || w.dueDate <= today
+    const isCompleted = workItemsStore.isCompleted(w.status)
+    // 1. If it was completed today, it is part of today's work tasks
+    if (isCompleted && isToday(w.closedDate)) {
+      return true
+    }
+    // 2. Otherwise, if it is open/snoozed, it is part of today's work tasks if due today, overdue, or has no due date
+    if (!isCompleted) {
+      if (w.dueDate && w.dueDate > today && !isToday(w.dueDate)) return false
+      return !w.dueDate || w.dueDate <= today
+    }
+    return false
   })
 })
 const workTasksTotal = computed(() => workTasks.value.length)
