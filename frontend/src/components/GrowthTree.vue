@@ -12,10 +12,11 @@ import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkInvoicesStore } from '@/stores/workInvoices'
 import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useFollowsStore } from '@/stores/follows'
+import { useReviewsStore } from '@/stores/reviews'
 import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, isSnoozed } from '@/lib/resurface'
 import { isToday, isOverdue } from '@/lib/date'
 
-import { CheckCircle2, Circle, Flame, Sprout, Trophy } from 'lucide-vue-next'
+import { CheckCircle2, Circle, Flame, Sprout, Trophy, Sparkles } from 'lucide-vue-next'
 
 const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
@@ -28,6 +29,7 @@ const workItemsStore = useWorkItemsStore()
 const workInvoicesStore = useWorkInvoicesStore()
 const workLeadsStore = useWorkLeadsStore()
 const followsStore = useFollowsStore()
+const reviewsStore = useReviewsStore()
 import { useUIStore } from '@/stores/ui'
 const ui = useUIStore()
 
@@ -47,6 +49,7 @@ onMounted(() => {
   }, 30000)
   syncClickedMemory()
   updateStreak()
+  reviewsStore.load()
   window.addEventListener('atrium-memory-clicked', syncClickedMemory)
 })
 
@@ -267,6 +270,73 @@ const workTasksScore = computed(() => {
   if (workTasksTotal.value === 0) return 1
   return workTasksHandled.value / workTasksTotal.value
 })
+// 6. Review Reminders (Optional, does not affect tree score)
+const activeReviews = computed(() => {
+  const list = []
+  const today = currentDate.value
+  
+  // 1. Daily Review: shows daily
+  const hasDaily = reviewsStore.items.some(r => r.type === 'daily' && dayjs(r.date).isSame(today, 'day'))
+  list.push({
+    id: 'daily',
+    label: 'Daily Review',
+    completed: hasDaily,
+    show: true
+  })
+  
+  // 2. Weekly Review: shows on Friday and continues for 3-4 days (Friday, Saturday, Sunday, Monday)
+  const dayOfWeek = today.day()
+  const isWeeklyActive = [5, 6, 0, 1].includes(dayOfWeek)
+  if (isWeeklyActive) {
+    let offset = 0
+    if (dayOfWeek === 5) offset = 0
+    else if (dayOfWeek === 6) offset = 1
+    else if (dayOfWeek === 0) offset = 2
+    else if (dayOfWeek === 1) offset = 3
+    
+    const fridayDate = today.subtract(offset, 'day').startOf('day')
+    const mondayDate = fridayDate.add(3, 'day').endOf('day')
+    
+    const hasWeekly = reviewsStore.items.some(r => {
+      if (r.type !== 'weekly') return false
+      const d = dayjs(r.date)
+      return (d.isSame(fridayDate, 'day') || d.isAfter(fridayDate)) && (d.isSame(mondayDate, 'day') || d.isBefore(mondayDate))
+    })
+    
+    list.push({
+      id: 'weekly',
+      label: 'Weekly Review',
+      completed: hasWeekly,
+      show: true
+    })
+  }
+  
+  // 3. Monthly Review: shows on 1st of month and continues till 10th
+  const dom = today.date()
+  const isMonthlyActive = dom >= 1 && dom <= 10
+  if (isMonthlyActive) {
+    const hasMonthly = reviewsStore.items.some(r => r.type === 'monthly' && dayjs(r.date).isSame(today, 'month'))
+    list.push({
+      id: 'monthly',
+      label: 'Monthly Review',
+      completed: hasMonthly,
+      show: true
+    })
+  }
+  
+  // 4. Yearly Review: shows on 1st of year and continues until completed for this year
+  const hasYearly = reviewsStore.items.some(r => r.type === 'yearly' && dayjs(r.date).year() === today.year())
+  if (!hasYearly) {
+    list.push({
+      id: 'yearly',
+      label: 'Yearly Review',
+      completed: false,
+      show: true
+    })
+  }
+  
+  return list.filter(r => r.show)
+})
 
 // Overall combined progress score (0 to 100)
 const progress = computed(() => {
@@ -381,6 +451,26 @@ watch(progress, () => {
           <div class="min-w-0 flex-1">
             <div class="font-semibold" :class="workTasksScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Today's Work Tasks</div>
             <p class="text-[10px] text-ink-3 mt-0.5">{{ workTasksHandled }}/{{ workTasksTotal }} handled today</p>
+          </div>
+        </div>
+
+        <!-- Review Reminders (Optional) -->
+        <div v-if="activeReviews.length" class="flex items-start gap-2.5 border-t border-line/35 pt-2.5 mt-0.5">
+          <Sparkles class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
+          <div class="min-w-0 flex-1">
+            <div class="font-semibold text-ink-2 flex items-center gap-1.5">
+              <span>Review Reminders</span>
+              <span class="text-[9px] uppercase tracking-wider px-1 py-0.5 bg-line text-ink-3 rounded font-bold scale-90 origin-left">Optional</span>
+            </div>
+            <div class="flex flex-col gap-1 mt-1.5">
+              <div v-for="rev in activeReviews" :key="rev.id" class="flex items-center gap-1.5">
+                <CheckCircle2 v-if="rev.completed" class="w-3.5 h-3.5 text-pri-strategic shrink-0" />
+                <Circle v-else class="w-3.5 h-3.5 text-ink-3 shrink-0" />
+                <span class="text-[10px]" :class="rev.completed ? 'text-ink-3 line-through font-normal' : 'text-ink-2 font-medium'">
+                  {{ rev.label }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
