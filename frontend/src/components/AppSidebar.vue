@@ -191,16 +191,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </div>
     </div>
 
-    <!-- THEME TOGGLE (FLOATING BOTTOM RIGHT) -->
-    <Teleport to="body">
-      <button
-        class="fixed bottom-6 right-6 z-50 p-2.5 rounded-full border border-line bg-surface/90 text-ink shadow-lg backdrop-blur-sm cursor-pointer hover:border-line-2 transition-colors flex items-center justify-center"
-        @click="ui.toggleTheme" :title="`Switch to ${ui.theme === 'dark' ? 'light' : 'dark'}`"
-        data-testid="theme-toggle">
-        <Sun v-if="ui.theme === 'dark'" class="w-4 h-4 text-pri-interruptive" />
-        <Moon v-else class="w-4 h-4 text-pri-strategic" />
-      </button>
-    </Teleport>
+
 
     <button @click="ui.openCommand"
       class="mx-4 mb-2 flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-line bg-surface text-ink-2 hover:text-ink hover:border-line-2 transition-all duration-300"
@@ -261,9 +252,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </div>
     </nav>
 
-    <div class="px-3 pb-5 pt-2 border-t border-line">
+    <div class="px-3 pb-5 pt-2 border-t border-line flex items-center justify-between gap-1.5">
       <RouterLink to="/settings"
-        class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-ink-2 hover:text-ink hover:bg-surface/60 transition-all duration-300"
+        class="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-ink-2 hover:text-ink hover:bg-surface/60 transition-all duration-300"
         data-testid="nav-settings">
         <Settings class="w-4 h-4 text-ink-3" />
         <span>
@@ -271,6 +262,15 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
             :class="{ 'underline decoration-ink/40 underline-offset-2': part.highlight }">{{ part.text }}</span>
         </span>
       </RouterLink>
+
+      <!-- Theme Toggle button positioned to the right of Settings -->
+      <button
+        class="p-2 rounded-xl border border-line bg-surface/90 text-ink shadow-sm cursor-pointer hover:border-line-2 transition-colors flex items-center justify-center shrink-0"
+        @click="ui.toggleTheme" :title="`Switch to ${ui.theme === 'dark' ? 'light' : 'dark'}`"
+        data-testid="theme-toggle">
+        <Sun v-if="ui.theme === 'dark'" class="w-4 h-4 text-pri-interruptive" />
+        <Moon v-else class="w-4 h-4 text-pri-strategic" />
+      </button>
     </div>
   </aside>
 </template>
