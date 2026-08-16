@@ -63,6 +63,7 @@ onBeforeUnmount(() => {
 
 watch(currentDate, () => {
   syncClickedMemory()
+  updateStreak()
 })
 
 // 1. Personal Today Focus Tasks
