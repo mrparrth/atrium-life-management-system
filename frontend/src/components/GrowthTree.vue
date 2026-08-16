@@ -14,6 +14,7 @@ import { useWorkInvoicesStore } from '@/stores/workInvoices'
 import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useFollowsStore } from '@/stores/follows'
 import { useReviewsStore } from '@/stores/reviews'
+import { useSettingsStore } from '@/stores/settings'
 import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, isSnoozed } from '@/lib/resurface'
 import { isToday, isOverdue } from '@/lib/date'
 
@@ -32,10 +33,12 @@ const workInvoicesStore = useWorkInvoicesStore()
 const workLeadsStore = useWorkLeadsStore()
 const followsStore = useFollowsStore()
 const reviewsStore = useReviewsStore()
+const settingsStore = useSettingsStore()
 import { useUIStore } from '@/stores/ui'
 const ui = useUIStore()
 
 const currentDate = ref(dayjs())
+const isInitialized = ref(false)
 let clockTimer = null
 
 const clickedSetLocal = ref(new Set())
@@ -45,14 +48,37 @@ function syncClickedMemory() {
   clickedSetLocal.value = new Set(JSON.parse(localStorage.getItem(`atrium.clicked_memory_${todayStr}`) || '[]'))
 }
 
-onMounted(() => {
+onMounted(async () => {
   clockTimer = setInterval(() => {
     currentDate.value = dayjs()
   }, 30000)
   syncClickedMemory()
+  
+  // Wait for all stores to finish loading database items
+  await Promise.all([
+    reviewsStore.load(),
+    yearsStore.load(),
+    tasksStore.load(),
+    projectsStore.load(),
+    notesStore.load(),
+    bookmarksStore.load(),
+    goalsStore.load(),
+    workItemsStore.load(),
+    workInvoicesStore.load(),
+    workLeadsStore.load(),
+    followsStore.load(),
+    settingsStore.load()
+  ])
+  
+  // Load streak state from IndexedDB Settings
+  streakCount.value = Number(settingsStore.get('tree_streak_count', 0))
+  lastStreakDate.value = settingsStore.get('tree_streak_last_date', '')
+  
+  isInitialized.value = true
+  
+  // Calculate today's starting streak state
   updateStreak()
-  reviewsStore.load()
-  yearsStore.load()
+  
   window.addEventListener('atrium-memory-clicked', syncClickedMemory)
 })
 
@@ -352,10 +378,12 @@ const progress = computed(() => {
 })
 
 // Streak Persistence
-const streakCount = ref(Number(localStorage.getItem('atrium.tree_streak_count') || 0))
-const lastStreakDate = ref(localStorage.getItem('atrium.tree_streak_last_date') || '')
+const streakCount = ref(0)
+const lastStreakDate = ref('')
 
 function updateStreak() {
+  if (!isInitialized.value) return
+  
   const today = currentDate.value.format('YYYY-MM-DD')
   if (progress.value === 100) {
     if (lastStreakDate.value === today) return
@@ -366,13 +394,13 @@ function updateStreak() {
       streakCount.value = 1
     }
     lastStreakDate.value = today
-    localStorage.setItem('atrium.tree_streak_count', streakCount.value.toString())
-    localStorage.setItem('atrium.tree_streak_last_date', today)
+    settingsStore.set('tree_streak_count', streakCount.value)
+    settingsStore.set('tree_streak_last_date', today)
   } else {
     const yesterday = currentDate.value.subtract(1, 'day').format('YYYY-MM-DD')
     if (lastStreakDate.value && lastStreakDate.value !== yesterday && lastStreakDate.value !== today) {
       streakCount.value = 0
-      localStorage.setItem('atrium.tree_streak_count', '0')
+      settingsStore.set('tree_streak_count', 0)
     }
   }
 }
@@ -442,6 +470,7 @@ function launchConfetti() {
 }
 
 watch(progress, (newVal, oldVal) => {
+  if (!isInitialized.value) return
   updateStreak()
   if (newVal === 100 && (oldVal === undefined || oldVal < 100)) {
     launchConfetti()
