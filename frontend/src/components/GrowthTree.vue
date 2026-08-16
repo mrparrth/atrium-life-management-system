@@ -460,12 +460,12 @@ watch(progress, (newVal, oldVal) => {
       <!-- Popover Header -->
       <div class="flex items-center justify-between border-b border-line pb-2.5">
         <div class="flex items-center gap-2">
-          <Sprout class="w-4 h-4 text-pri-strategic animate-pulse" />
-          <span class="font-serif text-sm font-bold text-ink">Tree of Daily Growth</span>
+          <Sprout class="w-4 h-4 text-pri-strategic animate-pulse -translate-y-[1px]" />
+          <span class="font-serif text-sm font-bold text-ink leading-none">Tree of Daily Growth</span>
         </div>
-        <div class="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold text-xs font-mono">
-          <Flame class="w-3.5 h-3.5 fill-current" />
-          <span>{{ streakCount }}d streak</span>
+        <div class="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold text-xs font-mono leading-none">
+          <Flame class="w-3.5 h-3.5 fill-current -translate-y-[1px]" />
+          <span class="leading-none">{{ streakCount }}d streak</span>
         </div>
       </div>
 
