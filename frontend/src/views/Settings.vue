@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
+import { useSettingsStore } from '@/stores/settings'
 import { db } from '@/db'
 import VCheckbox from '@/components/VCheckbox.vue'
 import VSelect from '@/components/VSelect.vue'
@@ -12,6 +13,7 @@ import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit
 import { isNotificationSupported, requestNotificationPermission, areNotificationsEnabled, sendDesktopNotification } from '@/lib/notifications'
 
 const ui = useUIStore()
+const settings = useSettingsStore()
 const origin = location.origin
 
 const clientIdInput = ref('')
@@ -74,8 +76,8 @@ function refresh() {
   isEditingClientId.value = !clientIdInput.value.trim()
   needsIntervention.value = localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
 
-  const url = localStorage.getItem('atrium.work.drive_folder_url') || ''
-  const root = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
+  const url = settings.get('work_drive_folder_url', '')
+  const root = settings.get('work_drive_root', 'AtriumWork')
   driveFolderInput.value = url || root
 
   checkOfflineFolder()
@@ -164,33 +166,33 @@ const driveFolderLink = computed(() => {
   }
   return `https://drive.google.com/drive/search?q=${encodeURIComponent(val)}`
 })
-const defaultCurrencyInput = ref(localStorage.getItem('atrium.work.default_currency') || 'USD')
-const syncModeInput = ref(localStorage.getItem('atrium.sync.mode') || 'auto')
-const syncIntervalInput = ref(Number(localStorage.getItem('atrium.sync.interval')) || 60)
+const defaultCurrencyInput = ref(settings.get('work_default_currency', 'USD'))
+const syncModeInput = ref(settings.get('sync_mode', 'auto'))
+const syncIntervalInput = ref(Number(settings.get('sync_interval', 60)))
 
 function saveWorkSettings() {
   const val = driveFolderInput.value.trim()
   if (val.startsWith('http://') || val.startsWith('https://') || val.includes('drive.google.com')) {
-    localStorage.setItem('atrium.work.drive_folder_url', val)
-    localStorage.setItem('atrium.work.drive_root', '')
+    settings.set('work_drive_folder_url', val)
+    settings.set('work_drive_root', '')
   } else {
-    localStorage.setItem('atrium.work.drive_root', val || 'AtriumWork')
-    localStorage.setItem('atrium.work.drive_folder_url', '')
+    settings.set('work_drive_root', val || 'AtriumWork')
+    settings.set('work_drive_folder_url', '')
   }
-  localStorage.setItem('atrium.work.default_currency', defaultCurrencyInput.value)
-  localStorage.setItem('atrium.sync.mode', syncModeInput.value)
-  localStorage.setItem('atrium.sync.interval', String(syncIntervalInput.value))
+  settings.set('work_default_currency', defaultCurrencyInput.value)
+  settings.set('sync_mode', syncModeInput.value)
+  settings.set('sync_interval', String(syncIntervalInput.value))
   ui.showToast('Preferences saved', 'success')
   refresh()
 }
 
 import { saveDirectoryHandle, getDirectoryHandle, executeOfflineBackup, verifyPermission } from '@/services/offlineSync'
 
-const offlineEnabled = ref(localStorage.getItem('atrium.offline.enabled') === '1')
-const offlineInterval = ref(Number(localStorage.getItem('atrium.offline.interval')) || 1440)
-const offlineKeepDays = ref(Number(localStorage.getItem('atrium.offline.keepDays')) || 7)
+const offlineEnabled = ref(settings.get('offline_enabled', false))
+const offlineInterval = ref(Number(settings.get('offline_interval', 1440)))
+const offlineKeepDays = ref(Number(settings.get('offline_keep_days', 7)))
 const offlineFolderName = ref('')
-const offlineLastBackup = ref(localStorage.getItem('atrium.offline.lastBackup') || null)
+const offlineLastBackup = ref(settings.get('offline_last_backup', null))
 const offlineBusy = ref(false)
 const offlineNeedsPermission = ref(false)
 

@@ -150,11 +150,20 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
   function selectFromPool(pool, count, strict = false) {
     if (!pool || pool.length === 0) return [];
     
-    let poolWithPriority = pool.map(item => {
-      let D = daysSince(item.lastViewedAt);
-      if (item.lastViewedAt && isToday(item.lastViewedAt)) {
-        D = Infinity;
-      }
+    // Items viewed today were resurfaced and clicked today!
+    // They MUST remain in today's chosen set so they stay in the list (turned grey).
+    const viewedToday = pool.filter(item => item.lastViewedAt && isToday(item.lastViewedAt));
+    const chosen = viewedToday.slice(0, count);
+
+    if (chosen.length >= count) {
+      return chosen;
+    }
+
+    const chosenIds = new Set(chosen.map(i => i.id));
+    let unviewedPool = pool.filter(item => !chosenIds.has(item.id));
+
+    let poolWithPriority = unviewedPool.map(item => {
+      const D = daysSince(item.lastViewedAt);
       const priority = D >= 15 ? D : D * 0.0001;
       return { item, D, priority };
     });
@@ -163,12 +172,11 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
       poolWithPriority = poolWithPriority.filter(p => p.D >= 15);
     }
 
-    if (poolWithPriority.length === 0) return [];
+    if (poolWithPriority.length === 0) return chosen;
 
     poolWithPriority.sort((a, b) => b.priority - a.priority);
 
     const candidates = poolWithPriority.slice(0, 8);
-    const chosen = [];
     const tempCandidates = [...candidates];
 
     while (chosen.length < count && tempCandidates.length > 0) {

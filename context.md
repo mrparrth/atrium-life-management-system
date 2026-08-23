@@ -138,10 +138,11 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Added the "By Due Date" tab to WorkItems.vue sorting active tasks by date criteria. Cleaned up redundant hint text descriptions from status/due date section headers, and renamed the first tab header to "By Priority".
 - UX: Fixed tomorrow's tasks filter in WorkDashboard.vue to correctly display tasks that are due tomorrow or are active tomorrow (snoozed until tomorrow's date).
 
-### August 14, 2026
-- UX: Integrated the custom VUrlInput component inside both the Create Wish and Edit Wish modals in views/Goals.vue for the Product Link and Image URL input fields.
-- UX: Enabled mouse-drag and touch-drag event handlers for Notion-style repositioning of Goal/Wishlist cover images, showing a "Drag to reposition" bar on hover and removing all manual range sliders from the modals.
-- UX: Redesigned wishlist items to render as Notion-style Gallery cards, with the cover image spanning the full width of the card at the top (height h-36), and content details styled in a padded section below.
-- FEATURE: Added support for entering, updating, and displaying a price on wishlist items, adding input fields to Create/Edit Wish modals and showing formatted price badges next to card titles in the Gallery view.
-- FEATURE: Designed and implemented the Tree of Daily Growth floating widget (100px SVG tree) with a hover popover, tracking personal tasks, drifting projects, memory resurfacing, work alerts, and work tasks, growing in color and bearing red fruits at 100%, with dynamic date streak tracking.
-- DOCS: Updated context.md and walkthrough.md.
+### August 23, 2026
+- FEATURE: Built dedicated Goal Detail page (`GoalDetail.vue`) at route `/goals/:id` with zero-layout-shift Live Form controls (title, description, start/target dates, assigned years, image URL, tracking mode) auto-saving to indexedDB. Integrated Review Log comments feed and tab navigation (`Summary`, `Projects`, `Tasks`).
+- OVERHAUL: Redesigned Project Detail page (`ProjectDetail.vue`) to match Work Clients 2-column layout. Placed Project Specifications in a 1/3 right sidebar card with an Edit toggle button; placed Active Tasks (minimal text cards triggering task edit dialog on click), Links & Bookmarks, and Review Log updates in the 2/3 main column.
+- FEATURE: Integrated universal tab keyboard shortcuts (`Alt+1-N`, `Alt+Up/Down`) and shortcut hint badges (`Press ⌥1–⌥N or ⌥ Up/⌥ Down to switch`) across Goal Detail and Project Detail pages.
+- FEATURE: Fixed Memory Resurfacing item retention in `resurface.js`. Retained items viewed today inside today's selection pool so clicking a resurfaced bookmark/note turns it grey without spawning new unclicked items.
+- UX: Implemented a 5-second delayed smooth sliding transition (`<TransitionGroup name="flip-list">` with 1.2s CSS move transitions) for greyed-out resurfaced memory items on `PersonalDashboard.vue`.
+- FEATURE: Refined Growth Tree handled task criteria to evaluate maximum of `dueDate` and `snoozedUntil`. Rescheduled or snoozed tasks updated today to future dates count as handled today; items still due today do not.
+- DOCS: Synchronized context.md and walkthrough.md.

@@ -8,6 +8,7 @@ import { useWorkNotesStore } from '@/stores/workNotes'
 import { useWorkMeetingsStore } from '@/stores/workMeetings'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { useUIStore } from '@/stores/ui'
+import { useSettingsStore } from '@/stores/settings'
 import WorkItemCard from '@/components/work/WorkItemCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { createClientDriveFolder, createClientDriveFolderInParent, extractFolderIdFromUrl } from '@/services/drive'
@@ -21,7 +22,7 @@ import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
   Calendar, Settings, Sparkles, Plus, Clock, MessageSquare,
   HardDrive, ExternalLink, Trash2, Star, Link as LinkIcon, Key,
-  Eye, EyeOff, Copy, X, Pencil
+  Eye, EyeOff, Copy, X, Pencil, Folder, Globe
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -37,6 +38,7 @@ const notesStore = useWorkNotesStore()
 const meetingsStore = useWorkMeetingsStore()
 const resourcesStore = useWorkResourcesStore()
 const ui = useUIStore()
+const settings = useSettingsStore()
 
 const activeTab = ref('overview') // overview, work, notes, invoices, reference, credentials
 const TABS = ['overview', 'work', 'notes', 'invoices', 'reference', 'credentials']
@@ -135,14 +137,14 @@ async function triggerCreateDriveFolder() {
   if (!client.value) return
   ui.showToast('Connecting to Google Drive...', 'info')
   try {
-    const parentFolderUrl = localStorage.getItem('atrium.work.drive_folder_url') || ''
+    const parentFolderUrl = settings.get('work_drive_folder_url', '')
     const parentFolderId = extractFolderIdFromUrl(parentFolderUrl)
     let folderId = ''
 
     if (parentFolderId) {
       folderId = await createClientDriveFolderInParent(client.value.name, parentFolderId)
     } else {
-      const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
+      const rootDir = settings.get('work_drive_root', 'AtriumWork')
       folderId = await createClientDriveFolder(client.value.name, rootDir)
     }
 
@@ -336,14 +338,14 @@ function getDomainName(url) {
 function getSubtypeConfig(subType) {
   switch (subType) {
     case 'file':
-      return { label: 'file', colorClass: 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400' }
+      return { label: 'file', colorClass: 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400', textClass: 'text-green-600 dark:text-green-400' }
     case 'folder':
-      return { label: 'folder', colorClass: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' }
+      return { label: 'folder', colorClass: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400', textClass: 'text-amber-600 dark:text-amber-400' }
     case 'doc':
-      return { label: 'document', colorClass: 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400' }
+      return { label: 'document', colorClass: 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400', textClass: 'text-blue-600 dark:text-blue-400' }
     case 'website':
     default:
-      return { label: 'website', colorClass: 'bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400' }
+      return { label: 'website', colorClass: 'bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400', textClass: 'text-teal-600 dark:text-teal-400' }
   }
 }
 
@@ -353,8 +355,9 @@ function getSubtypeIcon(subType) {
     case 'doc':
       return FileText
     case 'folder':
-      return FolderKanban
+      return Folder
     case 'website':
+      return Globe
     default:
       return LinkIcon
   }
@@ -462,12 +465,12 @@ watch(showAddResourceModal, (open) => {
 
           <!-- Google Drive Folder Header Utility Button (in the middle) -->
           <VTooltip v-if="client.driveFolderId" text="Open Google Drive folder (⌘2)" position="bottom">
-            <a :href="`https://drive.google.com/drive/folders/${client.driveFolderId}`"
-              target="_blank"
+            <a :href="`https://drive.google.com/drive/folders/${client.driveFolderId}`" target="_blank"
               class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-ink-2 hover:text-ink hover:bg-surface transition-all shrink-0">
               <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                 <title>Google Drive</title>
-                <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z"/>
+                <path
+                  d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
               </svg>
             </a>
           </VTooltip>
@@ -476,7 +479,8 @@ watch(showAddResourceModal, (open) => {
               class="w-9 h-9 flex items-center justify-center rounded-xl border border-dashed border-line bg-surface/30 text-ink-3 hover:text-ink hover:bg-surface transition-all shrink-0">
               <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                 <title>Google Drive</title>
-                <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z"/>
+                <path
+                  d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
               </svg>
             </button>
           </VTooltip>
@@ -488,7 +492,7 @@ watch(showAddResourceModal, (open) => {
               <Pencil class="w-4 h-4" />
             </button>
           </VTooltip>
-          
+
           <VTooltip v-if="activeTab === 'work'" text="Add Task" position="bottom">
             <button @click="newTaskTitle = ''; ui.showToast('Use quick composer below', 'info')"
               class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-pri-strategic hover:bg-surface hover:text-pri-strategic transition-all shrink-0">
@@ -548,7 +552,8 @@ watch(showAddResourceModal, (open) => {
       </div>
       <span class="text-[10px] text-ink-3 pb-3 select-none italic">Press <kbd
           class="kbd !text-[9px] !px-1 !py-0">⌥1</kbd>–<kbd class="kbd !text-[9px] !px-1 !py-0">⌥6</kbd> or <kbd
-          class="kbd !text-[9px] !px-1 !py-0">⌥ Up</kbd>/<kbd class="kbd !text-[9px] !px-1 !py-0">⌥ Down</kbd> to switch tabs</span>
+          class="kbd !text-[9px] !px-1 !py-0">⌥ Up</kbd>/<kbd class="kbd !text-[9px] !px-1 !py-0">⌥ Down</kbd> to switch
+        tabs</span>
     </div>
 
     <!-- OVERVIEW TAB -->
@@ -560,16 +565,17 @@ watch(showAddResourceModal, (open) => {
         <div class="card p-6 border bg-surface space-y-4">
           <div class="flex items-center justify-between">
             <h4 class="font-serif text-lg font-bold text-ink">Active Deliverables</h4>
-            <button @click="activeTab = 'work'" class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
+            <button @click="activeTab = 'work'"
+              class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
               View All <span class="text-[10px]">➔</span>
             </button>
           </div>
           <div v-if="openItems.length" class="space-y-2.5">
-            <div v-for="item in openItems.slice(0, 3)" :key="item.id" 
-              @click="editingTask = item"
+            <div v-for="item in openItems.slice(0, 3)" :key="item.id" @click="editingTask = item"
               class="p-3 bg-canvas/40 border border-line rounded-xl hover:border-line-2 transition-all flex items-center justify-between cursor-pointer group">
               <div class="min-w-0 flex-1 pr-3">
-                <div class="text-sm text-ink truncate group-hover:text-pri-strategic transition-colors">{{ item.title }}</div>
+                <div class="text-sm text-ink truncate group-hover:text-pri-strategic transition-colors">{{ item.title }}
+                </div>
                 <div class="text-[10px] text-ink-3 mt-1 flex items-center gap-1.5 font-mono">
                   <span class="capitalize">{{ item.status }}</span>
                   <span v-if="item.dueDate" class="text-ink-4">•</span>
@@ -579,7 +585,8 @@ watch(showAddResourceModal, (open) => {
               <span class="text-[10px] bg-surface border px-2 py-0.5 rounded text-ink-3">active</span>
             </div>
           </div>
-          <p v-else class="text-xs text-ink-3 italic bg-canvas/20 p-4 rounded-xl text-center">No active deliverables at this time.</p>
+          <p v-else class="text-xs text-ink-3 italic bg-canvas/20 p-4 rounded-xl text-center">No active deliverables at
+            this time.</p>
         </div>
 
         <!-- Linked Documents & Reference Links Grid -->
@@ -588,16 +595,17 @@ watch(showAddResourceModal, (open) => {
           <div class="card p-6 border bg-surface space-y-4">
             <div class="flex items-center justify-between">
               <h4 class="font-serif text-base font-semibold text-ink">Recent Documents</h4>
-              <button @click="activeTab = 'notes'" class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
+              <button @click="activeTab = 'notes'"
+                class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
                 View All <span class="text-[10px]">➔</span>
               </button>
             </div>
             <div v-if="clientNotes.length" class="space-y-2">
-              <div v-for="n in clientNotes.slice(0, 3)" :key="n.id"
-                @click="router.push(`/work/notes?id=${n.id}`)"
+              <div v-for="n in clientNotes.slice(0, 3)" :key="n.id" @click="router.push(`/work/notes?id=${n.id}`)"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center gap-2.5 group">
                 <FileText class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
-                <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{ n.title }}</span>
+                <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{
+                  n.title }}</span>
               </div>
             </div>
             <p v-else class="text-xs text-ink-3 italic bg-canvas/20 p-4 rounded-xl text-center">No linked documents.</p>
@@ -607,17 +615,19 @@ watch(showAddResourceModal, (open) => {
           <div class="card p-6 border bg-surface space-y-4">
             <div class="flex items-center justify-between">
               <h4 class="font-serif text-base font-semibold text-ink">Recent References</h4>
-              <button @click="activeTab = 'reference'" class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
+              <button @click="activeTab = 'reference'"
+                class="text-xs text-pri-strategic hover:underline flex items-center gap-1">
                 View All <span class="text-[10px]">➔</span>
               </button>
             </div>
             <div v-if="clientReferences.length" class="space-y-2">
-              <div v-for="res in clientReferences.slice(0, 3)" :key="res.id"
-                @click="openEditResourceModal(res)"
+              <div v-for="res in clientReferences.slice(0, 3)" :key="res.id" @click="openEditResourceModal(res)"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center justify-between group">
                 <div class="min-w-0 flex-1 flex items-center gap-2.5">
-                  <component :is="getSubtypeIcon(res.subType || 'website')" class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
-                  <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{ res.title }}</span>
+                  <component :is="getSubtypeIcon(res.subType || 'website')"
+                    class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
+                  <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{
+                    res.title }}</span>
                 </div>
                 <a v-if="res.url" :href="res.url" target="_blank" @click.stop
                   class="text-ink-3 hover:text-pri-strategic p-1 rounded hover:bg-canvas transition-colors shrink-0">
@@ -687,7 +697,8 @@ watch(showAddResourceModal, (open) => {
           </div>
 
           <div class="pt-4 border-t border-line space-y-2">
-            <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Relationship Details</span>
+            <span class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold block">Relationship
+              Details</span>
             <p class="text-xs text-ink-2 leading-relaxed whitespace-pre-line">
               {{ client.relationshipNotes || `No notes added yet.` }}</p>
           </div>
@@ -807,42 +818,39 @@ watch(showAddResourceModal, (open) => {
       </div>
 
       <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
-        <div v-for="res in clientReferences" :key="res.id"
-          @click="openEditResourceModal(res)"
-          class="card p-4 border bg-surface flex items-center justify-between hover:border-line-2 hover:bg-canvas/5 transition-all duration-300 relative group cursor-pointer">
-          <div class="flex items-center gap-3.5 min-w-0 flex-1">
+        <div v-for="res in clientReferences" :key="res.id" @click="openEditResourceModal(res)"
+          class="p-4 bg-surface border border-line rounded-2xl flex items-center justify-between hover:border-line-2 hover:bg-canvas/5 transition-all duration-300 relative group cursor-pointer">
+          <div class="flex items-center gap-3.5 min-w-0 flex-1 pr-14">
             <!-- Icon container representing the link/resource -->
-            <div class="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center shrink-0 border border-line/40 group-hover:border-pri-strategic/30 transition-all">
-              <component :is="getSubtypeIcon(res.subType || 'website')" class="w-5 h-5 text-ink-3 group-hover:text-pri-strategic transition-colors" />
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-all"
+              :class="getSubtypeConfig(res.subType || 'website').colorClass">
+              <component :is="getSubtypeIcon(res.subType || 'website')" class="w-5 h-5" />
             </div>
-            
+
             <!-- Details: Title & Domain -->
             <div class="min-w-0 flex-1">
-              <h4 class="text-sm font-sans font-normal text-ink line-clamp-2 leading-relaxed group-hover:text-pri-strategic transition-colors">
+              <h4
+                class="text-sm font-sans font-medium text-ink line-clamp-2 leading-relaxed group-hover:text-pri-strategic transition-colors">
                 {{ res.title }}
               </h4>
               <p v-if="res.notes" class="text-xs text-ink-2 mt-0.5 line-clamp-1 leading-normal">{{ res.notes }}</p>
-              <div v-if="res.url" class="text-[11px] font-mono text-ink-3 mt-1.5 flex items-center gap-2 select-none flex-wrap">
-                <!-- Subtype Badge -->
-                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border shrink-0"
-                  :class="getSubtypeConfig(res.subType || 'website').colorClass">
-                  {{ getSubtypeConfig(res.subType || 'website').label }}
-                </span>
-                <span class="text-ink-4">•</span>
+              <div v-if="res.url" class="text-[11px] font-sans text-ink-3 mt-1 flex items-center select-none flex-wrap">
                 <span>{{ getDomainName(res.url) }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Actions: Open link & Trash -->
-          <div class="flex items-center gap-1.5 shrink-0 ml-3">
-            <a v-if="res.url" :href="res.url" target="_blank" @click.stop
-              class="text-ink-3 hover:text-pri-strategic p-2 rounded-xl hover:bg-canvas transition-all shrink-0">
-              <ExternalLink class="w-4 h-4" />
+          <!-- Actions: Open link & Trash (Absolute top-right floating container on hover/focus) -->
+          <div
+            class="absolute top-3.5 right-3.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 bg-surface/90 backdrop-blur-sm rounded-lg p-0.5 border border-line shadow-sm"
+            @click.stop>
+            <a v-if="res.url" :href="res.url" target="_blank"
+              class="text-ink-3 hover:text-pri-strategic p-1.5 rounded-lg hover:bg-canvas transition-all shrink-0">
+              <ExternalLink class="w-3.5 h-3.5" />
             </a>
-            <button @click.prevent.stop="deleteResource(res.id)" 
-              class="text-ink-3 hover:text-pri-critical p-2 rounded-xl hover:bg-canvas transition-all shrink-0 md:opacity-0 group-hover:opacity-100 focus:opacity-100">
-              <Trash2 class="w-4 h-4" />
+            <button @click.prevent.stop="deleteResource(res.id)"
+              class="text-ink-3 hover:text-pri-critical p-1.5 rounded-lg hover:bg-canvas transition-all shrink-0">
+              <Trash2 class="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -861,56 +869,60 @@ watch(showAddResourceModal, (open) => {
       </div>
 
       <div v-if="clientCredentials.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div v-for="res in clientCredentials" :key="res.id"
-          @click="openEditResourceModal(res)"
+        <div v-for="res in clientCredentials" :key="res.id" @click="openEditResourceModal(res)"
           class="card p-5 border bg-surface flex flex-col justify-between hover:border-line-2 transition-all duration-300 cursor-pointer">
-          <div class="space-y-2">
-            <div class="flex justify-between items-start">
-              <span
-                class="text-[9px] uppercase tracking-wider font-bold text-ink-3 bg-canvas border px-2 py-0.5 rounded">
-                Account/Key
-              </span>
-              <button @click.stop="deleteResource(res.id)" class="text-ink-3 hover:text-pri-critical p-1">
+          <div class="space-y-4">
+            <div class="flex justify-between items-center gap-4">
+              <div class="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+                <h4 class="font-sans text-sm text-ink font-semibold truncate">
+                  {{ res.title }}
+                </h4>
+              </div>
+              <button @click.stop="deleteResource(res.id)"
+                class="text-ink-2 hover:text-pri-critical p-1 transition-colors shrink-0">
                 <Trash2 class="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <h4 class="font-serif text-base text-ink font-semibold flex items-center gap-1.5">
-              <Key class="w-4 h-4 text-ink-3 shrink-0" />
-              {{ res.title }}
-            </h4>
-
             <p v-if="res.notes" class="text-xs text-ink-2 leading-relaxed">{{ res.notes }}</p>
 
-            <div class="space-y-2 pt-2 text-xs font-mono bg-canvas/40 p-3 rounded-xl border border-line" @click.stop>
-              <div v-if="res.url" class="pb-1.5 mb-1.5 border-b border-line/40 flex justify-between items-center">
-                <span class="text-ink-3 text-[10px]">URL</span>
+            <div class="space-y-2.5 text-xs font-mono" @click.stop>
+              <!-- URL Row -->
+              <div v-if="res.url"
+                class="flex items-center gap-4 text-xs font-mono pt-2.5 border-t border-line/50 first:border-t-0 first:pt-0">
+                <span class="text-ink-2 font-semibold w-12 shrink-0 select-none text-[10px] tracking-wider">URL</span>
                 <a :href="res.url" target="_blank" @click.stop
-                  class="text-pri-strategic hover:underline inline-flex items-center gap-1 truncate max-w-[200px]">
+                  class="text-pri-strategic hover:underline inline-flex items-center gap-1 truncate flex-1 min-w-0">
                   {{ res.url }}
-                  <ExternalLink class="w-2.5 h-2.5" />
+                  <ExternalLink class="w-2.5 h-2.5 shrink-0" />
                 </a>
               </div>
-              <div class="flex justify-between items-center">
-                <span class="text-ink-3 text-[10px]">USER</span>
-                <div class="flex items-center gap-1.5">
-                  <span class="text-ink font-semibold">{{ res.username }}</span>
-                  <button @click.stop="copyToClipboard(res.username)" class="text-ink-3 hover:text-ink">
+
+              <!-- USER Row -->
+              <div
+                class="flex items-center gap-4 text-xs font-mono pt-2.5 border-t border-line/50 first:border-t-0 first:pt-0">
+                <span class="text-ink-2 font-semibold w-12 shrink-0 select-none text-[10px] tracking-wider">USER</span>
+                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                  <span class="text-ink font-semibold truncate">{{ res.username }}</span>
+                  <button @click.stop="copyToClipboard(res.username)" class="text-ink-2 hover:text-ink shrink-0">
                     <Copy class="w-3 h-3" />
                   </button>
                 </div>
               </div>
-              <div class="flex justify-between items-center border-t border-line/40 pt-1.5">
-                <span class="text-ink-3 text-[10px]">PASS</span>
-                <div class="flex items-center gap-1.5">
-                  <span class="text-ink font-semibold">
+
+              <!-- PASS Row -->
+              <div
+                class="flex items-center gap-4 text-xs font-mono pt-2.5 border-t border-line/50 first:border-t-0 first:pt-0">
+                <span class="text-ink-2 font-semibold w-12 shrink-0 select-none text-[10px] tracking-wider">PASS</span>
+                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                  <span class="text-ink font-semibold truncate">
                     {{ revealedPasswords[res.id] ? res.password : '••••••••' }}
                   </span>
-                  <button @click.stop="togglePassword(res.id)" class="text-ink-3 hover:text-ink">
+                  <button @click.stop="togglePassword(res.id)" class="text-ink-2 hover:text-ink shrink-0">
                     <EyeOff v-if="revealedPasswords[res.id]" class="w-3.5 h-3.5" />
                     <Eye v-else class="w-3.5 h-3.5" />
                   </button>
-                  <button @click.stop="copyToClipboard(res.password)" class="text-ink-3 hover:text-ink">
+                  <button @click.stop="copyToClipboard(res.password)" class="text-ink-2 hover:text-ink shrink-0">
                     <Copy class="w-3 h-3" />
                   </button>
                 </div>
@@ -964,7 +976,8 @@ watch(showAddResourceModal, (open) => {
         <div>
           <div class="overline">{{ editingResourceId ? 'Edit Resource' : 'New Vault Resource' }}</div>
           <h2 class="font-serif text-2xl mt-1">
-            {{ editingResourceId ? (resourceType === 'url' ? 'Edit Reference Link' : 'Edit Credential') : (resourceType === 'url' ? 'Add Reference Link' : 'Add Credential') }}
+            {{ editingResourceId ? (resourceType === 'url' ? 'Edit Reference Link' : 'Edit Credential') : (resourceType
+              === 'url' ? 'Add Reference Link' : 'Add Credential') }}
           </h2>
         </div>
 
@@ -982,8 +995,8 @@ watch(showAddResourceModal, (open) => {
               <VUrlInput v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
             </div>
             <div class="col-span-1">
-              <VSelect v-model="resourceSubType" label="Link Type" id="resource-subtype"
-                :options="linkTypeOptions" option-value="value" option-label="label" />
+              <VSelect v-model="resourceSubType" label="Link Type" id="resource-subtype" :options="linkTypeOptions"
+                option-value="value" option-label="label" />
             </div>
           </div>
           <VUrlInput v-else v-model="resourceUrl" label="URL/Folder Link" id="resource-url" />
@@ -1017,7 +1030,7 @@ watch(showAddResourceModal, (open) => {
               class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
-    </div>
+      </div>
     </div>
 
     <!-- WORK ITEM EDIT POPUP -->

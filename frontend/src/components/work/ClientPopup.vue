@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
+import { useSettingsStore } from '@/stores/settings'
 import {
   createClientDriveFolder,
   createClientDriveFolderInParent,
@@ -34,6 +35,7 @@ const emit = defineEmits(['close', 'saved'])
 
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
+const settings = useSettingsStore()
 
 const isEdit = computed(() => !!props.client)
 
@@ -206,13 +208,13 @@ async function saveClient() {
   if (!folderId && createDriveFolder.value) {
     ui.showToast('Connecting to Google Drive...', 'info')
     try {
-      const parentFolderUrl = localStorage.getItem('atrium.work.drive_folder_url') || ''
+      const parentFolderUrl = settings.get('work_drive_folder_url', '')
       const parentFolderId = extractFolderIdFromUrl(parentFolderUrl)
 
       if (parentFolderId) {
         folderId = await createClientDriveFolderInParent(name.value.trim(), parentFolderId)
       } else {
-        const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
+        const rootDir = settings.get('work_drive_root', 'AtriumWork')
         folderId = await createClientDriveFolder(name.value.trim(), rootDir)
       }
     } catch (e) {

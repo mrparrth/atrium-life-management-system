@@ -1,10 +1,30 @@
 import { defineStore } from "pinia";
-import { ref, watch } from "vue";
-import { db } from "@/db";
+import { ref, watch, computed } from "vue";
+import { useSettingsStore } from "./settings";
 
 export const useUIStore = defineStore("ui", () => {
-  const theme = ref(localStorage.getItem("atrium.theme") || "light");
-  const mode = ref(localStorage.getItem("atrium.mode") || "personal");
+  const settings = useSettingsStore();
+
+  const theme = computed({
+    get: () => settings.get("theme", localStorage.getItem("atrium.theme") || "light"),
+    set: (val) => settings.set("theme", val)
+  });
+
+  const mode = computed({
+    get: () => settings.get("mode", localStorage.getItem("atrium.mode") || "personal"),
+    set: (val) => settings.set("mode", val)
+  });
+
+  const showWorkspaceAlerts = computed({
+    get: () => settings.get("show_workspace_alerts", localStorage.getItem("atrium.show_workspace_alerts") !== "false"),
+    set: (val) => settings.set("show_workspace_alerts", val)
+  });
+
+  const userName = computed({
+    get: () => settings.get("user_name", localStorage.getItem("atrium.user_name") || ""),
+    set: (val) => settings.set("user_name", val.trim())
+  });
+
   const sidebarOpen = ref(true);
   const commandOpen = ref(false);
   const quickCaptureOpen = ref(false);
@@ -12,21 +32,18 @@ export const useUIStore = defineStore("ui", () => {
   const taskToEdit = ref(null);
   const toasts = ref([]);
   const confirmState = ref(null);
-  const showWorkspaceAlerts = ref(localStorage.getItem("atrium.show_workspace_alerts") !== "false");
-  const userName = ref(localStorage.getItem("atrium.user_name") || "");
 
   function applyTheme() {
     const root = document.documentElement;
     if (theme.value === "dark") root.classList.add("dark");
     else root.classList.remove("dark");
-    localStorage.setItem("atrium.theme", theme.value);
   }
   function toggleTheme() {
     theme.value = theme.value === "dark" ? "light" : "dark";
   }
   function toggleMode() {
+    theme.value; // access reactive source
     mode.value = mode.value === "work" ? "personal" : "work";
-    localStorage.setItem("atrium.mode", mode.value);
     showToast(`Switched to ${mode.value === "work" ? "Work" : "Personal"} Mode`, "success");
   }
   function openCommand() {
@@ -82,12 +99,6 @@ export const useUIStore = defineStore("ui", () => {
   }
 
   watch(theme, applyTheme, { immediate: true });
-  watch(showWorkspaceAlerts, (val) => {
-    localStorage.setItem("atrium.show_workspace_alerts", val ? "true" : "false");
-  });
-  watch(userName, (val) => {
-    localStorage.setItem("atrium.user_name", val.trim());
-  });
 
   return {
     theme,

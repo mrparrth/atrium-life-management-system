@@ -213,7 +213,7 @@ const memory = computed(() => {
 })
 
 const clickedMemoryItems = ref(new Set(JSON.parse(localStorage.getItem(`atrium.clicked_memory_${dayjs().format('YYYY-MM-DD')}`) || '[]')))
-const sortedMemoryItems = ref(new Set())
+const sortedMemoryItems = ref(new Set(clickedMemoryItems.value))
 
 function markClicked(id) {
   clickedMemoryItems.value.add(id)
@@ -224,7 +224,7 @@ function markClicked(id) {
   setTimeout(() => {
     sortedMemoryItems.value.add(id)
     sortedMemoryItems.value = new Set(sortedMemoryItems.value)
-  }, 4000)
+  }, 5000)
 }
 
 function isItemClicked(item) {
@@ -234,9 +234,7 @@ function isItemClicked(item) {
 }
 
 function isItemSorted(item) {
-  if (sortedMemoryItems.value.has(item.id)) return true
-  if (item.lastViewedAt && isToday(item.lastViewedAt)) return true
-  return false
+  return sortedMemoryItems.value.has(item.id)
 }
 
 const resurfacedMemoryList = computed(() => {
@@ -267,7 +265,7 @@ async function handleGoalOrWishClick(item) {
   markClicked(item.id)
   if (item.contentType === 'goal') {
     await goals.markViewed(item.id)
-    router.push(`/goals?goalId=${item.id}`)
+    router.push(`/goals/${item.id}`)
   } else {
     await wishlist.markViewed(item.id)
     router.push(`/goals?wishId=${item.id}`)
@@ -441,91 +439,93 @@ async function openDailyJournal() {
                 rf.reason }}</p>
             </a>
 
-            <!-- Unified Daily Resurfaced Memory List (Sorted: unclicked first, clicked/grayed last) -->
-            <template v-for="item in resurfacedMemoryList" :key="item.id">
-              <!-- Goal Item -->
-              <div v-if="item.contentType === 'goal'" @click="handleGoalOrWishClick(item)"
-                class="card p-4 block hover:border-line-2 transition-all duration-300 cursor-pointer relative"
-                :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
-                data-testid="resurface-goal">
-                <!-- Glowing Green Diamond in Top-Right -->
-                <div class="absolute top-4 right-4 flex items-center justify-center">
-                  <svg viewBox="0 0 100 170" class="w-3.5 h-6 animate-pulse"
-                    :style="isItemClicked(item) ? 'opacity: 0.35; filter: grayscale(1);' : 'filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.8));'">
-                    <!-- Top facets -->
-                    <polygon points="50,5 10,85 37,85" fill="#bef264" /> <!-- Left Top -->
-                    <polygon points="50,5 37,85 63,85" fill="#a3e635" /> <!-- Center Top -->
-                    <polygon points="50,5 63,85 90,85" fill="#65a30d" /> <!-- Right Top -->
+            <!-- Unified Daily Resurfaced Memory List (Sorted: unclicked first, clicked/grayed last smoothly after 5s) -->
+            <TransitionGroup name="flip-list" tag="div" class="space-y-4">
+              <template v-for="item in resurfacedMemoryList" :key="item.id">
+                <!-- Goal Item -->
+                <div v-if="item.contentType === 'goal'" @click="handleGoalOrWishClick(item)"
+                  class="card p-4 block hover:border-line-2 transition-all duration-300 cursor-pointer relative"
+                  :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+                  data-testid="resurface-goal">
+                  <!-- Glowing Green Diamond in Top-Right -->
+                  <div class="absolute top-4 right-4 flex items-center justify-center">
+                    <svg viewBox="0 0 100 170" class="w-3.5 h-6 animate-pulse"
+                      :style="isItemClicked(item) ? 'opacity: 0.35; filter: grayscale(1);' : 'filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.8));'">
+                      <!-- Top facets -->
+                      <polygon points="50,5 10,85 37,85" fill="#bef264" /> <!-- Left Top -->
+                      <polygon points="50,5 37,85 63,85" fill="#a3e635" /> <!-- Center Top -->
+                      <polygon points="50,5 63,85 90,85" fill="#65a30d" /> <!-- Right Top -->
 
-                    <!-- Bottom facets -->
-                    <polygon points="50,165 10,85 37,85" fill="#84cc16" /> <!-- Left Bottom -->
-                    <polygon points="50,165 37,85 63,85" fill="#65a30d" /> <!-- Center Bottom -->
-                    <polygon points="50,165 63,85 90,85" fill="#3f6212" /> <!-- Right Bottom -->
+                      <!-- Bottom facets -->
+                      <polygon points="50,165 10,85 37,85" fill="#84cc16" /> <!-- Left Bottom -->
+                      <polygon points="50,165 37,85 63,85" fill="#65a30d" /> <!-- Center Bottom -->
+                      <polygon points="50,165 63,85 90,85" fill="#3f6212" /> <!-- Right Bottom -->
 
-                    <!-- Glossy white sheen highlight overlays -->
-                    <polygon points="50,5 10,85 37,85" fill="#ffffff" opacity="0.35" />
-                    <polygon points="50,5 37,85 50,85" fill="#ffffff" opacity="0.2" />
-                  </svg>
-                </div>
-                <div class="flex items-center gap-2 text-ink-3">
-                  <Target class="w-3.5 h-3.5" />
-                  <span class="overline font-semibold select-none">Goal</span>
-                </div>
-                <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
-                <div class="text-[11px] text-ink-2 mt-2 select-none"
-                  style="text-shadow: 0 0 8px rgba(var(--ink), 0.35); font-weight: 500;">
-                  Remember what you are working towards
-                </div>
-              </div>
-
-              <!-- Wish Item -->
-              <div v-else-if="item.contentType === 'wish'" @click="handleGoalOrWishClick(item)"
-                class="card p-4 block hover:border-line-2 transition-all duration-300 cursor-pointer relative"
-                :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
-                data-testid="resurface-wish">
-                <div class="flex items-center gap-2 text-ink-3">
-                  <Gift class="w-3.5 h-3.5" />
-                  <span class="overline font-semibold select-none">Wishlist</span>
-                </div>
-                <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
-                <p v-if="item.description" class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">
-                  {{ item.description }}
-                </p>
-              </div>
-
-              <!-- Note Item -->
-              <RouterLink v-else-if="item.contentType === 'note'" :to="`/notes/${item.id}`"
-                @click="markClicked(item.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
-                :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
-                :data-testid="`resurface-note-${item.id}`">
-                <div class="flex items-center gap-2">
-                  <NotebookPen class="w-3.5 h-3.5 text-ink-3" />
-                  <span class="overline">Note · {{ fromNow(item.lastViewedAt) }}</span>
-                </div>
-                <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
-                <p class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ item.body }}</p>
-              </RouterLink>
-
-              <!-- Bookmark Item -->
-              <a v-else-if="item.contentType === 'bookmark'" :href="item.url" target="_blank"
-                @click="handleBookmarkClick(item)"
-                class="card p-4 block hover:border-line-2 transition-all duration-300"
-                :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
-                :data-testid="`resurface-bookmark-${item.id}`">
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                  <div class="flex items-center gap-2">
-                    <Bookmark class="w-3.5 h-3.5 text-ink-3" />
-                    <span class="overline">Bookmark · {{ fromNow(item.lastViewedAt) }}</span>
+                      <!-- Glossy white sheen highlight overlays -->
+                      <polygon points="50,5 10,85 37,85" fill="#ffffff" opacity="0.35" />
+                      <polygon points="50,5 37,85 50,85" fill="#ffffff" opacity="0.2" />
+                    </svg>
                   </div>
-                  <span v-if="item.category"
-                    class="text-[9px] uppercase tracking-wider text-ink-3 font-semibold bg-canvas border border-line px-1.5 py-0.5 rounded-full capitalize">
-                    {{ item.category }}
-                  </span>
+                  <div class="flex items-center gap-2 text-ink-3">
+                    <Target class="w-3.5 h-3.5" />
+                    <span class="overline font-semibold select-none">Goal</span>
+                  </div>
+                  <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
+                  <div class="text-[11px] text-ink-2 mt-2 select-none"
+                    style="text-shadow: 0 0 8px rgba(var(--ink), 0.35); font-weight: 500;">
+                    Remember what you are working towards
+                  </div>
                 </div>
-                <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
-                <p class="text-sm text-ink-2 mt-1 truncate">{{ item.url }}</p>
-              </a>
-            </template>
+
+                <!-- Wish Item -->
+                <div v-else-if="item.contentType === 'wish'" @click="handleGoalOrWishClick(item)"
+                  class="card p-4 block hover:border-line-2 transition-all duration-300 cursor-pointer relative"
+                  :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+                  data-testid="resurface-wish">
+                  <div class="flex items-center gap-2 text-ink-3">
+                    <Gift class="w-3.5 h-3.5" />
+                    <span class="overline font-semibold select-none">Wishlist</span>
+                  </div>
+                  <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
+                  <p v-if="item.description" class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">
+                    {{ item.description }}
+                  </p>
+                </div>
+
+                <!-- Note Item -->
+                <RouterLink v-else-if="item.contentType === 'note'" :to="`/notes/${item.id}`"
+                  @click="markClicked(item.id)" class="card p-4 block hover:border-line-2 transition-all duration-300"
+                  :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+                  :data-testid="`resurface-note-${item.id}`">
+                  <div class="flex items-center gap-2">
+                    <NotebookPen class="w-3.5 h-3.5 text-ink-3" />
+                    <span class="overline">Note · {{ fromNow(item.lastViewedAt) }}</span>
+                  </div>
+                  <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
+                  <p class="text-sm text-ink-2 mt-1 line-clamp-2 leading-relaxed">{{ item.body }}</p>
+                </RouterLink>
+
+                <!-- Bookmark Item -->
+                <a v-else-if="item.contentType === 'bookmark'" :href="item.url" target="_blank"
+                  @click="handleBookmarkClick(item)"
+                  class="card p-4 block hover:border-line-2 transition-all duration-300"
+                  :class="isItemClicked(item) ? '!bg-canvas/50 dark:!bg-canvas/20 !border-line/30 !opacity-55' : ''"
+                  :data-testid="`resurface-bookmark-${item.id}`">
+                  <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                      <Bookmark class="w-3.5 h-3.5 text-ink-3" />
+                      <span class="overline">Bookmark · {{ fromNow(item.lastViewedAt) }}</span>
+                    </div>
+                    <span v-if="item.category"
+                      class="text-[9px] uppercase tracking-wider text-ink-3 font-semibold bg-canvas border border-line px-1.5 py-0.5 rounded-full capitalize">
+                      {{ item.category }}
+                    </span>
+                  </div>
+                  <div class="font-serif text-lg mt-1.5 leading-snug">{{ item.title }}</div>
+                  <p class="text-sm text-ink-2 mt-1 truncate">{{ item.url }}</p>
+                </a>
+              </template>
+            </TransitionGroup>
 
             <EmptyState v-if="!memory.goal && !memory.wish && !memory.items.length && !resurfacedFollows.length"
               title="Memory is fresh" hint="Nothing to resurface yet." />
@@ -535,3 +535,9 @@ async function openDailyJournal() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.flip-list-move {
+  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>

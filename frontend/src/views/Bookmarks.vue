@@ -421,7 +421,6 @@ const focusedFields = ref({})
                 <BookmarkIcon class="w-3.5 h-3.5 text-ink-3 shrink-0 mt-0.5" />
                 <span class="truncate" :title="b.title || b.url">{{ b.title || b.url }}</span>
               </div>
-              <p v-if="b.description" class="text-xs text-ink-2 line-clamp-1 leading-normal">{{ b.description }}</p>
 
               <div class="flex items-center gap-2 flex-wrap min-w-0">
                 <a :href="b.url" target="_blank" @click.stop.prevent="openBookmark(b)"
@@ -537,7 +536,6 @@ const focusedFields = ref({})
                 <BookmarkIcon class="w-3.5 h-3.5 text-ink-3 shrink-0 mt-0.5" />
                 <span class="truncate" :title="b.title || b.url">{{ b.title || b.url }}</span>
               </div>
-              <p v-if="b.description" class="text-xs text-ink-2 line-clamp-1 leading-normal">{{ b.description }}</p>
 
               <div class="flex items-center gap-2 flex-wrap min-w-0">
                 <a :href="b.url" target="_blank" @click.stop.prevent="openBookmark(b)"

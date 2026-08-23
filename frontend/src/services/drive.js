@@ -126,7 +126,9 @@ export async function backup() {
     body,
   });
   if (!r.ok) throw new Error(`Drive upload failed (${r.status})`);
-  localStorage.setItem("atrium.drive.lastBackup", new Date().toISOString());
+  const nowStr = new Date().toISOString();
+  localStorage.setItem("atrium.drive.lastBackup", nowStr);
+  await db.settings.update("app", { drive_last_backup: nowStr });
   localStorage.setItem("atrium.drive.backupFailedAttempts", "0");
   localStorage.removeItem("atrium.drive.backupNeedsIntervention");
   return await r.json();
@@ -178,13 +180,35 @@ const TABLES = [
   "notes",
   "bookmarks",
   "areas",
-  "bookmark_pages",
+  "resources",
+  "finance_assets",
+  "finance_snapshots",
+  "reviews",
+  "resurfacing_logs",
+  "notifications",
+  "archives",
+  "settings",
+  "finance_cashflow",
+  "finance_categories",
   "next_steps",
+  "bookmark_pages",
   "finance_networth_logs",
   "finance_cashflow_periods",
-  "finance_categories",
-  "reviews",
-  "settings",
+  "next_steps_sections",
+  "work_clients",
+  "work_items",
+  "work_leads",
+  "work_invoices",
+  "work_meetings",
+  "work_capacity",
+  "work_templates",
+  "work_communication_logs",
+  "work_resources",
+  "work_notes",
+  "finance_subscriptions",
+  "finance_content_pipeline",
+  "follows",
+  "wishlist"
 ];
 
 export async function exportAllData() {
@@ -193,12 +217,42 @@ export async function exportAllData() {
   return data;
 }
 
+export async function syncSettingsToLocalStorage() {
+  const row = await db.settings.get("app");
+  if (!row) return;
+  
+  const keysToCache = {
+    theme: 'atrium.theme',
+    mode: 'atrium.mode',
+    user_name: 'atrium.user_name',
+    show_workspace_alerts: 'atrium.show_workspace_alerts',
+    initialized: 'atrium.initialized',
+    
+    // Backup and sync configurations
+    drive_last_backup: 'atrium.drive.lastBackup',
+    sync_mode: 'atrium.sync.mode',
+    sync_interval: 'atrium.sync.interval',
+    offline_enabled: 'atrium.offline.enabled',
+    offline_interval: 'atrium.offline.interval',
+    offline_keep_days: 'atrium.offline.keepDays',
+    offline_last_backup: 'atrium.offline.lastBackup'
+  };
+  
+  for (const [settingsKey, localKey] of Object.entries(keysToCache)) {
+    if (settingsKey in row) {
+      const val = row[settingsKey];
+      localStorage.setItem(localKey, typeof val === 'boolean' ? String(val) : val);
+    }
+  }
+}
+
 export async function importAllData(data) {
   for (const t of TABLES) {
     if (!Array.isArray(data[t])) continue;
     await db.table(t).clear();
     if (data[t].length) await db.table(t).bulkAdd(data[t]);
   }
+  await syncSettingsToLocalStorage();
 }
 
 export function downloadLocalBackup() {
@@ -345,7 +399,9 @@ export async function autoBackup() {
       body,
     });
     if (r.ok) {
-      localStorage.setItem("atrium.drive.lastBackup", new Date().toISOString());
+      const nowStr = new Date().toISOString();
+      localStorage.setItem("atrium.drive.lastBackup", nowStr);
+      await db.settings.update("app", { drive_last_backup: nowStr });
       localStorage.setItem("atrium.drive.backupFailedAttempts", "0");
       localStorage.removeItem("atrium.drive.backupNeedsIntervention");
       console.log("Hourly auto-backup completed successfully");

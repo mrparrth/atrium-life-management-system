@@ -34,10 +34,7 @@ onMounted(async () => {
   await wishlist.load()
   const goalId = route.query.goalId
   if (goalId) {
-    const found = goals.items.find(g => g.id === goalId)
-    if (found) {
-      openDetails(found)
-    }
+    router.replace(`/goals/${goalId}`)
   }
   const wishId = route.query.wishId
   if (wishId) {
@@ -577,7 +574,7 @@ function getWishFallbackIcon(w) {
       </SectionHeader>
 
       <div v-if="goals.items.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="g in goals.items" :key="g.id" @click="openDetails(g)"
+        <div v-for="g in goals.items" :key="g.id" @click="$router.push(`/goals/${g.id}`)"
           class="relative p-[1.5px] rounded-2xl overflow-hidden group cursor-pointer transition-all duration-300 bg-line hover:bg-line-2"
           :data-testid="`goal-card-${g.id}`">
 

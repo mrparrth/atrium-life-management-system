@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useWorkInvoicesStore } from '@/stores/workInvoices'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
+import { useSettingsStore } from '@/stores/settings'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -13,6 +14,7 @@ import dayjs from 'dayjs'
 const invoicesStore = useWorkInvoicesStore()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
+const settings = useSettingsStore()
 
 const activeClients = computed(() => {
   return clientsStore.items.filter(c => {
@@ -46,7 +48,7 @@ const invoiceTitle = ref('Invoice')
 const invoiceSubtitle = ref('')
 const invoiceDate = ref(dayjs().format('YYYY-MM-DD'))
 
-const currencySymbols = {
+const CURRENCY_SYMBOLS = {
   USD: '$',
   GBP: '£',
   INR: '₹'
@@ -54,11 +56,12 @@ const currencySymbols = {
 
 const isEditingInvoiceDoc = ref(false)
 
-const senderName = ref(localStorage.getItem('atrium.sender.name') || 'Partha Sarathi Sahoo')
-const senderAddress = ref(localStorage.getItem('atrium.sender.address') || 'Bangalore, Karnataka, India')
-const senderEmail = ref(localStorage.getItem('atrium.sender.email') || 'iamparrth@gmail.com')
-const senderPhone = ref(localStorage.getItem('atrium.sender.phone') || '+91 82494 86681')
-const senderPAN = ref(localStorage.getItem('atrium.sender.pan') || 'ESEPS4917Q')
+// Invoicing settings refs
+const senderName = ref('Partha Sarathi Sahoo')
+const senderAddress = ref('Bangalore, Karnataka, India')
+const senderEmail = ref('iamparrth@gmail.com')
+const senderPhone = ref('+91 82494 86681')
+const senderPAN = ref('ESEPS4917Q')
 
 const isEditingSenderProfile = ref(false)
 const isEditingClientProfile = ref(false)
@@ -69,29 +72,51 @@ const clientAddress = ref('')
 const clientEmail = ref('')
 const clientPhone = ref('')
 
-const logoSrc = ref(localStorage.getItem('atrium.invoice.logo') || '')
+const logoSrc = ref('')
 
-const bankAccountName = ref(localStorage.getItem('atrium.bank.account_name') || 'Partha Sarathi Sahoo')
-const bankAccountNumber = ref(localStorage.getItem('atrium.bank.account_number') || '913010056864708')
-const bankIFSC = ref(localStorage.getItem('atrium.bank.ifsc') || 'UTIB0000669')
-const bankSWIFT = ref(localStorage.getItem('atrium.bank.swift') || 'AXISINBB009')
-const bankName = ref(localStorage.getItem('atrium.bank.name') || 'Axis Bank')
-const bankMICR = ref(localStorage.getItem('atrium.bank.micr') || '144211502')
+const bankAccountName = ref('Partha Sarathi Sahoo')
+const bankAccountNumber = ref('913010056864708')
+const bankIFSC = ref('UTIB0000669')
+const bankSWIFT = ref('AXISINBB009')
+const bankName = ref('Axis Bank')
+const bankMICR = ref('144211502')
 
 const isEditingBankDetails = ref(false)
 
+function populateFromSettings() {
+  senderName.value = settings.get('sender_name', 'Partha Sarathi Sahoo')
+  senderAddress.value = settings.get('sender_address', 'Bangalore, Karnataka, India')
+  senderEmail.value = settings.get('sender_email', 'iamparrth@gmail.com')
+  senderPhone.value = settings.get('sender_phone', '+91 82494 86681')
+  senderPAN.value = settings.get('sender_pan', 'ESEPS4917Q')
+  
+  logoSrc.value = settings.get('invoice_logo', '')
+  
+  bankAccountName.value = settings.get('bank_account_name', 'Partha Sarathi Sahoo')
+  bankAccountNumber.value = settings.get('bank_account_number', '913010056864708')
+  bankIFSC.value = settings.get('bank_ifsc', 'UTIB0000669')
+  bankSWIFT.value = settings.get('bank_swift', 'AXISINBB009')
+  bankName.value = settings.get('bank_name', 'Axis Bank')
+  bankMICR.value = settings.get('bank_micr', '144211502')
+  
+  sigSrc.value = settings.get('invoice_signature', '')
+}
+
+// Watch settings values to keep state synced reactively on database updates (such as on database restore!)
+watch(() => settings.get('sender_name'), populateFromSettings, { immediate: true })
+
 function saveBankDetails() {
-  localStorage.setItem('atrium.bank.account_name', bankAccountName.value)
-  localStorage.setItem('atrium.bank.account_number', bankAccountNumber.value)
-  localStorage.setItem('atrium.bank.ifsc', bankIFSC.value)
-  localStorage.setItem('atrium.bank.swift', bankSWIFT.value)
-  localStorage.setItem('atrium.bank.name', bankName.value)
-  localStorage.setItem('atrium.bank.micr', bankMICR.value)
+  settings.set('bank_account_name', bankAccountName.value)
+  settings.set('bank_account_number', bankAccountNumber.value)
+  settings.set('bank_ifsc', bankIFSC.value)
+  settings.set('bank_swift', bankSWIFT.value)
+  settings.set('bank_name', bankName.value)
+  settings.set('bank_micr', bankMICR.value)
   isEditingBankDetails.value = false
   ui.showToast('Bank details saved', 'success')
 }
 
-const sigSrc = ref(localStorage.getItem('atrium.invoice.signature') || '')
+const sigSrc = ref('')
 
 function handleSigUpload(event) {
   const file = event.target.files[0]
@@ -99,14 +124,14 @@ function handleSigUpload(event) {
   const reader = new FileReader()
   reader.onload = (e) => {
     sigSrc.value = e.target.result
-    localStorage.setItem('atrium.invoice.signature', e.target.result)
+    settings.set('invoice_signature', e.target.result)
   }
   reader.readAsDataURL(file)
 }
 
 function removeSig() {
   sigSrc.value = ''
-  localStorage.removeItem('atrium.invoice.signature')
+  settings.set('invoice_signature', '')
 }
 
 function getClientById(cId) {
@@ -136,22 +161,22 @@ function handleLogoUpload(event) {
   const reader = new FileReader()
   reader.onload = (e) => {
     logoSrc.value = e.target.result
-    localStorage.setItem('atrium.invoice.logo', e.target.result)
+    settings.set('invoice_logo', e.target.result)
   }
   reader.readAsDataURL(file)
 }
 
 function removeLogo() {
   logoSrc.value = ''
-  localStorage.removeItem('atrium.invoice.logo')
+  settings.set('invoice_logo', '')
 }
 
 function saveSenderProfile() {
-  localStorage.setItem('atrium.sender.name', senderName.value)
-  localStorage.setItem('atrium.sender.address', senderAddress.value)
-  localStorage.setItem('atrium.sender.email', senderEmail.value)
-  localStorage.setItem('atrium.sender.phone', senderPhone.value)
-  localStorage.setItem('atrium.sender.pan', senderPAN.value)
+  settings.set('sender_name', senderName.value)
+  settings.set('sender_address', senderAddress.value)
+  settings.set('sender_email', senderEmail.value)
+  settings.set('sender_phone', senderPhone.value)
+  settings.set('sender_pan', senderPAN.value)
   isEditingSenderProfile.value = false
   ui.showToast('Sender profile updated', 'success')
 }

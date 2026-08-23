@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
+import { useSettingsStore } from '@/stores/settings'
 import {
   Play, Pause, Clock, AlertCircle, Sparkles, ChevronRight,
   Trash, Calendar, MoreVertical, CheckCircle2, Circle, BellOff, Star, HardDrive, Edit3,
@@ -69,6 +70,7 @@ const props = defineProps({
 const itemsStore = useWorkItemsStore()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
+const settings = useSettingsStore()
 
 const showMenu = ref(false)
 const showEditModal = ref(false)
@@ -261,7 +263,7 @@ function deleteItem() {
 }
 
 async function triggerLinkDriveFolder() {
-  const rootDir = localStorage.getItem('atrium.work.drive_root') || 'AtriumWork'
+  const rootDir = settings.get('work_drive_root', 'AtriumWork')
   const mockFolderId = `mock-task-drive-${Date.now()}`
   await itemsStore.update(props.item.id, {
     driveFolderId: mockFolderId

@@ -203,15 +203,22 @@ function deleteResource(id) {
                 class="text-[9px] uppercase tracking-wider font-bold text-ink-3 bg-canvas border px-2 py-0.5 rounded">
                 {{ getClientName(res.clientId) }}
               </span>
-              <button @click="deleteResource(res.id)" class="text-ink-3 hover:text-pri-critical p-1">
+              <button @click="deleteResource(res.id)" class="text-ink-2 hover:text-pri-critical p-1 transition-colors shrink-0">
                 <Trash class="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <h4 class="font-serif text-base text-ink font-semibold flex items-center gap-1.5">
-              <component :is="res.type === 'url' ? LinkIcon : Key" class="w-4 h-4 text-ink-3 shrink-0" />
-              {{ res.title }}
-            </h4>
+            <div class="flex items-center gap-2 flex-wrap min-w-0">
+              <h4 class="font-sans text-sm text-ink font-semibold truncate">
+                {{ res.title }}
+              </h4>
+              <span v-if="res.type === 'credentials'" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 select-none shrink-0">
+                <Key class="w-2.5 h-2.5" /> Vault
+              </span>
+              <span v-else class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:text-teal-400 select-none shrink-0">
+                <LinkIcon class="w-2.5 h-2.5" /> Link
+              </span>
+            </div>
 
             <p v-if="res.notes" class="text-xs text-ink-2 leading-relaxed">{{ res.notes }}</p>
 
@@ -224,35 +231,40 @@ function deleteResource(id) {
               </a>
             </div>
 
-            <div v-else class="space-y-2 pt-2 text-xs font-mono bg-canvas/40 p-3 rounded-xl border border-line">
-              <div v-if="res.url" class="pb-1.5 mb-1.5 border-b border-line/40 flex justify-between items-center">
-                <span class="text-ink-3 text-[10px]">URL</span>
+            <div v-else class="space-y-2.5 text-xs font-mono pt-1" @click.stop>
+              <!-- URL Row -->
+              <div v-if="res.url" class="flex items-center gap-4 text-xs font-mono pt-2.5 border-t border-line/50 first:border-t-0 first:pt-0">
+                <span class="text-ink-2 font-semibold w-12 shrink-0 select-none text-[10px] tracking-wider">URL</span>
                 <a :href="res.url" target="_blank"
-                  class="text-pri-strategic hover:underline inline-flex items-center gap-1 truncate max-w-[200px]">
+                  class="text-pri-strategic hover:underline inline-flex items-center gap-1 truncate flex-1 min-w-0">
                   {{ res.url }}
-                  <ExternalLink class="w-2.5 h-2.5" />
+                  <ExternalLink class="w-2.5 h-2.5 shrink-0" />
                 </a>
               </div>
-              <div class="flex justify-between items-center">
-                <span class="text-ink-3 text-[10px]">USER</span>
-                <div class="flex items-center gap-1.5">
-                  <span class="text-ink font-semibold">{{ res.username }}</span>
-                  <button @click="copyToClipboard(res.username)" class="text-ink-3 hover:text-ink">
+
+              <!-- USER Row -->
+              <div class="flex items-center gap-4 text-xs font-mono pt-2.5 border-t border-line/50 first:border-t-0 first:pt-0">
+                <span class="text-ink-2 font-semibold w-12 shrink-0 select-none text-[10px] tracking-wider">USER</span>
+                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                  <span class="text-ink font-semibold truncate">{{ res.username }}</span>
+                  <button @click="copyToClipboard(res.username)" class="text-ink-2 hover:text-ink shrink-0">
                     <Copy class="w-3 h-3" />
                   </button>
                 </div>
               </div>
-              <div class="flex justify-between items-center border-t border-line/40 pt-1.5">
-                <span class="text-ink-3 text-[10px]">PASS</span>
-                <div class="flex items-center gap-1.5">
-                  <span class="text-ink font-semibold">
+
+              <!-- PASS Row -->
+              <div class="flex items-center gap-4 text-xs font-mono pt-2.5 border-t border-line/50 first:border-t-0 first:pt-0">
+                <span class="text-ink-2 font-semibold w-12 shrink-0 select-none text-[10px] tracking-wider">PASS</span>
+                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                  <span class="text-ink font-semibold truncate">
                     {{ revealedPasswords[res.id] ? res.password : '••••••••' }}
                   </span>
-                  <button @click="togglePassword(res.id)" class="text-ink-3 hover:text-ink">
+                  <button @click="togglePassword(res.id)" class="text-ink-2 hover:text-ink shrink-0">
                     <EyeOff v-if="revealedPasswords[res.id]" class="w-3.5 h-3.5" />
                     <Eye v-else class="w-3.5 h-3.5" />
                   </button>
-                  <button @click="copyToClipboard(res.password)" class="text-ink-3 hover:text-ink">
+                  <button @click="copyToClipboard(res.password)" class="text-ink-2 hover:text-ink shrink-0">
                     <Copy class="w-3 h-3" />
                   </button>
                 </div>

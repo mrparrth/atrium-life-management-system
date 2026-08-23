@@ -53,7 +53,7 @@ onMounted(async () => {
     currentDate.value = dayjs()
   }, 30000)
   syncClickedMemory()
-  
+
   // Wait for all stores to finish loading database items
   await Promise.all([
     reviewsStore.load(),
@@ -69,16 +69,16 @@ onMounted(async () => {
     followsStore.load(),
     settingsStore.load()
   ])
-  
+
   // Load streak state from IndexedDB Settings
   streakCount.value = Number(settingsStore.get('tree_streak_count', 0))
   lastStreakDate.value = settingsStore.get('tree_streak_last_date', '')
-  
+
   isInitialized.value = true
-  
+
   // Calculate today's starting streak state
   updateStreak()
-  
+
   window.addEventListener('atrium-memory-clicked', syncClickedMemory)
 })
 
@@ -218,7 +218,7 @@ const workAlertsCount = computed(() => {
   let count = 0
   const today = currentDate.value.format('YYYY-MM-DD')
   const snoozedAlerts = JSON.parse(localStorage.getItem('atrium.snoozed_alerts') || '[]')
-  
+
   function isSnoozed(id) {
     const item = snoozedAlerts.find(s => s.id === id)
     if (!item) return false
@@ -228,7 +228,7 @@ const workAlertsCount = computed(() => {
   // 1. Stale Clients
   workClientsStore.items.forEach(c => {
     if (c.status === 'inactive' || c.status === 'do_not_follow_up') return
-    const hasActiveTask = workItemsStore.items.some(item => 
+    const hasActiveTask = workItemsStore.items.some(item =>
       item.clientId === c.id && !workItemsStore.isCompleted(item.status)
     )
     if (hasActiveTask) return
@@ -273,16 +273,35 @@ const workBriefingScore = computed(() => {
 // 5. Work Board Today Operational Tasks
 const workTasks = computed(() => {
   const today = currentDate.value.format('YYYY-MM-DD')
+  const now = new Date()
   return workItemsStore.items.filter(w => {
     const isCompleted = workItemsStore.isCompleted(w.status)
     // 1. If it was completed today, it is part of today's work tasks
     if (isCompleted && isToday(w.closedDate)) {
       return true
     }
-    // 2. Otherwise, if it is open/snoozed, it is part of today's work tasks if due today, overdue, or has no due date
+    // 2. If it was snoozed or rescheduled to the future today, it is part of today's work tasks (we handled/postponed it today)
+    const isSnoozedFuture = w.snoozedUntil && new Date(w.snoozedUntil) > now
+    const isRescheduledFuture = w.dueDate && w.dueDate > today
+    if (isToday(w.updatedAt) && (isSnoozedFuture || isRescheduledFuture)) {
+      return true
+    }
+    // 3. Otherwise, if it is open/snoozed, check the higher of snoozedUntil vs dueDate
     if (!isCompleted) {
-      if (w.dueDate && w.dueDate > today && !isToday(w.dueDate)) return false
-      return !w.dueDate || w.dueDate <= today
+      let activeDate = ''
+      if (w.dueDate) {
+        activeDate = w.dueDate
+      }
+      if (w.snoozedUntil) {
+        const snoozeDate = dayjs(w.snoozedUntil).format('YYYY-MM-DD')
+        if (!activeDate || snoozeDate > activeDate) {
+          activeDate = snoozeDate
+        }
+      }
+      if (activeDate) {
+        return activeDate <= today
+      }
+      return true // No due date and no snooze date -> active today
     }
     return false
   })
@@ -290,10 +309,12 @@ const workTasks = computed(() => {
 const workTasksTotal = computed(() => workTasks.value.length)
 const workTasksHandled = computed(() => {
   const now = new Date()
+  const today = currentDate.value.format('YYYY-MM-DD')
   return workTasks.value.filter(w => {
     const isCompleted = workItemsStore.isCompleted(w.status)
-    const isSnoozed = w.snoozedUntil && new Date(w.snoozedUntil) > now
-    return isCompleted || isSnoozed
+    const isSnoozedFuture = w.snoozedUntil && new Date(w.snoozedUntil) > now
+    const isRescheduledFuture = w.dueDate && w.dueDate > today
+    return isCompleted || isSnoozedFuture || isRescheduledFuture
   }).length
 })
 const workTasksScore = computed(() => {
@@ -304,7 +325,7 @@ const workTasksScore = computed(() => {
 const activeReviews = computed(() => {
   const list = []
   const today = currentDate.value
-  
+
   // 1. Daily Review: shows daily
   const hasDaily = reviewsStore.items.some(r => r.type === 'daily' && dayjs(r.date).isSame(today, 'day'))
   list.push({
@@ -313,7 +334,7 @@ const activeReviews = computed(() => {
     completed: hasDaily,
     show: true
   })
-  
+
   // 2. Weekly Review: shows on Friday and continues for 3-4 days (Friday, Saturday, Sunday, Monday)
   const dayOfWeek = today.day()
   const isWeeklyActive = [5, 6, 0, 1].includes(dayOfWeek)
@@ -323,16 +344,16 @@ const activeReviews = computed(() => {
     else if (dayOfWeek === 6) offset = 1
     else if (dayOfWeek === 0) offset = 2
     else if (dayOfWeek === 1) offset = 3
-    
+
     const fridayDate = today.subtract(offset, 'day').startOf('day')
     const mondayDate = fridayDate.add(3, 'day').endOf('day')
-    
+
     const hasWeekly = reviewsStore.items.some(r => {
       if (r.type !== 'weekly') return false
       const d = dayjs(r.date)
       return (d.isSame(fridayDate, 'day') || d.isAfter(fridayDate)) && (d.isSame(mondayDate, 'day') || d.isBefore(mondayDate))
     })
-    
+
     list.push({
       id: 'weekly',
       label: 'Weekly Review',
@@ -340,7 +361,7 @@ const activeReviews = computed(() => {
       show: true
     })
   }
-  
+
   // 3. Monthly Review: shows on 1st of month and continues till 10th (reviews the previous month)
   const dom = today.date()
   const isMonthlyActive = dom >= 1 && dom <= 10
@@ -354,7 +375,7 @@ const activeReviews = computed(() => {
       show: true
     })
   }
-  
+
   // 4. Yearly Review: shows starting Jan 1st and continues until completed (reviews the previous year Y-1)
   const targetYear = today.subtract(1, 'year').year()
   const yearExists = yearsStore.items.some(y => y.year === targetYear)
@@ -367,14 +388,41 @@ const activeReviews = computed(() => {
       show: true
     })
   }
-  
+
   return list.filter(r => r.show)
 })
 
 // Overall combined progress score (0 to 100)
 const progress = computed(() => {
-  const avg = (personalScore.value + driftingScore.value + memoryScore.value + workBriefingScore.value + workTasksScore.value) / 5
-  return Math.round(avg * 100)
+  // Base weights
+  const projectsWeight = 0.20 // 20%
+  const memoryWeight = 0.20   // 20%
+  const tasksWeight = 0.60   // 60%
+
+  let totalWeight = 0
+  let weightedScore = 0
+
+  // Projects (Drifting)
+  const hasProjects = staleProjectsList.value.length > 0
+  if (hasProjects) {
+    totalWeight += projectsWeight
+    weightedScore += driftingScore.value * projectsWeight
+  }
+
+  // Memory Resurfacing
+  totalWeight += memoryWeight
+  weightedScore += memoryScore.value * memoryWeight
+
+  // Tasks
+  totalWeight += tasksWeight
+  const hasWorkBriefing = workAlertsCount.value > 0
+  const totalTaskUnits = personalTasksTotal.value + workTasksTotal.value + (hasWorkBriefing ? 1 : 0)
+  const completedTaskUnits = personalTasksHandled.value + workTasksHandled.value + (hasWorkBriefing && workBriefingScore.value >= 1 ? 1 : 0)
+  const tasksScore = totalTaskUnits > 0 ? (completedTaskUnits / totalTaskUnits) : 1
+  weightedScore += tasksScore * tasksWeight
+
+  const finalScore = totalWeight > 0 ? (weightedScore / totalWeight) : 1
+  return Math.round(finalScore * 100)
 })
 
 // Streak Persistence
@@ -383,7 +431,7 @@ const lastStreakDate = ref('')
 
 function updateStreak() {
   if (!isInitialized.value) return
-  
+
   const today = currentDate.value.format('YYYY-MM-DD')
   if (progress.value === 100) {
     if (lastStreakDate.value === today) return
@@ -416,10 +464,10 @@ function launchConfetti() {
     const ctx = canvas.getContext('2d')
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
-    
+
     const colors = ['#1b4332', '#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2', '#b7e4c7', '#d8f3dc']
     const particles = []
-    
+
     for (let i = 0; i < 150; i++) {
       particles.push({
         x: Math.random() * canvas.width,
@@ -432,39 +480,39 @@ function launchConfetti() {
         rotationSpeed: (Math.random() - 0.5) * 12
       })
     }
-    
+
     function update() {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       let active = false
-      
+
       particles.forEach(p => {
         p.x += p.vx
         p.y += p.vy
         p.vy += 0.35 // gravity
         p.vx *= 0.98 // wind resistance
         p.rotation += p.rotationSpeed
-        
+
         if (p.y < canvas.height + 20) {
           active = true
         }
-        
+
         ctx.save()
         ctx.translate(p.x, p.y)
         ctx.rotate((p.rotation * Math.PI) / 180)
         ctx.fillStyle = p.color
-        
+
         // Draw tiny confetti leaves / squares
         ctx.fillRect(-p.r, -p.r, p.r * 2, p.r * 2)
         ctx.restore()
       })
-      
+
       if (active) {
         requestAnimationFrame(update)
       } else {
         showConfettiCanvas.value = false
       }
     }
-    
+
     update()
   })
 }
@@ -482,18 +530,21 @@ watch(progress, (newVal, oldVal) => {
   <div class="fixed bottom-6 right-6 z-40 flex flex-col items-center group select-none">
     <!-- Confetti Canvas -->
     <Teleport to="body">
-      <canvas v-if="showConfettiCanvas" ref="confettiCanvas" class="fixed inset-0 pointer-events-none z-[9999]"></canvas>
+      <canvas v-if="showConfettiCanvas" ref="confettiCanvas"
+        class="fixed inset-0 pointer-events-none z-[9999]"></canvas>
     </Teleport>
 
     <!-- Popover on Hover -->
-    <div class="absolute bottom-[110px] right-0 w-80 p-5 bg-surface border border-line rounded-2xl shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50 text-left flex flex-col gap-3.5">
+    <div
+      class="absolute bottom-[110px] right-0 w-80 p-5 bg-surface border border-line rounded-2xl shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50 text-left flex flex-col gap-3.5">
       <!-- Popover Header -->
       <div class="flex items-center justify-between border-b border-line pb-2.5">
         <div class="flex items-center gap-2">
           <Sprout class="w-4 h-4 text-pri-strategic animate-pulse -translate-y-[1px]" />
           <span class="font-serif text-sm font-bold text-ink leading-none">Tree of Daily Growth</span>
         </div>
-        <div class="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold text-xs font-mono leading-none">
+        <div
+          class="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold text-xs font-mono leading-none">
           <Flame class="w-3.5 h-3.5 fill-current -translate-y-[1px]" />
           <span class="leading-none">{{ streakCount }}d streak</span>
         </div>
@@ -502,7 +553,7 @@ watch(progress, (newVal, oldVal) => {
       <!-- Progress bar -->
       <div class="flex flex-col gap-1">
         <div class="flex justify-between text-xs text-ink-2 font-medium">
-          <span>Overall Growth</span>
+          <span>Today's Overall Progress</span>
           <span class="font-mono font-bold">{{ progress }}%</span>
         </div>
         <div class="w-full h-1.5 bg-canvas border border-line rounded-full overflow-hidden">
@@ -512,43 +563,15 @@ watch(progress, (newVal, oldVal) => {
 
       <!-- Checklist -->
       <div class="flex flex-col gap-2.5 text-xs border-t border-line/45 pt-3">
-        <!-- Personal Tasks -->
-        <div class="flex items-start gap-2.5">
-          <CheckCircle2 v-if="personalScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
-          <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
-          <div class="min-w-0 flex-1">
-            <div class="font-semibold" :class="personalScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Today's Focus Tasks</div>
-            <p class="text-[10px] text-ink-3 mt-0.5">{{ personalTasksHandled }}/{{ personalTasksTotal }} handled today</p>
-          </div>
-        </div>
-
-        <!-- Drifting Projects -->
-        <div class="flex items-start gap-2.5">
-          <CheckCircle2 v-if="driftingScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
-          <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
-          <div class="min-w-0 flex-1">
-            <div class="font-semibold" :class="driftingScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Drifting Projects</div>
-            <p class="text-[10px] text-ink-3 mt-0.5">{{ staleProjectsList.length === 0 ? 'No drifting projects need review' : `${staleProjectsList.length} projects need to be touched` }}</p>
-          </div>
-        </div>
-
-        <!-- Resurfacing Memory -->
-        <div class="flex items-start gap-2.5">
-          <CheckCircle2 v-if="memoryScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
-          <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
-          <div class="min-w-0 flex-1">
-            <div class="font-semibold" :class="memoryScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Memory Resurfacing</div>
-            <p class="text-[10px] text-ink-3 mt-0.5">{{ memoryClickedCount }}/{{ memoryTotalCount }} clicked/viewed today</p>
-          </div>
-        </div>
-
         <!-- Work Briefing Alerts -->
-        <div class="flex items-start gap-2.5">
+        <div v-if="workAlertsCount > 0" class="flex items-start gap-2.5">
           <CheckCircle2 v-if="workBriefingScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
           <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
           <div class="min-w-0 flex-1">
-            <div class="font-semibold" :class="workBriefingScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Work Briefing Alerts</div>
-            <p class="text-[10px] text-ink-3 mt-0.5">{{ workAlertsCount === 0 ? 'No active strategic alerts' : `${workAlertsCount} alerts need attention` }}</p>
+            <div class="font-semibold" :class="workBriefingScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Work
+              Briefing Alerts</div>
+            <p class="text-[10px] text-ink-3 mt-0.5">{{ workAlertsCount === 0 ? 'No active strategic alerts' :
+              `${workAlertsCount} alerts need attention` }}</p>
           </div>
         </div>
 
@@ -557,10 +580,48 @@ watch(progress, (newVal, oldVal) => {
           <CheckCircle2 v-if="workTasksScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
           <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
           <div class="min-w-0 flex-1">
-            <div class="font-semibold" :class="workTasksScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Today's Work Tasks</div>
+            <div class="font-semibold" :class="workTasksScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Today's Work
+              Tasks</div>
             <p class="text-[10px] text-ink-3 mt-0.5">{{ workTasksHandled }}/{{ workTasksTotal }} handled today</p>
           </div>
         </div>
+        <!-- Personal Tasks -->
+        <div class="flex items-start gap-2.5">
+          <CheckCircle2 v-if="personalScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
+          <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
+          <div class="min-w-0 flex-1">
+            <div class="font-semibold" :class="personalScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Today's
+              Personal Tasks</div>
+            <p class="text-[10px] text-ink-3 mt-0.5">{{ personalTasksHandled }}/{{ personalTasksTotal }} handled today
+            </p>
+          </div>
+        </div>
+
+        <!-- Drifting Projects -->
+        <div v-if="staleProjectsList.length > 0" class="flex items-start gap-2.5">
+          <CheckCircle2 v-if="driftingScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
+          <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
+          <div class="min-w-0 flex-1">
+            <div class="font-semibold" :class="driftingScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Drifting
+              Projects</div>
+            <p class="text-[10px] text-ink-3 mt-0.5">
+              {{ staleProjectsList.length === 0 ? 'No drifting projects need review' : `${staleProjectsList.length}
+              projects need to be touched` }}</p>
+          </div>
+        </div>
+
+        <!-- Resurfacing Memory -->
+        <div class="flex items-start gap-2.5">
+          <CheckCircle2 v-if="memoryScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
+          <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
+          <div class="min-w-0 flex-1">
+            <div class="font-semibold" :class="memoryScore >= 1 ? 'text-ink font-bold' : 'text-ink-2'">Memory
+              Resurfacing</div>
+            <p class="text-[10px] text-ink-3 mt-0.5">{{ memoryClickedCount }}/{{ memoryTotalCount }} clicked/viewed
+              today</p>
+          </div>
+        </div>
+
 
         <!-- Review Reminders (Optional) -->
         <div v-if="activeReviews.length" class="flex items-start gap-2.5 border-t border-line/35 pt-2.5 mt-0.5">
@@ -568,13 +629,15 @@ watch(progress, (newVal, oldVal) => {
           <div class="min-w-0 flex-1">
             <div class="font-semibold text-ink-2 flex items-center gap-1.5">
               <span>Review Reminders</span>
-              <span class="text-[9px] uppercase tracking-wider px-1 py-0.5 bg-line text-ink-3 rounded font-bold scale-90 origin-left">Optional</span>
+              <span
+                class="text-[9px] uppercase tracking-wider px-1 py-0.5 bg-line text-ink-3 rounded font-bold scale-90 origin-left">Optional</span>
             </div>
             <div class="flex flex-col gap-1 mt-1.5">
               <div v-for="rev in activeReviews" :key="rev.id" class="flex items-center gap-1.5">
                 <CheckCircle2 v-if="rev.completed" class="w-3.5 h-3.5 text-pri-strategic shrink-0" />
                 <Circle v-else class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-                <span class="text-[10px]" :class="rev.completed ? 'text-ink-3 line-through font-normal' : 'text-ink-2 font-medium'">
+                <span class="text-[10px]"
+                  :class="rev.completed ? 'text-ink-3 line-through font-normal' : 'text-ink-2 font-medium'">
                   {{ rev.label }}
                 </span>
               </div>
@@ -584,7 +647,8 @@ watch(progress, (newVal, oldVal) => {
       </div>
 
       <!-- Action Guide -->
-      <div class="border-t border-line/45 pt-2.5 text-[10px] text-ink-2 bg-canvas/30 p-2.5 rounded-lg border border-line/20">
+      <div
+        class="border-t border-line/45 pt-2.5 text-[10px] text-ink-2 bg-canvas/30 p-2.5 rounded-lg border border-line/20">
         <span class="font-bold text-ink uppercase tracking-wider block mb-1">Growth Guidelines:</span>
         <ul class="list-disc pl-3.5 space-y-0.5 text-ink-3">
           <li v-if="personalScore < 1">Complete your remaining personal tasks.</li>
@@ -592,7 +656,8 @@ watch(progress, (newVal, oldVal) => {
           <li v-if="memoryScore < 1">Click all resurfaced memory items.</li>
           <li v-if="workBriefingScore < 1">Resolve work briefing alerts on the work board.</li>
           <li v-if="workTasksScore < 1">Complete today's operational work tasks.</li>
-          <li v-if="progress >= 100" class="text-pri-strategic font-semibold list-none -ml-3.5 flex items-center gap-1.5 animate-pulse">
+          <li v-if="progress >= 100"
+            class="text-pri-strategic font-semibold list-none -ml-3.5 flex items-center gap-1.5 animate-pulse">
             <Trophy class="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" /> All complete! The tree is bearing fruit.
           </li>
         </ul>
@@ -600,7 +665,7 @@ watch(progress, (newVal, oldVal) => {
     </div>
 
     <!-- Tree Image Mask Wrapper (Height: 100px) -->
-    <div 
+    <div
       class="w-24 h-24 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 relative select-none pointer-events-none"
       :style="{
         maskImage: 'url(/progress-tree.svg)',
@@ -611,23 +676,19 @@ watch(progress, (newVal, oldVal) => {
         webkitMaskRepeat: 'no-repeat',
         maskPosition: 'center',
         webkitMaskPosition: 'center'
-      }"
-    >
+      }">
       <!-- Base faint gray outline (always visible under the green) -->
-      <div 
-        class="absolute inset-0 transition-all duration-300"
-        :class="ui.theme === 'dark' ? 'bg-white/10' : 'bg-ink/10'"
-      ></div>
+      <div class="absolute inset-0 transition-all duration-300"
+        :class="ui.theme === 'dark' ? 'bg-white/10' : 'bg-ink/10'"></div>
 
       <!-- Solid Green Fill (representing progress completed, rising from bottom to top) -->
-      <div 
-        class="absolute inset-x-0 bottom-0 bg-[#1b4332] dark:bg-[#2d6a4f] transition-all duration-500 ease-out"
-        :style="{ height: `${progress}%` }"
-      ></div>
+      <div class="absolute inset-x-0 bottom-0 bg-[#1b4332] dark:bg-[#2d6a4f] transition-all duration-500 ease-out"
+        :style="{ height: `${progress}%` }"></div>
     </div>
 
     <!-- Streak Display below the tree (in grey) -->
-    <div v-if="streakCount > 0" class="text-[10px] text-ink-3 font-semibold mt-1 font-mono tracking-wide flex items-center gap-0.5">
+    <div v-if="streakCount > 0"
+      class="text-[10px] text-ink-3 font-semibold mt-1 font-mono tracking-wide flex items-center gap-0.5">
       <Flame class="w-3 h-3 fill-current text-ink-3" />
       <span>{{ streakCount }}d streak</span>
     </div>

@@ -71,7 +71,9 @@ export async function executeOfflineBackup() {
   await writable.write(JSON.stringify(payload, null, 2));
   await writable.close();
 
-  localStorage.setItem("atrium.offline.lastBackup", new Date().toISOString());
+  const nowStr = new Date().toISOString();
+  localStorage.setItem("atrium.offline.lastBackup", nowStr);
+  await db.settings.update("app", { offline_last_backup: nowStr });
   
   const keepDays = Number(localStorage.getItem("atrium.offline.keepDays")) || 7;
   await pruneOldBackups(handle, keepDays);
@@ -114,7 +116,9 @@ export async function autoOfflineBackup() {
     await writable.write(JSON.stringify(payload, null, 2));
     await writable.close();
 
-    localStorage.setItem("atrium.offline.lastBackup", new Date().toISOString());
+    const nowStr = new Date().toISOString();
+    localStorage.setItem("atrium.offline.lastBackup", nowStr);
+    await db.settings.update("app", { offline_last_backup: nowStr });
     await pruneOldBackups(handle, keepDays);
     console.log("Offline background backup complete.");
   } catch (e) {

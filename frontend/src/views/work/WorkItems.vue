@@ -18,7 +18,7 @@ const itemsStore = useWorkItemsStore()
 const clientsStore = useWorkClientsStore()
 const ui = useUIStore()
 
-const activeTab = ref('active') // active, completed
+const activeTab = ref('due_date') // active, due_date, completed
 const showAddDrawer = ref(false)
 const prefillTitle = ref('')
 
@@ -63,32 +63,57 @@ const itemsByDueDate = computed(() => {
   const activeList = itemsStore.items.filter(item => !itemsStore.isCompleted(item.status))
   const today = dayjs().startOf('day')
 
+  // Calculate the end of the current week (Sunday).
+  // In dayjs, day() returns 0 for Sunday, 1 for Monday, etc.
+  const currentDay = today.day()
+  const daysToSunday = currentDay === 0 ? 0 : 7 - currentDay
+  const endOfWeek = today.add(daysToSunday, 'day').endOf('day')
+
   const groups = {
     overdue: [],
     today: [],
+    this_week: [],
     upcoming: [],
     no_due_date: []
   }
 
+  const getEffectiveDate = (item) => {
+    let effectiveDate = ''
+    if (item.dueDate) {
+      effectiveDate = item.dueDate
+    }
+    if (item.snoozedUntil) {
+      const snoozeDate = dayjs(item.snoozedUntil).format('YYYY-MM-DD')
+      if (!effectiveDate || snoozeDate > effectiveDate) {
+        effectiveDate = snoozeDate
+      }
+    }
+    return effectiveDate
+  }
+
   activeList.forEach(item => {
-    if (!item.dueDate) {
+    const effDate = getEffectiveDate(item)
+    if (!effDate) {
       groups.no_due_date.push(item)
     } else {
-      const due = dayjs(item.dueDate).startOf('day')
+      const due = dayjs(effDate).startOf('day')
       if (due.isBefore(today)) {
         groups.overdue.push(item)
       } else if (due.isSame(today, 'day')) {
         groups.today.push(item)
+      } else if (due.isAfter(today) && (due.isBefore(endOfWeek) || due.isSame(endOfWeek, 'day'))) {
+        groups.this_week.push(item)
       } else {
         groups.upcoming.push(item)
       }
     }
   })
 
-  // Sort sections
-  groups.overdue.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
-  groups.today.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
-  groups.upcoming.sort((a, b) => dayjs(a.dueDate).diff(dayjs(b.dueDate)))
+  // Sort sections using the effective date
+  groups.overdue.sort((a, b) => getEffectiveDate(a).localeCompare(getEffectiveDate(b)))
+  groups.today.sort((a, b) => getEffectiveDate(a).localeCompare(getEffectiveDate(b)))
+  groups.this_week.sort((a, b) => getEffectiveDate(a).localeCompare(getEffectiveDate(b)))
+  groups.upcoming.sort((a, b) => getEffectiveDate(a).localeCompare(getEffectiveDate(b)))
   groups.no_due_date.sort((a, b) => dayjs(b.updatedAt || b.createdAt).diff(dayjs(a.updatedAt || a.createdAt)))
 
   return groups
@@ -99,12 +124,16 @@ const DUE_DATE_SECTIONS = [
     key: 'overdue',
     overline: 'Action Needed',
     title: 'Overdue Deliverables',
-
   },
   {
     key: 'today',
     overline: 'Focus Today',
     title: 'Due Today',
+  },
+  {
+    key: 'this_week',
+    overline: 'This Week',
+    title: 'Due This Week',
   },
   {
     key: 'upcoming',

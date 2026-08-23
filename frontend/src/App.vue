@@ -13,6 +13,7 @@ import { useBookmarksStore } from '@/stores/bookmarks'
 import { useFinanceStore } from '@/stores/finance'
 import { useAreasStore } from '@/stores/areas'
 import { useReviewsStore } from '@/stores/reviews'
+import { useSettingsStore, migrateLocalStorageToSettings } from '@/stores/settings'
 import { useNextStepsStore } from '@/stores/nextSteps'
 import { useWorkClientsStore } from '@/stores/workClients'
 import { useWorkItemsStore } from '@/stores/workItems'
@@ -86,7 +87,14 @@ onMounted(async () => {
   initNotificationsOnLoad()
   await db.open()
   await seedIfEmpty()
+
+  // Load settings and migrate legacy settings from localStorage to settings table
+  const settingsStore = useSettingsStore()
+  await settingsStore.load()
+  await migrateLocalStorageToSettings(settingsStore)
+
   await Promise.all([
+    settingsStore.load(),
     useYearsStore().load(),
     useGoalsStore().load(),
     useWishlistStore().load(),
@@ -120,7 +128,7 @@ onMounted(async () => {
     setTimeout(async () => {
       await ui.confirm({
         title: 'Welcome',
-        message: 'Enter your preferences in Settings',
+        message: 'Enter your preferences in Settings or restore from a backup',
         confirmText: 'Go to Settings',
         cancelText: 'Ignore',
         isDestructive: false
