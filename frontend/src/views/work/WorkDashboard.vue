@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import dayjs from 'dayjs'
 import { useWorkClientsStore } from '@/stores/workClients'
@@ -11,7 +11,7 @@ import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useNotesStore } from '@/stores/notes'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { useUIStore } from '@/stores/ui'
-import { isConnected as isGoogleConnected, syncGoogleCalendar } from '@/services/drive'
+import { backup as driveBackup, isConnected as isGoogleConnected, syncGoogleCalendar } from '@/services/drive'
 
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
@@ -24,8 +24,50 @@ import ScopeCreepWidget from '@/components/work/ScopeCreepWidget.vue'
 import {
   ArrowRight, Plus, FolderKanban, Users, Target, Receipt,
   BarChart2, ShieldAlert, Sparkles, Zap, Award, ChevronRight, Calendar, FileText,
-  RefreshCw, Video
+  RefreshCw, Video, X
 } from 'lucide-vue-next'
+
+const backupAlert = ref(null)
+const retryingBackup = ref(false)
+
+function checkBackupStatus() {
+  const driveNeedsIntervention = localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
+  const offlineNeedsIntervention = localStorage.getItem('atrium.offline.backupNeedsIntervention') === 'true'
+  const driveError = localStorage.getItem('atrium.drive.lastBackupError')
+
+  if (driveNeedsIntervention) {
+    backupAlert.value = {
+      type: 'drive',
+      title: 'Google Drive Auto-Backup Failed',
+      message: driveError || 'Auto-backup to Google Drive failed multiple times. Manual intervention or re-authentication required.'
+    }
+  } else if (offlineNeedsIntervention) {
+    backupAlert.value = {
+      type: 'offline',
+      title: 'Local Disk Backup Failed',
+      message: 'Automatic backup to your local directory failed. Please check folder permissions in Settings.'
+    }
+  } else {
+    backupAlert.value = null
+  }
+}
+
+async function retryBackupNow() {
+  retryingBackup.value = true
+  try {
+    await driveBackup()
+    ui.showToast('Backup completed successfully!', 'success')
+    checkBackupStatus()
+  } catch (err) {
+    ui.showToast(err.message || 'Backup retry failed', 'error')
+  } finally {
+    retryingBackup.value = false
+  }
+}
+
+function dismissBackupAlert() {
+  backupAlert.value = null
+}
 
 const syncingCalendar = ref(false)
 async function manualCalendarSync() {
@@ -162,12 +204,60 @@ async function addQuickWork() {
 }
 
 onMounted(async () => {
+  checkBackupStatus()
+  window.addEventListener('atrium-backup-failed-alert', checkBackupStatus)
+  window.addEventListener('atrium-backup-success', checkBackupStatus)
   await syncGoogleCalendar()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('atrium-backup-failed-alert', checkBackupStatus)
+  window.removeEventListener('atrium-backup-success', checkBackupStatus)
 })
 </script>
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto space-y-8" data-testid="work-dashboard">
+
+    <!-- BACKUP FAILURE ALERT BANNER -->
+    <div v-if="backupAlert"
+      class="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-between gap-4 text-xs text-red-900 dark:text-red-200 shadow-sm animate-fade-in"
+      data-testid="work-dash-backup-alert">
+      
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-8 h-8 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+          <ShieldAlert class="w-4 h-4" />
+        </div>
+        <div class="min-w-0">
+          <h4 class="font-bold text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+            {{ backupAlert.title }}
+          </h4>
+          <p class="text-red-800/80 dark:text-red-200/80 mt-0.5 leading-snug truncate sm:whitespace-normal">
+            {{ backupAlert.message }}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button @click="retryBackupNow" :disabled="retryingBackup"
+          class="btn-secondary !py-1.5 !px-3 text-xs !bg-red-500/20 !border-red-500/40 text-red-700 dark:text-red-200 hover:!bg-red-500/30 flex items-center gap-1.5"
+          data-testid="work-dash-retry-backup-btn">
+          <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': retryingBackup }" />
+          <span>{{ retryingBackup ? 'Backing up...' : 'Retry Backup' }}</span>
+        </button>
+
+        <RouterLink to="/settings"
+          class="btn-primary !py-1.5 !px-3 text-xs flex items-center gap-1"
+          data-testid="work-dash-fix-backup-settings-btn">
+          Fix in Settings <ArrowRight class="w-3.5 h-3.5" />
+        </RouterLink>
+
+        <button @click="dismissBackupAlert" class="text-red-700/60 dark:text-red-300/60 hover:text-red-700 dark:hover:text-red-200 p-1"
+          title="Dismiss alert">
+          <X class="w-4 h-4" />
+        </button>
+      </div>
+    </div>
 
     <!-- HEADER -->
     <PageHeader :overline="todayDate" :title="`${greeting}.`"

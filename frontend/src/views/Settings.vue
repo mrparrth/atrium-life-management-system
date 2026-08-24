@@ -1,15 +1,16 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
 import { db } from '@/db'
 import VCheckbox from '@/components/VCheckbox.vue'
 import VSelect from '@/components/VSelect.vue'
+import VUrlInput from '@/components/VUrlInput.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import { downloadLocalBackup, getClientId, setClientId, connect as driveConnect, backup as driveBackup, restore as driveRestore, disconnect as driveDisconnect, lastBackupAt } from '@/services/drive'
 import { fromNow } from '@/lib/date'
-import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check } from 'lucide-vue-next'
+import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles } from 'lucide-vue-next'
 import { isNotificationSupported, requestNotificationPermission, areNotificationsEnabled, sendDesktopNotification } from '@/lib/notifications'
 
 const ui = useUIStore()
@@ -28,6 +29,27 @@ const needsIntervention = ref(false)
 
 const notificationsSupported = ref(isNotificationSupported())
 const notificationsEnabled = ref(areNotificationsEnabled())
+
+const confettiDurationVal = ref('20')
+const confettiOptions = [
+  { id: '0', label: 'Disabled' },
+  { id: '5', label: '5 Seconds' },
+  { id: '10', label: '10 Seconds' },
+  { id: '20', label: '20 Seconds' },
+  { id: '30', label: '30 Seconds' }
+]
+
+async function saveConfettiDuration() {
+  await settings.set('tree_confetti_duration', Number(confettiDurationVal.value))
+  ui.showToast(`Confetti duration set to ${confettiDurationVal.value === '0' ? 'Disabled' : confettiDurationVal.value + 's'}`, 'success')
+}
+
+function triggerTestConfetti() {
+  window.dispatchEvent(new CustomEvent('test-confetti', {
+    detail: { duration: Number(confettiDurationVal.value) }
+  }))
+  ui.showToast(`Triggered test confetti (${confettiDurationVal.value === '0' ? 'Disabled' : confettiDurationVal.value + 's'})`, 'info')
+}
 
 async function toggleNotifications() {
   if (notificationsEnabled.value) {
@@ -69,7 +91,8 @@ function toggleNameEdit() {
   }
 }
 
-function refresh() {
+async function refresh() {
+  await settings.load()
   clientIdInput.value = getClientId()
   connected.value = !!localStorage.getItem('atrium.drive.connected')
   lastBackup.value = lastBackupAt()
@@ -80,6 +103,10 @@ function refresh() {
   const root = settings.get('work_drive_root', 'AtriumWork')
   driveFolderInput.value = url || root
 
+  confettiDurationVal.value = String(settings.get('tree_confetti_duration', 20))
+  offlineEnabled.value = Boolean(settings.get('offline_enabled', false))
+  offlineInterval.value = Number(settings.get('offline_interval', 1440))
+  offlineKeepDays.value = Number(settings.get('offline_keep_days', 7))
   checkOfflineFolder()
   nameInputVal.value = ui.userName
   if (!ui.userName.trim()) {
@@ -188,7 +215,7 @@ function saveWorkSettings() {
 
 import { saveDirectoryHandle, getDirectoryHandle, executeOfflineBackup, verifyPermission } from '@/services/offlineSync'
 
-const offlineEnabled = ref(settings.get('offline_enabled', false))
+const offlineEnabled = ref(Boolean(settings.get('offline_enabled', false)))
 const offlineInterval = ref(Number(settings.get('offline_interval', 1440)))
 const offlineKeepDays = ref(Number(settings.get('offline_keep_days', 7)))
 const offlineFolderName = ref('')
@@ -282,25 +309,8 @@ function saveOfflineSettings() {
 
     <SectionHeader overline="Appearance" />
     <div class="card p-5 mb-10 space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm font-medium text-ink">Theme Mode</p>
-          <p class="text-xs text-ink-3">Adjust the visual color scheme (currently {{ ui.theme }}).</p>
-        </div>
-        <button class="btn-secondary" @click="ui.toggleTheme" data-testid="settings-toggle-theme">Switch theme</button>
-      </div>
-      <hr class="border-line/40" />
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm font-medium text-ink">Show Cross-Workspace Alerts</p>
-          <p class="text-xs text-ink-3">Notify me at the top of the screen if I have tasks due today in my other
-            workspace.</p>
-        </div>
-        <VCheckbox v-model="ui.showWorkspaceAlerts" />
-      </div>
-      <hr class="border-line/40" />
       <div class="flex items-center gap-4 flex-wrap md:flex-nowrap">
-        <div class="shrink-0 min-w-[200px]">
+        <div class="shrink-0 min-w-[350px]">
           <p class="text-sm font-medium text-ink">Enter your name</p>
           <p class="text-xs text-ink-3">It will just be used to greet you</p>
         </div>
@@ -315,32 +325,31 @@ function saveOfflineSettings() {
           </button>
         </div>
       </div>
-    </div>
-
-    <SectionHeader overline="Notifications" />
-    <div class="card p-5 mb-10 space-y-4">
+      <hr class="border-line/40" />
+      <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+        <div>
+          <p class="text-sm font-medium text-ink">Growth Tree Confetti Celebration</p>
+          <p class="text-xs text-ink-3">Duration of continuous confetti burst when your daily tree progress reaches
+            100%.</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <VSelect v-model="confettiDurationVal" id="settings-confetti-duration" :options="confettiOptions"
+            option-value="id" option-label="label" @change="saveConfettiDuration" class="!w-36" />
+          <button @click="triggerTestConfetti"
+            class="btn-ghost !text-xs !py-2 px-3 font-semibold text-amber-600 dark:text-amber-400"
+            title="Test confetti burst animation">
+            <Sparkles class="w-3.5 h-3.5 inline mr-1" /> Test
+          </button>
+        </div>
+      </div>
+      <hr class="border-line/40" />
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-ink">Enable Desktop Notifications</p>
-          <p class="text-xs text-ink-3">Receive real-time alerts for strategic briefings and schedule warnings.</p>
+          <p class="text-sm font-medium text-ink">Show Cross-Workspace Alerts</p>
+          <p class="text-xs text-ink-3">Notify me at the top of the screen if I have tasks due today in my other
+            workspace.</p>
         </div>
-        <div class="flex items-center gap-2">
-          <button v-if="notificationsEnabled" @click="testNotification" class="btn-ghost !text-xs !py-1.5 px-3">
-            Send Test
-          </button>
-          <button class="btn-secondary flex items-center gap-1.5" @click="toggleNotifications"
-            :disabled="!notificationsSupported">
-            <template v-if="!notificationsSupported">
-              Unsupported
-            </template>
-            <template v-else-if="notificationsEnabled">
-              <BellOff class="w-3.5 h-3.5" /> Disable
-            </template>
-            <template v-else>
-              <Bell class="w-3.5 h-3.5" /> Enable
-            </template>
-          </button>
-        </div>
+        <VCheckbox v-model="ui.showWorkspaceAlerts" />
       </div>
     </div>
 
@@ -348,18 +357,13 @@ function saveOfflineSettings() {
     <SectionHeader overline="Work Operations" />
     <div class="card p-6 mb-10 space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="v-input-group flex items-center relative">
-          <input v-model="driveFolderInput" placeholder=" " id="drive-folder-location" class="pr-12" />
-          <label for="drive-folder-location">Google Drive Client Folders Location</label>
-          <a v-if="driveFolderLink" :href="driveFolderLink" target="_blank"
-            class="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-elevated text-ink-2 border border-line hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center"
-            title="Open folder in Google Drive">
-            <ExternalLink class="w-3.5 h-3.5" />
-          </a>
+        <div>
+          <VUrlInput v-model="driveFolderInput" label="Google Drive Client Folders Location" id="drive-folder-location"
+            @change="saveWorkSettings" />
         </div>
         <div>
-          <label class="overline block mb-1">Default Billing Currency</label>
-          <VSelect v-model="defaultCurrencyInput"
+          <VSelect label="Default Billing Currency" v-model="defaultCurrencyInput" id="settings-default-currency"
+            @change="saveWorkSettings"
             :options="[{ value: 'USD', label: 'USD ($)' }, { value: 'GBP', label: 'GBP (£)' }, { value: 'INR', label: 'INR (₹)' }]" />
         </div>
       </div>
@@ -410,7 +414,7 @@ function saveOfflineSettings() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="overline block mb-1">Sync Execution Mode</label>
-            <VSelect v-model="syncModeInput"
+            <VSelect v-model="syncModeInput" id="settings-sync-mode" @change="saveWorkSettings"
               :options="[{ value: 'auto', label: 'Automatic Sync (Background)' }, { value: 'manual', label: 'Manual Sync (Only on request)' }]" />
             <p class="text-[11px] text-ink-3 mt-1.5 leading-relaxed">
               <strong>Automatic:</strong> Runs backup & calendar checks in the background. May prompt Google
@@ -424,32 +428,31 @@ function saveOfflineSettings() {
             <label class="overline block mb-1" :class="{ 'opacity-40 select-none': syncModeInput !== 'auto' }">Auto-Sync
               Time
               Interval</label>
-            <VSelect v-model="syncIntervalInput" :disabled="syncModeInput !== 'auto'" :options="[
-              { value: 5, label: 'Every 5 Minutes' },
-              { value: 15, label: 'Every 15 Minutes' },
-              { value: 30, label: 'Every 30 Minutes' },
-              { value: 60, label: 'Every 1 Hour (Recommended)' },
-              { value: 180, label: 'Every 3 Hours' }
-            ]" />
+            <VSelect v-model="syncIntervalInput" id="settings-sync-interval" :disabled="syncModeInput !== 'auto'"
+              @change="saveWorkSettings" :options="[
+                { value: 5, label: 'Every 5 Minutes' },
+                { value: 15, label: 'Every 15 Minutes' },
+                { value: 30, label: 'Every 30 Minutes' },
+                { value: 60, label: 'Every 1 Hour (Recommended)' },
+                { value: 180, label: 'Every 3 Hours' }
+              ]" />
             <p class="text-[11px] text-ink-3 mt-1.5 leading-relaxed"
               :class="{ 'opacity-40 select-none': syncModeInput !== 'auto' }">
               Set how frequently the system silently updates backups and calendar events.
             </p>
           </div>
         </div>
-        <div class="flex justify-end pt-2">
-          <button class="btn-secondary !text-xs !py-1.5" @click="saveWorkSettings" data-testid="save-sync-settings">
-            <Save class="w-3.5 h-3.5" /> Save Sync Settings
-          </button>
-        </div>
       </div>
 
       <!-- Warning if manual intervention is required -->
-      <div v-if="connected && needsIntervention" class="mb-3 p-3 bg-pri-critical-bg border border-pri-critical/20 rounded-xl text-xs text-pri-critical flex items-start gap-2.5">
+      <div v-if="connected && needsIntervention"
+        class="mb-3 p-3 bg-pri-critical-bg border border-pri-critical/20 rounded-xl text-xs text-pri-critical flex items-start gap-2.5">
         <span class="text-base select-none">⚠️</span>
         <div class="space-y-1">
           <p class="font-semibold">Auto-Backup Suspended</p>
-          <p class="leading-relaxed opacity-90">Cloud backups have failed 3 times and are suspended. Please click <strong>"Back up now"</strong> below to sign in manually and restore sync.</p>
+          <p class="leading-relaxed opacity-90">Cloud backups have failed 3 times and are suspended. Please click
+            <strong>"Back up now"</strong> below to sign in manually and restore sync.
+          </p>
         </div>
       </div>
 
@@ -524,7 +527,7 @@ function saveOfflineSettings() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="overline block mb-1">Backup Frequency</label>
-            <VSelect v-model="offlineInterval" @change="saveOfflineSettings" :options="[
+            <VSelect v-model="offlineInterval" id="settings-offline-interval" @change="saveOfflineSettings" :options="[
               { value: 5, label: 'Every 5 Minutes' },
               { value: 15, label: 'Every 15 Minutes' },
               { value: 30, label: 'Every 30 Minutes' },
@@ -539,15 +542,15 @@ function saveOfflineSettings() {
           </div>
           <div>
             <label class="overline block mb-1">Retention Policy</label>
-            <select v-model="offlineKeepDays" class="input-block text-sm" @change="saveOfflineSettings">
-              <option :value="1">Keep 1 Day of Backups</option>
-              <option :value="3">Keep 3 Days of Backups</option>
-              <option :value="7">Keep 7 Days of Backups (Recommended)</option>
-              <option :value="14">Keep 14 Days of Backups</option>
-              <option :value="30">Keep 30 Days of Backups</option>
-              <option :value="90">Keep 90 Days of Backups</option>
-              <option :value="0">Keep Infinite (No Pruning)</option>
-            </select>
+            <VSelect v-model="offlineKeepDays" id="settings-retention-policy" @change="saveOfflineSettings" :options="[
+              { value: 1, label: 'Keep 1 Day of Backups' },
+              { value: 3, label: 'Keep 3 Days of Backups' },
+              { value: 7, label: 'Keep 7 Days of Backups (Recommended)' },
+              { value: 14, label: 'Keep 14 Days of Backups' },
+              { value: 30, label: 'Keep 30 Days of Backups' },
+              { value: 90, label: 'Keep 90 Days of Backups' },
+              { value: 0, label: 'Keep Infinite (No Pruning)' }
+            ]" />
             <p class="text-[11px] text-ink-3 mt-1.5">
               Old backups matching <code>atrium-backup-*</code> will be cleaned up automatically.
             </p>
@@ -582,5 +585,31 @@ function saveOfflineSettings() {
     </div>
 
 
+    <SectionHeader overline="Notifications" />
+    <div class="card p-5 mb-10 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-ink">Enable Desktop Notifications</p>
+          <p class="text-xs text-ink-3">Receive real-time alerts for strategic briefings and schedule warnings.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button v-if="notificationsEnabled" @click="testNotification" class="btn-ghost !text-xs !py-1.5 px-3">
+            Send Test
+          </button>
+          <button class="btn-secondary flex items-center gap-1.5" @click="toggleNotifications"
+            :disabled="!notificationsSupported">
+            <template v-if="!notificationsSupported">
+              Unsupported
+            </template>
+            <template v-else-if="notificationsEnabled">
+              <BellOff class="w-3.5 h-3.5" /> Disable
+            </template>
+            <template v-else>
+              <Bell class="w-3.5 h-3.5" /> Enable
+            </template>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

@@ -207,7 +207,7 @@ onUnmounted(() => {
             Define which month starts your financial year. This aligns the month columns and comparison windows in the
             Annual Summary.
           </p>
-          <VSelect v-model="startMonth" :options="[
+          <VSelect v-model="startMonth" label="Fiscal Year Starts" id="finance-fiscal-start" :options="[
             { value: '01', label: 'January' },
             { value: '02', label: 'February' },
             { value: '03', label: 'March' },

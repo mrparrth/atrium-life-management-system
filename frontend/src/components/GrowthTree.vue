@@ -453,69 +453,24 @@ function updateStreak() {
   }
 }
 
+import GrowthTreeConfetti from '@/components/GrowthTreeConfetti.vue'
+
 const showConfettiCanvas = ref(false)
-const confettiCanvas = ref(null)
+const activeConfettiDuration = ref(20)
 
-function launchConfetti() {
+function launchConfetti(overrideSec = null) {
+  const durationSec = overrideSec !== null ? overrideSec : Number(settingsStore.get('tree_confetti_duration', 20))
+  if (durationSec <= 0) return
+  activeConfettiDuration.value = durationSec
   showConfettiCanvas.value = true
-  nextTick(() => {
-    const canvas = confettiCanvas.value
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-
-    const colors = ['#1b4332', '#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2', '#b7e4c7', '#d8f3dc']
-    const particles = []
-
-    for (let i = 0; i < 150; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: canvas.height + Math.random() * 50,
-        vx: (Math.random() - 0.5) * 14,
-        vy: -Math.random() * 16 - 10,
-        r: Math.random() * 5 + 3,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 12
-      })
-    }
-
-    function update() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      let active = false
-
-      particles.forEach(p => {
-        p.x += p.vx
-        p.y += p.vy
-        p.vy += 0.35 // gravity
-        p.vx *= 0.98 // wind resistance
-        p.rotation += p.rotationSpeed
-
-        if (p.y < canvas.height + 20) {
-          active = true
-        }
-
-        ctx.save()
-        ctx.translate(p.x, p.y)
-        ctx.rotate((p.rotation * Math.PI) / 180)
-        ctx.fillStyle = p.color
-
-        // Draw tiny confetti leaves / squares
-        ctx.fillRect(-p.r, -p.r, p.r * 2, p.r * 2)
-        ctx.restore()
-      })
-
-      if (active) {
-        requestAnimationFrame(update)
-      } else {
-        showConfettiCanvas.value = false
-      }
-    }
-
-    update()
-  })
 }
+
+onMounted(() => {
+  window.addEventListener('test-confetti', (e) => {
+    const overrideSec = e?.detail?.duration
+    launchConfetti(overrideSec)
+  })
+})
 
 watch(progress, (newVal, oldVal) => {
   if (!isInitialized.value) return
@@ -528,11 +483,13 @@ watch(progress, (newVal, oldVal) => {
 
 <template>
   <div class="fixed bottom-6 right-6 z-40 flex flex-col items-center group select-none">
-    <!-- Confetti Canvas -->
-    <Teleport to="body">
-      <canvas v-if="showConfettiCanvas" ref="confettiCanvas"
-        class="fixed inset-0 pointer-events-none z-[9999]"></canvas>
-    </Teleport>
+    <!-- Confetti Particle Celebration Overlay -->
+    <GrowthTreeConfetti
+      :show="showConfettiCanvas"
+      :streak-count="streakCount"
+      :duration-sec="activeConfettiDuration"
+      @close="showConfettiCanvas = false"
+    />
 
     <!-- Popover on Hover -->
     <div

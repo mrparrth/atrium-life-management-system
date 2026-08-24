@@ -131,6 +131,8 @@ export async function backup() {
   await db.settings.update("app", { drive_last_backup: nowStr });
   localStorage.setItem("atrium.drive.backupFailedAttempts", "0");
   localStorage.removeItem("atrium.drive.backupNeedsIntervention");
+  localStorage.removeItem("atrium.drive.lastBackupError");
+  window.dispatchEvent(new CustomEvent('atrium-backup-success'));
   return await r.json();
 }
 
@@ -404,6 +406,8 @@ export async function autoBackup() {
       await db.settings.update("app", { drive_last_backup: nowStr });
       localStorage.setItem("atrium.drive.backupFailedAttempts", "0");
       localStorage.removeItem("atrium.drive.backupNeedsIntervention");
+      localStorage.removeItem("atrium.drive.lastBackupError");
+      window.dispatchEvent(new CustomEvent('atrium-backup-success'));
       console.log("Hourly auto-backup completed successfully");
     } else {
       throw new Error(`Upload returned status ${r.status}`);
@@ -415,6 +419,7 @@ export async function autoBackup() {
 
     if (attempts >= 3) {
       localStorage.setItem("atrium.drive.backupNeedsIntervention", "true");
+      localStorage.setItem("atrium.drive.lastBackupError", e.message || "Unknown error");
       window.dispatchEvent(new CustomEvent('atrium-backup-failed-alert', { detail: { message: e.message } }));
     }
   }

@@ -146,3 +146,13 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Implemented a 5-second delayed smooth sliding transition (`<TransitionGroup name="flip-list">` with 1.2s CSS move transitions) for greyed-out resurfaced memory items on `PersonalDashboard.vue`.
 - FEATURE: Refined Growth Tree handled task criteria to evaluate maximum of `dueDate` and `snoozedUntil`. Rescheduled or snoozed tasks updated today to future dates count as handled today; items still due today do not.
 - DOCS: Synchronized context.md and walkthrough.md.
+
+### August 24, 2026
+- FEATURE: Added auto-backup failure alert banners to `WorkDashboard.vue` and `PersonalDashboard.vue` with real-time window event listeners, retry action triggers, and settings route links.
+- OVERHAUL: Modularized Growth Tree component into `GrowthTree.vue` (widget button & popover) and `GrowthTreeConfetti.vue` (full-screen canvas particle celebration engine).
+- FEATURE: Implemented pure canvas confetti particle text assembly. Confetti leaves spray upward from dual bottom-corner cannons, arc through the air, and smoothly magnetize/lerp into position to form `"X Day Streak!"` out of the confetti blocks without HTML text overlays.
+- FEATURE: Added a 3-second extra hold duration for assembled confetti text before fading out cleanly.
+- ARCHITECTURE: Exported `DEFAULT_SETTINGS` dictionary in `settings.js` to seed initial defaults automatically into IndexedDB (`db.settings`) on first boot and provide central fallback values across the application.
+- UX: Updated `VSelect.vue` to make the `label` prop optional. Unified `Sync Execution Mode`, `Auto-Sync Time Interval`, `Backup Frequency`, and `Retention Policy` under clean custom `<VSelect>` dropdowns without floating cutout text.
+- UX: Enabled instant auto-saving (`@change`) for all backup & sync settings in `Settings.vue`, removing redundant manual save buttons. Integrated `<VUrlInput>` for Google Drive Client Folders Location.
+- DOCS: Synchronized context.md and walkthrough.md.

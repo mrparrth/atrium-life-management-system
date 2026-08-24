@@ -15,7 +15,8 @@ const props = defineProps({
   },
   label: {
     type: String,
-    required: true
+    required: false,
+    default: ''
   },
   options: {
     type: Array,
@@ -79,7 +80,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'change'])
 
 const isOpen = ref(false)
 const search = ref('')
@@ -98,24 +99,22 @@ function getOptionVal(opt) {
 }
 
 function getOptionLabel(opt) {
-  if (opt === null) return props.placeholder
+  if (opt === null) return ''
   if (typeof opt === 'object') {
     const labelKey = props.optionLabel || 'label'
     if (opt[labelKey] !== undefined) {
       return opt[labelKey]
     }
-    if (opt.emoji !== undefined && opt.title !== undefined) {
-      return `${opt.emoji} ${opt.title}`
-    }
-    return opt.title || opt.name || opt.value || opt
+    return opt.title || opt.name || opt.id || JSON.stringify(opt)
   }
-  return opt
+  return String(opt)
 }
 
-// Searchable custom select functionality
-const selectedLabel = computed(() => {
+const displayValue = computed(() => {
   if (props.multiple) {
-    if (!Array.isArray(props.modelValue) || !props.modelValue.length) return props.placeholder
+    if (!Array.isArray(props.modelValue) || props.modelValue.length === 0) {
+      return props.placeholder
+    }
     return props.modelValue.map(val => {
       const match = props.options.find(o => getOptionVal(o) === val)
       return match ? getOptionLabel(match) : val
@@ -126,6 +125,10 @@ const selectedLabel = computed(() => {
   }
   const match = props.options.find(o => getOptionVal(o) === props.modelValue)
   return match ? getOptionLabel(match) : props.placeholder
+})
+
+const selectedLabel = computed(() => {
+  return displayValue.value
 })
 
 const filteredOptions = computed(() => {
@@ -147,8 +150,10 @@ function selectOption(opt) {
       current.push(val)
     }
     emit('update:modelValue', current)
+    emit('change', current)
   } else {
     emit('update:modelValue', val)
+    emit('change', val)
     isOpen.value = false
     search.value = ''
   }
@@ -156,6 +161,7 @@ function selectOption(opt) {
 
 function clearSelection() {
   emit('update:modelValue', null)
+  emit('change', null)
 }
 
 const dropdownStyle = ref({})
@@ -288,7 +294,7 @@ onBeforeUnmount(() => {
           :class="variant === 'compact' ? 'text-[6px]' : 'text-[10px]'">▼</span>
       </div>
     </button>
-    <label v-if="variant !== 'compact'" :for="id" class="v-field-label v-field-label--floating text-xs select-none"
+    <label v-if="variant !== 'compact' && label" :for="id" class="v-field-label v-field-label--floating text-xs select-none"
       :class="{ '!text-pri-strategic': isOpen }">
       {{ label }}
     </label>
