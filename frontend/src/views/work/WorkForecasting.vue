@@ -169,8 +169,12 @@ const suggestions = computed(() => {
   const list = []
   itemsStore.items.forEach(item => {
     const isActive = ['open', 'todo', 'in_progress', 'critical'].includes(item.status)
-    if (isActive && item.title && !list.includes(item.title)) {
-      list.push(item.title)
+    if (isActive && item.title) {
+      const clientName = getClientName(item.clientId)
+      const fullName = clientName ? `${clientName} - ${item.title}` : item.title
+      if (!list.includes(fullName)) {
+        list.push(fullName)
+      }
     }
   })
   return list
@@ -386,87 +390,12 @@ async function saveCapacitySettings() {
 
                   </div>
                 </div>
-
-                <!-- Due Today Inline indicator (Clean hierarchy matching row layout) -->
-                <div v-if="getActiveTasksForDay(day.dateStr).length > 0" class="pt-2">
-                  <div v-for="task in getActiveTasksForDay(day.dateStr)" :key="task.id"
-                    class="flex items-center gap-2 mt-2">
-
-                    <!-- Arrow indent indicator -->
-                    <span class="text-ink-3 select-none ml-2 shrink-0">↳</span>
-
-                    <!-- Task name details button -->
-                    <div class="flex-grow min-w-0">
-                      <button type="button"
-                        class="w-full text-left bg-canvas/30 border border-line/50 rounded-xl px-3.5 py-1.5 text-xs font-semibold text-ink flex items-center justify-between cursor-pointer h-[34px] hover:border-line transition-all"
-                        @click="openEditModal(task)">
-                        <span class="truncate">{{ getClientName(task.clientId) ? getClientName(task.clientId) + ' - ' :
-                          '' }}{{ task.title }}</span>
-                        <span
-                          class="text-[9px] text-ink-3 font-semibold uppercase tracking-wider bg-canvas/60 px-1.5 py-0.5 rounded border border-line/35 select-none shrink-0">Task</span>
-                      </button>
-                    </div>
-
-                    <!-- Hour input -->
-                    <div class="w-20 shrink-0 relative flex items-center">
-                      <input type="number" :value="task.estimatedHours || 0"
-                        @change="updateEstimate(task.id, $event.target.value)" min="0" max="24" step="0.5"
-                        class="w-full bg-surface border border-line rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-semibold text-ink h-[34px] text-center pr-5"
-                        placeholder="0.0" />
-                      <span
-                        class="absolute right-2.5 text-[10px] text-ink-3 font-semibold pointer-events-none select-none">h</span>
-                    </div>
-
-                    <!-- Spacer representing the delete button -->
-                    <div class="w-[34px] shrink-0"></div>
-
-                  </div>
-                </div>
               </template>
 
               <!-- Day Body (If No Allocations Planned) -->
               <template v-else>
-                <div class="space-y-3">
-                  <div v-if="getActiveTasksForDay(day.dateStr).length === 0"
-                    class="flex items-center py-0.5 select-none">
-                    <span class="text-xs text-ink-3 font-medium">No allocations planned.</span>
-                  </div>
-
-                  <!-- Due Today tasks for empty day (Clean hierarchy matching row layout) -->
-                  <div v-if="getActiveTasksForDay(day.dateStr).length > 0" class="pt-2">
-                    <div v-for="task in getActiveTasksForDay(day.dateStr)" :key="task.id"
-                      class="flex items-center gap-2">
-
-                      <!-- Arrow indent indicator -->
-                      <span class="text-ink-3 select-none ml-2 shrink-0">↳</span>
-
-                      <!-- Task name details button -->
-                      <div class="flex-grow min-w-0">
-                        <button type="button"
-                          class="w-full text-left bg-canvas/30 border border-line/50 rounded-xl px-3.5 py-1.5 text-xs font-semibold text-ink flex items-center justify-between cursor-pointer h-[34px] hover:border-line transition-all"
-                          @click="openEditModal(task)">
-                          <span class="truncate">{{ getClientName(task.clientId) ? getClientName(task.clientId) + ' - '
-                            : '' }}{{ task.title }}</span>
-                          <span
-                            class="text-[9px] text-ink-3 font-semibold uppercase tracking-wider bg-canvas/60 px-1.5 py-0.5 rounded border border-line/35 select-none shrink-0">Task</span>
-                        </button>
-                      </div>
-
-                      <!-- Hour input -->
-                      <div class="w-20 shrink-0 relative flex items-center">
-                        <input type="number" :value="task.estimatedHours || 0"
-                          @change="updateEstimate(task.id, $event.target.value)" min="0" max="24" step="0.5"
-                          class="w-full bg-surface border border-line rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs font-semibold text-ink h-[34px] text-center pr-5"
-                          placeholder="0.0" />
-                        <span
-                          class="absolute right-2.5 text-[10px] text-ink-3 font-semibold pointer-events-none select-none">h</span>
-                      </div>
-
-                      <!-- Spacer representing the delete button -->
-                      <div class="w-[34px] shrink-0"></div>
-
-                    </div>
-                  </div>
+                <div class="flex items-center py-0.5 select-none">
+                  <span class="text-xs text-ink-3 font-medium">No allocations planned.</span>
                 </div>
               </template>
 

@@ -87,9 +87,8 @@ const alerts = computed(() => {
 
   // 1. Stale Clients (> 30 days since last interaction)
   clientsStore.items.forEach(c => {
-    console.log(c)
     if (c.status === 'inactive' || c.status === 'do_not_follow_up') return
-    const hasActiveTask = itemsStore.items.some(item => 
+    const hasActiveTask = itemsStore.items.some(item =>
       item.clientId === c.id && !itemsStore.isCompleted(item.status)
     )
     if (hasActiveTask) return
@@ -216,9 +215,12 @@ watch(alerts, (newAlerts) => {
           <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 min-w-0 flex-1">
             <div class="flex items-center gap-2 shrink-0">
               <h4 class="font-serif text-xs md:text-sm text-ink font-bold truncate">{{ alert.title }}</h4>
-              <span class="text-[9px] uppercase tracking-wider text-ink-3 font-bold bg-canvas px-1.5 py-0.5 rounded border border-line/40 shrink-0">{{ alert.type }}</span>
+              <span
+                class="text-[9px] uppercase tracking-wider text-ink-3 font-bold bg-canvas px-1.5 py-0.5 rounded border border-line/40 shrink-0">{{
+                alert.type }}</span>
             </div>
-            <p class="text-xs text-ink-2 truncate max-w-xl md:border-l md:border-line md:pl-3">{{ alert.description }}</p>
+            <p class="text-xs text-ink-2 truncate max-w-xl md:border-l md:border-line md:pl-3">{{ alert.description }}
+            </p>
           </div>
         </div>
 
@@ -236,11 +238,10 @@ watch(alerts, (newAlerts) => {
 
           <div class="relative snooze-popover-container">
             <button @click="toggleSnoozePopover(alert.id)"
-              class="btn-ghost !p-1.5 hover:bg-canvas text-ink-3 hover:text-ink rounded-lg"
-              title="Snooze Alert">
+              class="btn-ghost !p-1.5 hover:bg-canvas text-ink-3 hover:text-ink rounded-lg" title="Snooze Alert">
               <EyeOff class="w-3.5 h-3.5" />
             </button>
-            
+
             <!-- Snooze Options Popover -->
             <div v-if="activeSnoozePopoverAlertId === alert.id"
               class="absolute right-0 bottom-full mb-2 bg-surface border border-line rounded-xl shadow-xl p-1.5 min-w-[100px] z-50 flex flex-col space-y-0.5 animate-rise-in text-left">

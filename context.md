@@ -155,4 +155,6 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - ARCHITECTURE: Exported `DEFAULT_SETTINGS` dictionary in `settings.js` to seed initial defaults automatically into IndexedDB (`db.settings`) on first boot and provide central fallback values across the application.
 - UX: Updated `VSelect.vue` to make the `label` prop optional. Unified `Sync Execution Mode`, `Auto-Sync Time Interval`, `Backup Frequency`, and `Retention Policy` under clean custom `<VSelect>` dropdowns without floating cutout text.
 - UX: Enabled instant auto-saving (`@change`) for all backup & sync settings in `Settings.vue`, removing redundant manual save buttons. Integrated `<VUrlInput>` for Google Drive Client Folders Location.
+- UX: Removed auto-linked task rows from the time allocation planner in `WorkForecasting.vue`, leaving daily allocations 100% manually user-managed via `+ Add Project`.
+- UX: Prefixed project allocation dropdown options with their associated Client Name (`[Client Name] - [Task Title]`).
 - DOCS: Synchronized context.md and walkthrough.md.
