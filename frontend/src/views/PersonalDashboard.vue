@@ -440,7 +440,7 @@ async function openDailyJournal() {
 
         <!-- STALE PROJECTS -->
         <section data-testid="section-stale">
-          <SectionHeader overline="Drifting" hint="These projects are drifting. Time to review them to move forward."
+          <SectionHeader overline="Drifting" :hint="stale.length ? 'These projects are drifting. Time to review them to move forward.' : ''"
             :show-all-link="false" />
           <div v-if="stale.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <RouterLink v-for="p in stale" :key="p.id" :to="`/projects/${p.id}`"

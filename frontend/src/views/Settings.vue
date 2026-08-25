@@ -51,6 +51,26 @@ function triggerTestConfetti() {
   ui.showToast(`Triggered test confetti (${confettiDurationVal.value === '0' ? 'Disabled' : confettiDurationVal.value + 's'})`, 'info')
 }
 
+const goalSplashDurationVal = ref(String(settings.get('daily_goal_splash_duration', '3')))
+const goalSplashOptions = [
+  { id: '0', label: 'Disabled' },
+  { id: '3', label: '3 Seconds' },
+  { id: '5', label: '5 Seconds' },
+  { id: '10', label: '10 Seconds' },
+  { id: '20', label: '20 Seconds' }
+]
+
+async function saveGoalSplashDuration() {
+  await settings.set('daily_goal_splash_duration', goalSplashDurationVal.value)
+  const isEnabled = goalSplashDurationVal.value !== '0'
+  await settings.set('daily_goal_splash_enabled', isEnabled)
+  ui.showToast(`Morning Goals Splash set to ${goalSplashDurationVal.value === '0' ? 'Disabled' : goalSplashDurationVal.value + 's'}`, 'success')
+}
+
+function triggerTestGoalSplash() {
+  window.dispatchEvent(new CustomEvent('atrium-trigger-goals-splash'))
+}
+
 async function toggleNotifications() {
   if (notificationsEnabled.value) {
     localStorage.setItem('atrium.notifications.enabled', 'false')
@@ -338,6 +358,22 @@ function saveOfflineSettings() {
           <button @click="triggerTestConfetti"
             class="btn-ghost !text-xs !py-2 px-3 font-semibold text-amber-600 dark:text-amber-400"
             title="Test confetti burst animation">
+            <Sparkles class="w-3.5 h-3.5 inline mr-1" /> Test
+          </button>
+        </div>
+      </div>
+      <hr class="border-line/40" />
+      <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+        <div>
+          <p class="text-sm font-medium text-ink">Daily Morning Goals Splash Screen</p>
+          <p class="text-xs text-ink-3">Show a full-screen affirmation of your active goals when opening the app each morning.</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <VSelect v-model="goalSplashDurationVal" id="settings-goal-splash-duration" :options="goalSplashOptions"
+            option-value="id" option-label="label" @change="saveGoalSplashDuration" class="!w-36" />
+          <button @click="triggerTestGoalSplash"
+            class="btn-ghost !text-xs !py-2 px-3 font-semibold text-emerald-600 dark:text-emerald-400"
+            title="Test morning goals splash screen">
             <Sparkles class="w-3.5 h-3.5 inline mr-1" /> Test
           </button>
         </div>

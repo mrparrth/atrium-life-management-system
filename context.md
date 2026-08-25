@@ -158,3 +158,10 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Removed auto-linked task rows from the time allocation planner in `WorkForecasting.vue`, leaving daily allocations 100% manually user-managed via `+ Add Project`.
 - UX: Prefixed project allocation dropdown options with their associated Client Name (`[Client Name] - [Task Title]`).
 - DOCS: Synchronized context.md and walkthrough.md.
+
+### August 25, 2026
+- UX: Updated `<SectionHeader overline="Drifting">` in `PersonalDashboard.vue` to `:hint="stale.length ? 'These projects are drifting. Time to review them to move forward.' : ''"`, hiding the hint when no projects are drifting.
+- FEATURE: Implemented `getTaskEffectiveDate`, `isTaskActiveToday`, and `isTaskHandledToday` in `resurface.js`. Tasks snoozed to the future evaluate their future snooze date; tasks with expired past snooze dates evaluate `scheduledDate`/`dueDate`, preventing past snoozed items from appearing in today's active pool.
+- FEATURE: Built `DailyGoalsSplash.vue` full-screen morning affirmation overlay displaying `"Remember what you are working towards"` and a clean, minimalist list of active goals on first load each day.
+- UX: Added `daily_goal_splash_duration` setting in `settings.js` and rendered a custom `<VSelect>` dropdown (`Disabled`, `3 Seconds`, `5 Seconds`, `10 Seconds`, `20 Seconds`) and Test button in `Settings.vue` matching the Growth Tree setting layout.
+- DOCS: Synchronized context.md and walkthrough.md.

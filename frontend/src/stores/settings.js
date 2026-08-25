@@ -33,6 +33,8 @@ export const DEFAULT_SETTINGS = {
   financeStartMonth: "01",
   clientsViewMode: "grid",
   clientsSortBy: "updatedAt",
+  daily_goal_splash_enabled: true,
+  daily_goal_splash_duration: "3",
 };
 
 export const useSettingsStore = defineStore("settings", () => {

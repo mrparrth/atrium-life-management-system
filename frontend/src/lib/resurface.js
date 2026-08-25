@@ -64,10 +64,76 @@ function sortTodayFocus(list) {
   return list;
 }
 
+export function getTaskEffectiveDate(t, todayStr) {
+  const today = todayStr || new Date().toISOString().slice(0, 10);
+  
+  // 1. If snoozed to a date in the future, that future date is considered
+  if (t?.snoozedUntil) {
+    const snoozeDate = t.snoozedUntil.slice(0, 10);
+    if (snoozeDate > today) {
+      return snoozeDate;
+    }
+  }
+
+  // 2. Otherwise (snooze date is past/today/none), check other dates (scheduledDate, dueDate)
+  const scheduled = t?.scheduledDate ? t.scheduledDate.slice(0, 10) : null;
+  const due = t?.dueDate ? t.dueDate.slice(0, 10) : null;
+
+  if (scheduled && due) {
+    return scheduled > due ? scheduled : due;
+  }
+  if (scheduled) return scheduled;
+  if (due) return due;
+
+  return null;
+}
+
+export function isTaskActiveToday(t, todayStr) {
+  const today = todayStr || new Date().toISOString().slice(0, 10);
+
+  if (t?.status === 'done') {
+    return isToday(t.completedAt);
+  }
+
+  const effectiveDate = getTaskEffectiveDate(t, today);
+
+  // If no date at all, it's active today
+  if (!effectiveDate) return true;
+
+  // If effective date is in the future (> today), it is NOT active today
+  if (effectiveDate > today) return false;
+
+  // If effective date is today or past (<= today), it IS active today
+  return true;
+}
+
+export function isTaskHandledToday(t, todayStr) {
+  const today = todayStr || new Date().toISOString().slice(0, 10);
+
+  if (t?.status === 'done') {
+    return isToday(t.completedAt);
+  }
+
+  if (t?.snoozedUntil) {
+    const snoozeDate = t.snoozedUntil.slice(0, 10);
+    if (snoozeDate > today) {
+      return true;
+    }
+  }
+
+  if (t?.updatedAt && isToday(t.updatedAt)) {
+    const effectiveDate = getTaskEffectiveDate(t, today);
+    if (effectiveDate && effectiveDate > today) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function todayFocus(tasks) {
-  // tasks scheduled today, due today, overdue, open, not snoozed, OR tasks with no due date
   const filtered = tasks.filter(
-    (t) => isTaskOpen(t) && !isSnoozed(t) && (!t.dueDate || isToday(t.scheduledDate) || isToday(t.dueDate) || isOverdue(t.dueDate)),
+    (t) => isTaskOpen(t) && isTaskActiveToday(t)
   );
   return sortTodayFocus(filtered);
 }

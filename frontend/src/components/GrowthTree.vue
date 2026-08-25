@@ -15,7 +15,7 @@ import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useFollowsStore } from '@/stores/follows'
 import { useReviewsStore } from '@/stores/reviews'
 import { useSettingsStore } from '@/stores/settings'
-import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, isSnoozed } from '@/lib/resurface'
+import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, isSnoozed, isTaskActiveToday, isTaskHandledToday } from '@/lib/resurface'
 import { isToday, isOverdue } from '@/lib/date'
 
 import { CheckCircle2, Circle, Flame, Sprout, Trophy, Sparkles } from 'lucide-vue-next'
@@ -96,23 +96,27 @@ watch(currentDate, () => {
 const personalTasks = computed(() => {
   currentDate.value
   const today = currentDate.value.format('YYYY-MM-DD')
-  return tasksStore.items.filter(t => {
-    // 1. If it was completed today, it is part of today's focus tasks
-    if (t.status === 'done' && isToday(t.completedAt)) {
-      return true
+  return tasksStore.items.filter(t => isTaskActiveToday(t, today))
+})
+const personalTasksHandledList = computed(() => {
+  const today = currentDate.value.format('YYYY-MM-DD')
+  return personalTasks.value.map(t => {
+    const isHandled = isTaskHandledToday(t, today)
+    let statusText = 'Pending'
+    if (t.status === 'done') statusText = 'Completed'
+    else if (isHandled) statusText = 'Snoozed'
+    return {
+      id: t.id,
+      title: t.title,
+      isHandled,
+      statusText
     }
-    // 2. Otherwise, if it is open/snoozed, it is part of today's tasks if scheduled/due today, overdue, or has no due date
-    if (t.status !== 'done') {
-      if (t.scheduledDate && t.scheduledDate > today && !isToday(t.scheduledDate)) return false
-      if (t.dueDate && t.dueDate > today && !isToday(t.dueDate) && !isToday(t.scheduledDate)) return false
-      return !t.dueDate || isToday(t.scheduledDate) || isToday(t.dueDate) || isOverdue(t.dueDate)
-    }
-    return false
   })
 })
 const personalTasksTotal = computed(() => personalTasks.value.length)
 const personalTasksHandled = computed(() => {
-  return personalTasks.value.filter(t => t.status === 'done' || isSnoozed(t)).length
+  const today = currentDate.value.format('YYYY-MM-DD')
+  return personalTasks.value.filter(t => isTaskHandledToday(t, today)).length
 })
 const personalScore = computed(() => {
   if (personalTasksTotal.value === 0) return 1
@@ -484,12 +488,8 @@ watch(progress, (newVal, oldVal) => {
 <template>
   <div class="fixed bottom-6 right-6 z-40 flex flex-col items-center group select-none">
     <!-- Confetti Particle Celebration Overlay -->
-    <GrowthTreeConfetti
-      :show="showConfettiCanvas"
-      :streak-count="streakCount"
-      :duration-sec="activeConfettiDuration"
-      @close="showConfettiCanvas = false"
-    />
+    <GrowthTreeConfetti :show="showConfettiCanvas" :streak-count="streakCount" :duration-sec="activeConfettiDuration"
+      @close="showConfettiCanvas = false" />
 
     <!-- Popover on Hover -->
     <div
