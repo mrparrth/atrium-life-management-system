@@ -6,6 +6,8 @@
 
 # Dependencies
 node_modules/
+/.emergent
+
 /node_modules
 /.pnp
 .pnp.js
