@@ -8,9 +8,9 @@ import VSelect from '@/components/VSelect.vue'
 import VUrlInput from '@/components/VUrlInput.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
-import { downloadLocalBackup, getClientId, setClientId, connect as driveConnect, backup as driveBackup, restore as driveRestore, disconnect as driveDisconnect, lastBackupAt } from '@/services/drive'
+import { downloadLocalBackup, getClientId, setClientId, setManualToken, connect as driveConnect, backup as driveBackup, restore as driveRestore, disconnect as driveDisconnect, isConnected, lastBackupAt } from '@/services/drive'
 import { fromNow } from '@/lib/date'
-import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote } from 'lucide-vue-next'
+import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote, Key } from 'lucide-vue-next'
 import { isNotificationSupported, requestNotificationPermission, areNotificationsEnabled, sendDesktopNotification } from '@/lib/notifications'
 
 const ui = useUIStore()
@@ -309,6 +309,18 @@ function saveWorkSettings() {
 import { saveDirectoryHandle, getDirectoryHandle, executeOfflineBackup, verifyPermission, isTauriEnv } from '@/services/offlineSync'
 
 const isTauri = ref(isTauriEnv())
+const showManualTokenInput = ref(false)
+const manualTokenText = ref('')
+
+function handleManualTokenSubmit() {
+  if (!manualTokenText.value.trim()) return
+  setManualToken(manualTokenText.value)
+  connected.value = isConnected()
+  lastBackup.value = lastBackupAt()
+  manualTokenText.value = ''
+  showManualTokenInput.value = false
+  ui.showToast('Connected to Google Drive!', 'success')
+}
 const offlineEnabled = ref(Boolean(settings.get('offline_enabled', false)))
 const offlineInterval = ref(Number(settings.get('offline_interval', 1440)))
 const offlineKeepDays = ref(Number(settings.get('offline_keep_days', 7)))
@@ -903,27 +915,42 @@ function matchesSearch(text) {
                   <span v-else class="text-ink-3 mt-0.5 block">Not connected</span>
                 </p>
               </div>
-              <div class="flex items-center gap-2 flex-wrap">
-                <button v-if="!connected" @click="connect" :disabled="busy || !clientIdInput.trim()"
-                  class="btn-primary !py-2 px-4 text-xs flex items-center gap-1.5">
-                  <Loader2 v-if="connecting" class="w-3.5 h-3.5 animate-spin" />
-                  <Cloud v-else class="w-3.5 h-3.5" />
-                  <span>Connect Drive</span>
-                </button>
-                <template v-else>
-                  <button @click="disconnect" :disabled="busy"
-                    class="btn-ghost !py-2 px-3 text-xs text-red-500 hover:text-red-600 flex items-center gap-1.5">
-                    <Unlink class="w-3.5 h-3.5" /> Disconnect
+              <div class="flex flex-col items-end gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <button v-if="!connected" @click="connect" :disabled="busy || (!isTauri && !clientIdInput.trim())"
+                    class="btn-primary !py-2 px-4 text-xs flex items-center gap-1.5">
+                    <Loader2 v-if="connecting" class="w-3.5 h-3.5 animate-spin" />
+                    <Cloud v-else class="w-3.5 h-3.5" />
+                    <span>Connect Drive</span>
                   </button>
-                  <button @click="backup" :disabled="busy"
-                    class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5">
-                    <CloudUpload class="w-3.5 h-3.5" /> Backup Now
+                  <button v-if="!connected" @click="showManualTokenInput = !showManualTokenInput" type="button"
+                    class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1">
+                    <Key class="w-3.5 h-3.5" />
+                    <span>{{ showManualTokenInput ? 'Hide Token Field' : 'Paste Token' }}</span>
                   </button>
-                  <button @click="restore" :disabled="busy"
-                    class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5">
-                    <CloudDownload class="w-3.5 h-3.5" /> Restore
+                  <template v-else>
+                    <button @click="disconnect" :disabled="busy"
+                      class="btn-ghost !py-2 px-3 text-xs text-red-500 hover:text-red-600 flex items-center gap-1.5">
+                      <Unlink class="w-3.5 h-3.5" /> Disconnect
+                    </button>
+                    <button @click="backup" :disabled="busy"
+                      class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5">
+                      <CloudUpload class="w-3.5 h-3.5" /> Backup Now
+                    </button>
+                    <button @click="restore" :disabled="busy"
+                      class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5">
+                      <CloudDownload class="w-3.5 h-3.5" /> Restore
+                    </button>
+                  </template>
+                </div>
+                <div v-if="!connected && showManualTokenInput" class="flex items-center gap-2 w-full max-w-sm">
+                  <input v-model="manualTokenText" placeholder="Paste access token or Google redirect URL..."
+                    class="flex-grow min-w-0 bg-canvas/30 border border-line rounded-xl px-3 py-1.5 text-xs font-mono text-ink outline-none" />
+                  <button @click="handleManualTokenSubmit" type="button"
+                    class="btn-secondary !py-1.5 px-3 text-xs shrink-0">
+                    Submit
                   </button>
-                </template>
+                </div>
               </div>
             </div>
           </div>

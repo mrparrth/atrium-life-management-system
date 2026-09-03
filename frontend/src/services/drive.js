@@ -58,11 +58,12 @@ export function checkAndCaptureOAuthRedirect() {
     const token = params.get("access_token");
     const expiresIn = params.get("expires_in") || "3600";
     if (token) {
-      accessToken = token;
-      tokenExpiresAt = Date.now() + (Number(expiresIn) || 3600) * 1000;
-      localStorage.setItem("atrium.drive.accessToken", token);
-      localStorage.setItem("atrium.drive.tokenExpiresAt", String(tokenExpiresAt));
-      localStorage.setItem("atrium.drive.connected", "1");
+      setManualToken(token);
+      try {
+        const bc = new BroadcastChannel("atrium_oauth_channel");
+        bc.postMessage({ type: "oauth_success", token });
+        bc.close();
+      } catch (e) {}
 
       window.history.replaceState(null, "", window.location.pathname);
       return true;
@@ -101,7 +102,8 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
   if (!clientId) throw new Error("Google Client ID not set. Add it in Settings.");
 
   if (isTauriEnv()) {
-    const redirectUri = window.location.origin;
+    // Exact desktop app origin (http://tauri.localhost) for Tauri 2.0 bundle
+    const redirectUri = "http://tauri.localhost";
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${encodeURIComponent(clientId)}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -109,50 +111,53 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
       `scope=${encodeURIComponent(scope)}` +
       (prompt ? `&prompt=${encodeURIComponent(prompt)}` : "");
 
-    try {
-      const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
-      
-      return new Promise((resolve, reject) => {
-        const webview = new WebviewWindow("google-auth-" + Date.now(), {
-          url: authUrl,
-          title: "Sign in with Google",
-          width: 540,
-          height: 680,
-          resizable: false,
-          center: true,
-        });
+    return new Promise(async (resolve, reject) => {
+      let resolved = false;
 
-        const checkTokenInterval = setInterval(async () => {
-          try {
-            const currentUrl = await webview.url();
-            if (currentUrl && currentUrl.includes("access_token=")) {
-              clearInterval(checkTokenInterval);
-              const hash = currentUrl.substring(currentUrl.indexOf("access_token="));
-              const params = new URLSearchParams(hash);
-              const token = params.get("access_token");
-              if (token) {
-                setManualToken(token);
-                await webview.close();
-                resolve(token);
-              }
-            }
-          } catch (err) {
-            // ignore navigation errors before page load
+      // Listen for OAuth token relay broadcast
+      let bc;
+      try {
+        bc = new BroadcastChannel("atrium_oauth_channel");
+        bc.onmessage = (event) => {
+          if (event.data?.type === "oauth_success" && event.data?.token) {
+            resolved = true;
+            setManualToken(event.data.token);
+            if (bc) bc.close();
+            resolve(event.data.token);
           }
-        }, 500);
+        };
+      } catch (e) {}
 
-        webview.once("tauri://destroyed", () => {
-          clearInterval(checkTokenInterval);
+      // Storage event listener fallback
+      const storageHandler = (e) => {
+        if (e.key === "atrium.drive.accessToken" && e.newValue) {
+          resolved = true;
+          window.removeEventListener("storage", storageHandler);
+          if (bc) bc.close();
+          resolve(e.newValue);
+        }
+      };
+      window.addEventListener("storage", storageHandler);
+
+      // Open Google Sign-In in system default browser (Safari / Arc / Chrome)
+      try {
+        const { openUrl } = await import("@tauri-apps/plugin-opener");
+        await openUrl(authUrl);
+      } catch (e) {
+        window.open(authUrl, "_blank");
+      }
+
+      // Timeout safety (2 minutes)
+      setTimeout(() => {
+        if (!resolved) {
+          window.removeEventListener("storage", storageHandler);
+          if (bc) bc.close();
           if (!accessToken) {
-            reject(new Error("Google Sign-In window closed."));
+            reject(new Error("Google Sign-In timed out. Please try again."));
           }
-        });
-      });
-    } catch (e) {
-      const { openUrl } = await import("@tauri-apps/plugin-opener");
-      await openUrl(authUrl);
-      throw new Error("Google Sign-In opened in your browser. Complete sign-in to connect.");
-    }
+        }
+      }, 120000);
+    });
   }
 
   await loadGisScript();
