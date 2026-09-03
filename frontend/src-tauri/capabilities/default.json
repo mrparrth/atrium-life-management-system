@@ -15,6 +15,7 @@
     "fs:allow-read-dir",
     "fs:allow-exists",
     "opener:default",
-    "opener:allow-open-url"
+    "opener:allow-open-url",
+    "deep-link:default"
   ]
 }

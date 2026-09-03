@@ -102,22 +102,52 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
   if (!clientId) throw new Error("Google Client ID not set. Add it in Settings.");
 
   if (isTauriEnv()) {
+    const redirectUri = "atrium://oauth-callback";
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(clientId)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=token&` +
+      `scope=${encodeURIComponent(scope)}` +
+      (prompt ? `&prompt=${encodeURIComponent(prompt)}` : "");
+
     return new Promise(async (resolve, reject) => {
       try {
-        const { invoke } = await import("@tauri-apps/api/core");
-        const { listen } = await import("@tauri-apps/api/event");
+        const { onOpenUrl } = await import("@tauri-apps/plugin-deep-link");
+        const { openUrl } = await import("@tauri-apps/plugin-opener");
 
-        const unlisten = await listen("oauth-token-received", (event) => {
-          if (event.payload) {
-            setManualToken(event.payload);
-            if (unlisten) unlisten();
-            resolve(event.payload);
+        const unsubscribe = await onOpenUrl((urls) => {
+          for (const url of urls) {
+            if (url.includes("atrium://oauth-callback")) {
+              const hash = url.split("#")[1] || url.split("?")[1] || "";
+              const params = new URLSearchParams(hash);
+              const token = params.get("access_token");
+              if (token) {
+                setManualToken(token);
+                if (typeof unsubscribe === "function") unsubscribe();
+                resolve(token);
+              }
+            }
           }
         });
 
-        await invoke("start_native_oauth", { clientId, scope });
+        await openUrl(authUrl);
       } catch (err) {
-        reject(err);
+        try {
+          const { invoke } = await import("@tauri-apps/api/core");
+          const { listen } = await import("@tauri-apps/api/event");
+
+          const unlisten = await listen("oauth-token-received", (event) => {
+            if (event.payload) {
+              setManualToken(event.payload);
+              if (unlisten) unlisten();
+              resolve(event.payload);
+            }
+          });
+
+          await invoke("start_native_oauth", { clientId, scope });
+        } catch (e) {
+          reject(e);
+        }
       }
     });
   }

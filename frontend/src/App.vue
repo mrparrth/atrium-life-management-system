@@ -84,6 +84,22 @@ onMounted(async () => {
   if (checkAndCaptureOAuthRedirect()) {
     ui.showToast('Connected to Google Drive successfully', 'success')
   }
+  try {
+    const { onOpenUrl } = await import('@tauri-apps/plugin-deep-link')
+    await onOpenUrl((urls) => {
+      for (const url of urls) {
+        if (url.includes('atrium://oauth-callback')) {
+          const hash = url.split('#')[1] || url.split('?')[1] || ''
+          const params = new URLSearchParams(hash)
+          const token = params.get('access_token')
+          if (token) {
+            setManualToken(token)
+            ui.showToast('Connected to Google Drive successfully', 'success')
+          }
+        }
+      }
+    })
+  } catch (e) {}
   initNotificationsOnLoad()
   await db.open()
   await seedIfEmpty()
