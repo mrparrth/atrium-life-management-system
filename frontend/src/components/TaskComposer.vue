@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
@@ -37,6 +37,21 @@ const enableSubtasks = ref(props.initialTask?.enableSubtasks || (props.initialTa
 const subtasks = ref(props.initialTask?.subtasks ? JSON.parse(JSON.stringify(props.initialTask.subtasks)) : [])
 const newSubtaskTitle = ref('')
 
+function handleKeydown(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault()
+    save()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+
 function addSubtask() {
   if (!newSubtaskTitle.value.trim()) return
   subtasks.value.push({
@@ -68,32 +83,41 @@ watch(status, (newVal) => {
   }
 })
 
-async function save() {
-  if (!title.value.trim()) return
-  const payload = {
-    title: title.value, description: description.value,
-    projectId: projectId.value || null,
-    scheduledDate: scheduledDate.value || null,
-    dueDate: dueDate.value || null,
-    important: important.value, urgent: urgent.value,
-    status: status.value,
-    enableSubtasks: enableSubtasks.value,
-    subtasks: enableSubtasks.value ? subtasks.value : []
-  }
+const isSaving = ref(false)
 
-  if (props.initialTask) {
-    // Include completedAt if editing a done task
-    if (isDone.value) payload.completedAt = completedAt.value || null
-    await tasks.update(props.initialTask.id, payload)
-    ui.showToast('Task updated', 'success')
-    emit('updated', props.initialTask.id)
-  } else {
-    if (isDone.value) payload.completedAt = completedAt.value || null
-    const t = await tasks.add(payload)
-    ui.showToast('Task captured', 'success')
-    emit('created', t)
+async function save() {
+  if (isSaving.value) return
+  if (!title.value.trim()) return
+  isSaving.value = true
+
+  try {
+    const payload = {
+      title: title.value, description: description.value,
+      projectId: projectId.value || null,
+      scheduledDate: scheduledDate.value || null,
+      dueDate: dueDate.value || null,
+      important: important.value, urgent: urgent.value,
+      status: status.value,
+      enableSubtasks: enableSubtasks.value,
+      subtasks: enableSubtasks.value ? subtasks.value : []
+    }
+
+    if (props.initialTask) {
+      // Include completedAt if editing a done task
+      if (isDone.value) payload.completedAt = completedAt.value || null
+      await tasks.update(props.initialTask.id, payload)
+      ui.showToast('Task updated', 'success')
+      emit('updated', props.initialTask.id)
+    } else {
+      if (isDone.value) payload.completedAt = completedAt.value || null
+      const t = await tasks.add(payload)
+      ui.showToast('Task captured', 'success')
+      emit('created', t)
+    }
+    emit('close')
+  } finally {
+    isSaving.value = false
   }
-  emit('close')
 }
 
 async function toggleCompleteAndSave() {
@@ -109,8 +133,7 @@ async function toggleCompleteAndSave() {
 </script>
 
 <template>
-  <form @submit.prevent="save" @keydown.meta.enter.prevent="save" @keydown.ctrl.enter.prevent="save"
-    class="space-y-5 relative" data-testid="task-composer">
+  <form @submit.prevent="save" class="space-y-5 relative" data-testid="task-composer">
 
     <!-- 2-Column Grid -->
     <div class="flex flex-col md:flex-row gap-6 items-start">

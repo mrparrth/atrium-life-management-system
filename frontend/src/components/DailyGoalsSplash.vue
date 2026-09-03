@@ -5,16 +5,37 @@ import { useGoalsStore } from '@/stores/goals'
 import { useSettingsStore } from '@/stores/settings'
 import { Sparkles, Target } from 'lucide-vue-next'
 
+import { useUIStore } from '@/stores/ui'
+
 const goalsStore = useGoalsStore()
 const settingsStore = useSettingsStore()
+const ui = useUIStore()
 
 const visible = ref(false)
 const isFadingOut = ref(false)
 let autoDismissTimer = null
 
+const greeting = computed(() => {
+  const h = new Date().getHours()
+  let greet = 'Good Evening'
+  if (h >= 4 && h < 12) greet = 'Good Morning'
+  else if (h >= 12 && h < 17) greet = 'Good Afternoon'
+  else if (h >= 17 && h < 22) greet = 'Good Evening'
+  else greet = 'Good Night'
+
+  const name = settingsStore.get('user_name', '') || ui.userName || localStorage.getItem('atrium.user_name') || ''
+  if (name && name.trim()) {
+    return `${greet}, ${name.trim()}`
+  }
+  return greet
+})
+
 const activeGoals = computed(() => {
   return goalsStore.items.filter(g => g.status !== 'archived' && g.status !== 'completed').slice(0, 4)
 })
+
+const favoriteQuote = computed(() => settingsStore.get('favorite_quote', ''))
+const favoriteQuoteAuthor = computed(() => settingsStore.get('favorite_quote_author', ''))
 
 function triggerSplash(force = false) {
   const durationSec = Number(settingsStore.get('daily_goal_splash_duration', 3))
@@ -59,6 +80,12 @@ function handleKeydown() {
   }
 }
 
+function handleFocusOrVisibility() {
+  if (document.visibilityState === 'visible' || document.hasFocus()) {
+    triggerSplash(false)
+  }
+}
+
 onMounted(async () => {
   await goalsStore.load()
   await settingsStore.load()
@@ -67,12 +94,16 @@ onMounted(async () => {
     triggerSplash(false)
   }, 400)
 
+  window.addEventListener('focus', handleFocusOrVisibility)
+  document.addEventListener('visibilitychange', handleFocusOrVisibility)
   window.addEventListener('atrium-trigger-goals-splash', () => triggerSplash(true))
   window.addEventListener('keydown', handleKeydown)
 })
 
 onBeforeUnmount(() => {
   if (autoDismissTimer) clearTimeout(autoDismissTimer)
+  window.removeEventListener('focus', handleFocusOrVisibility)
+  document.removeEventListener('visibilitychange', handleFocusOrVisibility)
   window.removeEventListener('atrium-trigger-goals-splash', () => triggerSplash(true))
   window.removeEventListener('keydown', handleKeydown)
 })
@@ -94,13 +125,21 @@ onBeforeUnmount(() => {
       <div class="relative z-10 flex flex-col items-center text-center max-w-2xl space-y-3 mb-8 animate-rise-in">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-semibold uppercase tracking-wider">
           <Sparkles class="w-3.5 h-3.5" />
-          <span>Daily Morning Focus</span>
+          <span>{{ greeting }}</span>
         </div>
 
         <h1 class="font-serif italic text-3xl md:text-5xl text-ink font-normal tracking-tight leading-tight">
           Remember what you are working towards
         </h1>
-        <p class="text-xs md:text-sm text-ink-3 tracking-wide">
+        <div v-if="favoriteQuote" class="py-1 px-4 max-w-xl text-center">
+          <p class="font-serif italic text-base md:text-xl text-emerald-700 dark:text-emerald-300 leading-relaxed">
+            “{{ favoriteQuote }}”
+          </p>
+          <p v-if="favoriteQuoteAuthor" class="text-xs font-mono font-semibold text-ink-3 uppercase tracking-wider mt-1">
+            — {{ favoriteQuoteAuthor }}
+          </p>
+        </div>
+        <p v-else class="text-xs md:text-sm text-ink-3 tracking-wide">
           Keep your primary aspirations aligned with today's focus.
         </p>
       </div>

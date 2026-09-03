@@ -245,7 +245,7 @@ onUnmounted(() => {
 
     <!-- HEADER -->
     <PageHeader overline="Execution" title="Work scope"
-      sub="Frictionless tasking and time tracking without rigid hierarchy constraints.">
+      sub="Frictionless tasking without rigid hierarchy constraints.">
       <template #right>
         <button @click="showAddDrawer = true" class="btn-primary">
           <Plus class="w-4 h-4" /> Create Work Item <span

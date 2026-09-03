@@ -249,7 +249,6 @@ async function startMeetingNote(meeting) {
   }
 
   const body = `## Meeting Prep: ${meeting.title}
-Date: ${dayjs(meeting.startDateTime).format('LLLL')}
 
 ### Agenda & Discussion Topics
 - 
@@ -259,10 +258,6 @@ Date: ${dayjs(meeting.startDateTime).format('LLLL')}
 
 ### Unresolved Blockers / Revisions
 - 
-
-### Related References
-- Timezone: ${c?.timezone || 'N/A'}
-- Stack: ${c?.technicalStack || 'N/A'}
 `
 
   const created = await notesStore.add({
@@ -278,7 +273,7 @@ Date: ${dayjs(meeting.startDateTime).format('LLLL')}
 </script>
 
 <template>
-  <section v-if="combinedMeetings.length" class="space-y-4">
+  <section v-if="combinedMeetings.length" class="space-y-4 relative" :class="{ 'z-40': activeDropdownMeetingId }">
     <div class="flex items-center justify-between">
       <div class="leading-snug">
         <div class="overline">Schedule</div>
@@ -287,8 +282,8 @@ Date: ${dayjs(meeting.startDateTime).format('LLLL')}
 
     <div class="flex flex-col gap-2.5 animate-fade-in">
       <div v-for="meeting in combinedMeetings" :key="meeting.id"
-        class="card !p-2.5 !px-4 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all duration-300 hover:border-line-2"
-        :class="getMeetingDisplayState(meeting).class" :style="getMeetingDynamicStyle(meeting)">
+        class="card !p-2.5 !px-4 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all duration-300 hover:border-line-2 relative"
+        :class="[getMeetingDisplayState(meeting).class, activeDropdownMeetingId === meeting.id ? 'z-40' : '']" :style="getMeetingDynamicStyle(meeting)">
 
         <!-- LEFT: STATUS RAIL & DETAILS -->
         <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -346,19 +341,19 @@ Date: ${dayjs(meeting.startDateTime).format('LLLL')}
                 </button>
 
                 <!-- Click-outside catcher -->
-                <div v-if="activeDropdownMeetingId === meeting.id" class="fixed inset-0 z-10"
+                <div v-if="activeDropdownMeetingId === meeting.id" class="fixed inset-0 z-40"
                   @click.stop="activeDropdownMeetingId = null"></div>
 
                 <!-- Dropdown panel -->
                 <div v-if="activeDropdownMeetingId === meeting.id"
-                  class="absolute left-0 mt-1 w-44 bg-surface border border-line rounded-lg shadow-lg z-20 p-1.5 space-y-1">
+                  class="absolute left-0 top-full mt-1.5 w-52 bg-surface border border-line/80 rounded-xl shadow-2xl z-50 p-2 space-y-1.5">
                   <input v-model="clientSearchQuery" placeholder="Search client..."
-                    class="w-full text-[10px] bg-canvas border border-line rounded px-1.5 py-0.5 focus:outline-none focus:border-line-2"
+                    class="w-full text-[10px] bg-canvas border border-line rounded-lg px-2 py-1 focus:outline-none focus:border-pri-strategic/50"
                     @click.stop />
-                  <div class="max-h-28 overflow-y-auto space-y-0.5">
+                  <div class="max-h-36 overflow-y-auto space-y-0.5">
                     <button v-for="c in filteredClients" :key="c.id" @click.stop="selectClient(meeting.id, c.id)"
                       type="button"
-                      class="w-full text-left text-[10px] px-2 py-1 rounded hover:bg-canvas text-ink transition-colors block truncate">
+                      class="w-full text-left text-[10px] px-2 py-1 rounded-lg hover:bg-canvas text-ink transition-colors block truncate font-medium">
                       {{ c.name }}
                     </button>
                     <div v-if="filteredClients.length === 0" class="text-[9px] text-ink-3 px-2 py-1">

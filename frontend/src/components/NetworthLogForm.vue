@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
 import { inr, inrShort } from '@/lib/money'
-import { X, ChevronDown, ChevronRight, Plus } from 'lucide-vue-next'
+import { X, ChevronDown, ChevronRight, ChevronLeft, Plus, Calendar, MessageSquare } from 'lucide-vue-next'
 import { onKeyStroke } from '@vueuse/core'
 
 const props = defineProps({
@@ -17,6 +17,44 @@ const ui = useUIStore()
 
 const date = ref(props.initial?.date || new Date().toISOString().slice(0, 7))
 const note = ref(props.initial?.note || '')
+
+const notesMap = ref({})
+const activeNoteKey = ref(null)
+const activeNoteVal = ref('')
+
+function openNoteEditor(type, category) {
+  const key = makeKey(type, category)
+  activeNoteKey.value = key
+  activeNoteVal.value = notesMap.value[key] || ''
+}
+
+function saveNote() {
+  if (activeNoteKey.value) {
+    if (activeNoteVal.value.trim()) {
+      notesMap.value[activeNoteKey.value] = activeNoteVal.value.trim()
+    } else {
+      delete notesMap.value[activeNoteKey.value]
+    }
+    activeNoteKey.value = null
+  }
+}
+
+function formatMonthHeader(m) {
+  if (!m) return 'Select Month'
+  const [y, mo] = m.split('-')
+  if (!y || !mo) return m
+  const d = new Date(+y, +mo - 1, 1)
+  return d.toLocaleString('en-IN', { month: 'long', year: 'numeric' })
+}
+
+function stepMonth(delta) {
+  if (!date.value) return
+  const [y, mo] = date.value.split('-').map(Number)
+  const d = new Date(y, mo - 1 + delta, 1)
+  const newY = d.getFullYear()
+  const newM = String(d.getMonth() + 1).padStart(2, '0')
+  date.value = `${newY}-${newM}`
+}
 
 // Build the working map: scope+category → value
 const valuesMap = ref({})
@@ -39,6 +77,9 @@ function initValues() {
       const key = makeKey(e.type, e.category)
       map[key] = +e.value
       dispMap[key] = inrShort(e.value)
+      if (e.note) {
+        notesMap.value[key] = e.note
+      }
     }
   }
   valuesMap.value = map
@@ -126,24 +167,39 @@ watch(valuesMap, () => {
 function toggleGroup(key) { collapsed.value[key] = !collapsed.value[key] }
 
 function groupTotal(scope, cats) {
-  return cats.reduce((s, c) => s + (+valuesMap.value[makeKey(scope, c.name)] || 0), 0)
+  return cats.reduce((sum, c) => sum + (valuesMap.value[makeKey(scope, c.name)] || 0), 0)
 }
 
 const totalAssets = computed(() => {
-  return Object.keys(valuesMap.value).filter(k => k.startsWith('asset::')).reduce((s, k) => s + (+valuesMap.value[k] || 0), 0)
+  let sum = 0
+  for (const [k, v] of Object.entries(valuesMap.value)) {
+    if (k.startsWith('asset::')) sum += (+v || 0)
+  }
+  return sum
 })
 const totalLiabs = computed(() => {
-  return Object.keys(valuesMap.value).filter(k => k.startsWith('liability::')).reduce((s, k) => s + (+valuesMap.value[k] || 0), 0)
+  let sum = 0
+  for (const [k, v] of Object.entries(valuesMap.value)) {
+    if (k.startsWith('liability::')) sum += (+v || 0)
+  }
+  return sum
 })
 const netTotal = computed(() => totalAssets.value - totalLiabs.value)
 
+const scopeMeta = {
+  asset: { label: 'Assets', textClass: 'text-pri-strategic', dot: 'bg-pri-strategic' },
+  liability: { label: 'Liabilities', textClass: 'text-pri-critical', dot: 'bg-pri-critical' }
+}
+
 async function save() {
+  saveNote()
   const entries = []
   for (const [k, v] of Object.entries(valuesMap.value)) {
     const num = +v
     if (!num) continue
     const [type, category] = k.split('::')
-    entries.push({ type, category, value: num })
+    const noteVal = notesMap.value[k] || undefined
+    entries.push({ type, category, value: num, note: noteVal })
   }
   if (!entries.length) { ui.showToast('Add at least one value', 'error'); return }
 
@@ -209,14 +265,8 @@ function handleFormKeydown(e) {
   }
 }
 
-
 function label(name) {
   return (name || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
-const scopeMeta = {
-  asset: { label: 'Assets', textClass: 'text-pri-strategic', accentBg: 'bg-pri-strategic/8', dot: 'bg-pri-strategic' },
-  liability: { label: 'Liabilities', textClass: 'text-pri-critical', accentBg: 'bg-pri-critical/8', dot: 'bg-pri-critical' },
 }
 </script>
 
@@ -248,21 +298,18 @@ const scopeMeta = {
 
         <!-- Summary strip -->
         <div class="nw-summary-strip">
-          <!-- Assets -->
           <div class="nw-summary-cell">
             <span class="nw-summary-label">Total Assets</span>
             <span class="nw-summary-value text-pri-strategic">
               {{ totalAssets > 0 ? inr(totalAssets) : '—' }}
             </span>
           </div>
-          <!-- Liabilities -->
           <div class="nw-summary-cell">
             <span class="nw-summary-label">Total Liabilities</span>
             <span class="nw-summary-value text-pri-critical">
               {{ totalLiabs > 0 ? inr(totalLiabs) : '—' }}
             </span>
           </div>
-          <!-- Net Worth — emphasized -->
           <div class="nw-summary-cell nw-summary-net">
             <span class="nw-summary-label">Net Worth</span>
             <span class="nw-summary-value nw-net-value" :class="netTotal >= 0 ? 'text-ink' : 'text-pri-critical'"
@@ -278,7 +325,6 @@ const scopeMeta = {
         <div class="nw-body-grid">
           <div v-for="scope in ['asset', 'liability']" :key="scope" class="nw-column">
 
-            <!-- Section header — column title -->
             <div class="nw-column-header">
               <div class="flex items-center gap-2">
                 <span class="nw-section-dot" :class="scopeMeta[scope].dot"></span>
@@ -293,11 +339,9 @@ const scopeMeta = {
               </span>
             </div>
 
-            <!-- Groups stacked vertically inside the column -->
             <div class="flex flex-col gap-4">
               <div v-for="group in groupedCategories(scope)" :key="group.name" class="nw-group">
 
-                <!-- Group toggle -->
                 <button type="button" class="nw-group-header"
                   :class="collapsed[`${scope}::${group.name}`] ? 'nw-group-collapsed' : 'nw-group-expanded'"
                   @click="toggleGroup(`${scope}::${group.name}`)">
@@ -316,27 +360,55 @@ const scopeMeta = {
                   </span>
                 </button>
 
-                <!-- Rows — single-column stacked list -->
                 <div v-show="!collapsed[`${scope}::${group.name}`]" class="nw-rows-list">
-                  <label v-for="c in group.cats" :key="c.id" class="nw-row-single" :class="`nw-row-hover-${scope}`"
-                    :data-testid="`nw-input-${scope}-${c.name}`">
+                  <div v-for="c in group.cats" :key="c.id" class="nw-row-single group/row relative"
+                    :class="`nw-row-hover-${scope}`" :data-testid="`nw-input-${scope}-${c.name}`">
                     <span class="nw-row-label">{{ label(c.name) }}</span>
-                    <input type="text" :value="displayValues[makeKey(scope, c.name)]"
-                      @focus="onFocus(scope, c.name, $event)" @input="onInput(scope, c.name, $event.target.value)"
-                      @blur="onBlur(scope, c.name)" class="nw-input"
-                      :class="(+valuesMap[makeKey(scope, c.name)] || 0) > 0 ? 'nw-input-filled' : 'nw-input-empty'"
-                      placeholder="0" />
-                  </label>
+
+                    <div class="relative flex items-center gap-2" @mouseleave="saveNote">
+                      <button type="button" class="btn-ghost !p-1 transition-colors nw-note-container" :class="[
+                        notesMap[makeKey(scope, c.name)]
+                          ? '!text-ink-2'
+                          : '!text-ink-3/30 hover:!text-ink-3 opacity-0 group-hover/row:opacity-100'
+                      ]" @mouseenter="openNoteEditor(scope, c.name)" @click.stop="openNoteEditor(scope, c.name)"
+                        title="Add/Edit Note" tabindex="-1">
+                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                          <path
+                            d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
+                        </svg>
+                      </button>
+
+                      <div class="relative flex items-center">
+                        <input type="text" :value="displayValues[makeKey(scope, c.name)]"
+                          @focus="onFocus(scope, c.name, $event)" @input="onInput(scope, c.name, $event.target.value)"
+                          @blur="onBlur(scope, c.name)" class="nw-input"
+                          :class="(+valuesMap[makeKey(scope, c.name)] || 0) > 0 ? 'nw-input-filled' : 'nw-input-empty'"
+                          placeholder="0" />
+                      </div>
+
+                      <div v-if="activeNoteKey === makeKey(scope, c.name)"
+                        class="absolute right-0 top-full mt-1.5 w-64 p-3 bg-surface border border-line rounded-xl shadow-xl z-50 animate-rise-in text-left nw-note-editor"
+                        @click.stop>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-ink-3 mb-1.5">Note for {{ label(c.name) }}</div>
+                        <textarea v-model="activeNoteVal" placeholder="Write a note..."
+                          class="w-full bg-canvas border border-line rounded-lg p-2 text-xs outline-none focus:border-pri-strategic font-sans placeholder-ink-3 resize-none text-ink"
+                          rows="3" autofocus @keydown.enter.prevent="saveNote"
+                          @keydown.esc.stop="activeNoteKey = null"></textarea>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
           </div>
         </div>
-        <!-- Notes Row -->
-        <div class="px-7 pb-6 pt-2 border-t border-line/40">
-          <input v-model="note" class="nw-note-input-line" placeholder="Add a month note…" data-testid="nw-note" />
-        </div>
+      </div>
+
+      <!-- ══ PINNED MONTH COMMENT BAR ═══════════════════════════════ -->
+      <div class="px-7 py-3 border-t border-line/40 bg-surface flex items-center gap-3 shrink-0">
+        <MessageSquare class="w-4 h-4 text-ink-3 shrink-0" />
+        <input v-model="note" class="nw-note-input-line" placeholder="Add a comment or note for this month's net worth..." data-testid="nw-note" />
       </div>
 
       <!-- ══ FOOTER ════════════════════════════════════════════════ -->

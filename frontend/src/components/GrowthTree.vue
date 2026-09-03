@@ -16,7 +16,7 @@ import { useFollowsStore } from '@/stores/follows'
 import { useReviewsStore } from '@/stores/reviews'
 import { useSettingsStore } from '@/stores/settings'
 import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, isSnoozed, isTaskActiveToday, isTaskHandledToday } from '@/lib/resurface'
-import { isToday, isOverdue } from '@/lib/date'
+import { isToday, isOverdue, daysSince } from '@/lib/date'
 
 import { CheckCircle2, Circle, Flame, Sprout, Trophy, Sparkles } from 'lucide-vue-next'
 
@@ -96,7 +96,10 @@ watch(currentDate, () => {
 const personalTasks = computed(() => {
   currentDate.value
   const today = currentDate.value.format('YYYY-MM-DD')
-  return tasksStore.items.filter(t => isTaskActiveToday(t, today))
+  return tasksStore.items.filter(t => {
+    if (t.status === 'done') return isToday(t.completedAt)
+    return isTaskActiveToday(t, today) || isTaskHandledToday(t, today)
+  })
 })
 const personalTasksHandledList = computed(() => {
   const today = currentDate.value.format('YYYY-MM-DD')
@@ -135,9 +138,22 @@ const driftingScore = computed(() => {
 // 3. Resurfacing Memory Clicks
 const memory = computed(() => {
   currentDate.value
-  return memoryResurfacing(notesStore.items, bookmarksStore.items, goalsStore.items, wishlistStore.items, currentDate.value)
+  const config = {
+    resurface_note_days: Number(settingsStore.get('resurface_note_days', 21)),
+    resurface_bookmark_days: Number(settingsStore.get('resurface_bookmark_days', 30)),
+    resurface_goal_interval: Number(settingsStore.get('resurface_goal_interval', 15)),
+    resurface_wish_interval: Number(settingsStore.get('resurface_wish_interval', 15)),
+    resurface_goal_count: Number(settingsStore.get('resurface_goal_count', 1)),
+    resurface_wish_count: Number(settingsStore.get('resurface_wish_count', 1)),
+    resurface_note_count: Number(settingsStore.get('resurface_note_count', 1)),
+    resurface_bookmark_count: Number(settingsStore.get('resurface_bookmark_count', 1))
+  }
+  return memoryResurfacing(notesStore.items, bookmarksStore.items, goalsStore.items, wishlistStore.items, currentDate.value, config)
 })
 const resurfacedFollows = computed(() => {
+  const count = Number(settingsStore.get('resurface_radar_count', 1))
+  const minInterval = Number(settingsStore.get('resurface_radar_interval', 7))
+  if (count <= 0) return []
   const items = followsStore.items
   if (!items || items.length === 0) return []
 
@@ -171,20 +187,27 @@ const resurfacedFollows = computed(() => {
     return candidates[candidates.length - 1]
   }
 
-  const first = pickWeighted(items)
-  if (!first) return []
+  // Items viewed today MUST stay in today's chosen set so they stay visible (turned grey)
+  const viewedToday = items.filter(item => item.lastViewedAt && isToday(item.lastViewedAt))
+  const picked = viewedToday.slice(0, count)
 
-  let remaining = items.filter(x => x.id !== first.id)
-  let diffCatCandidates = remaining.filter(x => x.category !== first.category)
+  if (picked.length >= count) return picked
 
-  let second = null
-  if (diffCatCandidates.length > 0) {
-    second = pickWeighted(diffCatCandidates)
-  } else if (remaining.length > 0) {
-    second = pickWeighted(remaining)
+  const pickedIds = new Set(picked.map(i => i.id))
+  let pool = items.filter(i => !pickedIds.has(i.id))
+
+  // Filter pool by minimum interval (rest period between resurfacings)
+  const eligiblePool = pool.filter(i => daysSince(i.lastViewedAt) >= minInterval)
+  let activePool = eligiblePool.length > 0 ? eligiblePool : pool
+
+  while (picked.length < count && activePool.length > 0) {
+    const item = pickWeighted(activePool)
+    if (!item) break
+    picked.push(item)
+    activePool = activePool.filter(x => x.id !== item.id)
   }
 
-  return second ? [first, second] : [first]
+  return picked
 })
 
 const memoryList = computed(() => {

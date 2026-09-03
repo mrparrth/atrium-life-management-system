@@ -371,14 +371,15 @@ async function deleteSub(sub) {
     <div v-if="filteredAndSortedSubscriptions.length"
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
       <div v-for="sub in filteredAndSortedSubscriptions" :key="sub.id"
-        class="card p-5 hover:border-line-2 transition-all relative flex flex-col justify-between"
+        @click="openEditModal(sub)"
+        class="card p-5 hover:border-line-2 transition-all relative flex flex-col justify-between cursor-pointer"
         :class="sub.status === 'paused' ? 'opacity-70 bg-elevated/20' : ''" :data-testid="`sub-card-${sub.id}`">
 
         <!-- Card Body content -->
         <div>
           <!-- Row 1: Name + Type + Dropdown Trigger -->
           <div class="flex items-center justify-between mb-4">
-            <h4 class="font-serif text-lg text-ink leading-tight capitalize truncate pr-2" title="sub.name">
+            <h4 class="font-serif text-lg text-ink leading-tight capitalize truncate pr-2" :title="sub.name">
               {{ sub.name }}
             </h4>
             <div class="flex items-center gap-2 shrink-0">
@@ -390,7 +391,7 @@ async function deleteSub(sub) {
 
               <!-- Options Dropdown Kebab Trigger -->
               <div class="relative">
-                <button type="button" @click="toggleMenu(sub.id, $event)"
+                <button type="button" @click.stop="toggleMenu(sub.id, $event)"
                   class="btn-ghost !p-1 rounded-md text-ink-3 hover:text-ink hover:bg-elevated" title="Options">
                   <MoreVertical class="w-4 h-4" />
                 </button>

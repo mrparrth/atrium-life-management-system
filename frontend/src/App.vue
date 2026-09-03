@@ -309,9 +309,9 @@ watch(() => ui.mode, (newMode) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-canvas text-ink flex" data-testid="app-root">
+  <div class="h-screen w-screen overflow-hidden bg-canvas text-ink flex" data-testid="app-root">
     <AppSidebar />
-    <main class="flex-1 min-w-0 relative flex flex-col">
+    <main class="flex-1 min-w-0 h-full relative flex flex-col overflow-hidden">
       <!-- Cross-Workspace Task Alert Banner -->
       <div v-if="showBanner"
         class="w-full bg-surface border-b border-line px-6 py-2.5 flex items-center justify-between text-xs text-ink-2 select-none z-30 animate-fade-in shrink-0">
@@ -332,7 +332,8 @@ watch(() => ui.mode, (newMode) => {
         </button>
       </div>
 
-      <div class="flex-1 min-h-0 relative">
+      <!-- Main Scrollable Content Container (Starts BELOW Top Banner) -->
+      <div class="flex-1 min-h-0 relative overflow-y-auto" style="scrollbar-gutter: stable;">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />

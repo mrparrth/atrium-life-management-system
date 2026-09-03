@@ -522,7 +522,7 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
       <div class="overflow-x-auto w-full pb-4">
         <div class="w-max min-w-full flex flex-col gap-2 p-1">
           <!-- Table Columns Header Card -->
-          <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface select-none overflow-clip w-fit">
+          <div class="card shadow-sm border border-line/60 rounded-2xl bg-surface select-none overflow-visible w-fit">
             <table :style="{ width: `${620 + summaryMonths.length * 80}px` }" class="table-fixed text-xs text-left border-separate border-spacing-0">
               <colgroup>
                 <col class="col-category" />
@@ -540,12 +540,12 @@ function label(s) { return (s || '').replace(/_/g, ' ') }
                   <th class="py-2.5 px-3 font-bold text-ink border-b border-line/40 border-l border-slate-200 font-sans" style="text-align: right;">Total</th>
                   <th class="py-2.5 px-3 font-bold text-ink border-b border-line/40 bg-slate-100 font-sans" style="text-align: right;">Budget</th>
                   <th class="py-2.5 px-3 font-bold text-ink border-b border-line/40 bg-slate-100 font-sans text-right" style="text-align: right;">
-                    <VTooltip :text="prTooltipText" position="top">
+                    <VTooltip :text="prTooltipText" position="bottom" contentClass="right-0 !left-auto !translate-x-0">
                       <span class="cursor-help border-b border-dotted border-ink-3/40">vs PR Bud</span>
                     </VTooltip>
                   </th>
                   <th class="py-2.5 px-3 font-bold text-ink border-b border-line/40 bg-slate-100 font-sans text-right" style="text-align: right;">
-                    <VTooltip :text="prTooltipText" position="top">
+                    <VTooltip :text="prTooltipText" position="bottom" contentClass="right-0 !left-auto !translate-x-0">
                       <span class="cursor-help border-b border-dotted border-ink-3/40">vs PR LY</span>
                     </VTooltip>
                   </th>

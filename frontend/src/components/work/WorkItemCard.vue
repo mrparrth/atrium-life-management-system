@@ -11,6 +11,7 @@ import {
   X, CheckCircle
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
+import VTooltip from '@/components/VTooltip.vue'
 import WorkItemPopup from '@/components/work/WorkItemPopup.vue'
 
 const route = useRoute()
@@ -386,12 +387,6 @@ watch(showEditModal, (isOpen) => {
             <CheckCircle2 class="w-3.5 h-3.5" /> Closed {{ dayjs(props.item.closedDate ||
               props.item.updatedAt).format('MMM D, YYYY') }}
           </span>
-          <span class="flex items-center gap-1" :class="isOverran ? 'text-pri-critical font-medium' : ''">
-            <Clock class="w-3.5 h-3.5" />
-            {{ props.item.actualHours }}h tracked / {{ props.item.estimatedHours || '-' }}h est
-            <span v-if="isOverran"
-              class="text-[9px] px-1 rounded bg-pri-critical-bg text-pri-critical border border-pri-critical-bd shrink-0">Creep</span>
-          </span>
           <span v-if="props.item.snoozedUntil && !dayjs(props.item.snoozedUntil).isBefore(dayjs(), 'day')" class="italic text-pri-interruptive">
             Snoozed until {{ dayjs(props.item.snoozedUntil).format('MMM D') }}
           </span>
@@ -411,7 +406,7 @@ watch(showEditModal, (isOpen) => {
       </div>
     </div>
 
-    <!-- Actions / Timer -->
+    <!-- Actions -->
     <div class="flex items-center gap-2 shrink-0">
       <!-- Checkbox / Mark Done -->
       <button @click.stop="toggleStatus"
@@ -421,28 +416,13 @@ watch(showEditModal, (isOpen) => {
         <Circle v-else class="w-5 h-5" />
       </button>
 
-      <!-- Live Timer UI -->
-      <div v-if="timerActive"
-        class="flex items-center gap-2 bg-pri-strategic-bg border border-pri-strategic-bd text-pri-strategic px-2.5 py-1 rounded-xl text-xs font-semibold font-mono shadow-sm">
-        <span class="w-2 h-2 rounded-full bg-pri-strategic animate-pulse"></span>
-        {{ formattedTrackingTime }}
-      </div>
-
-      <!-- Play button -->
-      <button v-if="!itemsStore.isCompleted(props.item.status)" @click.stop="toggleTimer"
-        class="p-2 rounded-xl border border-line bg-surface transition-all shadow-sm"
-        :class="timerActive ? 'text-pri-critical border-pri-critical-bd hover:bg-pri-critical-bg/20' : 'text-pri-strategic hover:bg-canvas'"
-        title="Track time on this task">
-        <Pause v-if="timerActive" class="w-4 h-4 fill-current" />
-        <Play v-else class="w-4 h-4 fill-current" />
-      </button>
-
       <!-- Easy One-Click Snooze Button -->
-      <button v-if="!itemsStore.isCompleted(props.item.status)" @click.stop="oneClickSnooze"
-        class="p-2 rounded-xl border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm"
-        title="Snooze until tomorrow">
-        <BellOff class="w-4 h-4" />
-      </button>
+      <VTooltip v-if="!itemsStore.isCompleted(props.item.status)" text="Snooze until tomorrow">
+        <button @click.stop="oneClickSnooze"
+          class="p-2 rounded-xl border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm flex items-center justify-center">
+          <BellOff class="w-4 h-4" />
+        </button>
+      </VTooltip>
 
       <!-- Snooze / Delete Menu -->
       <div class="relative">

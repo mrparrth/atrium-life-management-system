@@ -101,7 +101,7 @@ const sections = computed(() => {
 })
 
 const settingsItem = computed(() => {
-  return { to: '/settings', name: 'Settings', shortcut: null }
+  return { to: '/settings', name: 'Settings', shortcut: { char: 't', index: 2 } }
 })
 
 function getHighlightedName(name, shortcut) {
@@ -115,18 +115,46 @@ function getHighlightedName(name, shortcut) {
 
 function isActive(to) { return route.path === to || (to !== '/' && route.path.startsWith(to)) }
 
+let tTimer = null
+
 function handleKeydown(e) {
   if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.target.tagName) || e.target.isContentEditable) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
 
   const key = e.key.toLowerCase()
+
+  if (key === 't') {
+    e.preventDefault()
+    if (tTimer) {
+      clearTimeout(tTimer)
+      tTimer = null
+      router.push('/settings')
+    } else {
+      tTimer = setTimeout(() => {
+        tTimer = null
+        let targetItem = null
+        for (const section of sections.value) {
+          const found = section.items.find(i => i.shortcut?.char === 't')
+          if (found) { targetItem = found; break }
+        }
+        if (targetItem) {
+          router.push(targetItem.to)
+        } else {
+          router.push('/today')
+        }
+      }, 200)
+    }
+    return
+  }
+
+  if (tTimer) {
+    clearTimeout(tTimer)
+    tTimer = null
+  }
+
   if (key === 'd') {
     e.preventDefault()
     router.push('/')
-    return
-  }
-  if (settingsItem.value.shortcut?.char === key) {
-    e.preventDefault(); router.push(settingsItem.value.to)
     return
   }
 

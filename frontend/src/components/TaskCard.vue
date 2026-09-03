@@ -8,6 +8,7 @@ import { inFuture, fromNow, isToday } from '@/lib/date'
 import { isSnoozed } from '@/lib/resurface'
 import PriorityBadge from './PriorityBadge.vue'
 import VSelect from './VSelect.vue'
+import VTooltip from './VTooltip.vue'
 import { Calendar, Clock, MoonStar, Trash2, Circle, CheckCircle2, BellOff, MoreVertical, Edit3, AlertCircle } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -221,17 +222,13 @@ onUnmounted(() => {
         </div>
 
         <!-- Easy One-Click Snooze Button -->
-        <div class="relative group" v-if="!isDone">
+        <VTooltip v-if="!isDone" text="Snooze until tomorrow">
           <button @click.stop="snooze1d"
             class="p-2 rounded-xl border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm flex items-center justify-center"
             :data-testid="`task-snooze-${task.id}`">
             <BellOff class="w-4 h-4" />
           </button>
-          <div
-            class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
-            Snooze task (1 day)
-          </div>
-        </div>
+        </VTooltip>
 
         <!-- Snooze / Delete Menu -->
         <div class="relative">
@@ -387,17 +384,13 @@ onUnmounted(() => {
         </div>
 
         <!-- Easy One-Click Snooze Button -->
-        <div class="relative group" v-if="!isDone">
+        <VTooltip v-if="!isDone" text="Snooze until tomorrow">
           <button @click.stop="snooze1d"
             class="p-1 rounded-lg border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm flex items-center justify-center"
             :data-testid="`task-snooze-${task.id}`">
             <BellOff class="w-3.5 h-3.5" />
           </button>
-          <div
-            class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-ink text-surface text-[10px] rounded font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-30 shadow-md">
-            Snooze task (1 day)
-          </div>
-        </div>
+        </VTooltip>
 
         <!-- Snooze / Delete Menu -->
         <div class="relative">

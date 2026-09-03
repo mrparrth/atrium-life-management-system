@@ -7,6 +7,7 @@ import { useYearsStore } from '@/stores/years'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
+import { useSettingsStore } from '@/stores/settings'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -19,7 +20,7 @@ import VCol from '@/components/VCol.vue'
 import VUrlInput from '@/components/VUrlInput.vue'
 import DateField from '@/components/DateField.vue'
 import dayjs from 'dayjs'
-import { Plus, X, Target, Trash2, Folder, CheckSquare, Check, Pencil, ExternalLink, Camera, Laptop, PiggyBank, FileText, Gift } from 'lucide-vue-next'
+import { Plus, X, Target, Trash2, Folder, CheckSquare, Check, Pencil, ExternalLink, Camera, Laptop, PiggyBank, FileText, Gift, Quote } from 'lucide-vue-next'
 
 const route = useRoute()
 const goals = useGoalsStore()
@@ -28,8 +29,13 @@ const years = useYearsStore()
 const projects = useProjectsStore()
 const tasks = useTasksStore()
 const ui = useUIStore()
+const settingsStore = useSettingsStore()
+
+const favoriteQuote = computed(() => settingsStore.get('favorite_quote', ''))
+const favoriteQuoteAuthor = computed(() => settingsStore.get('favorite_quote_author', ''))
 
 onMounted(async () => {
+  await settingsStore.load()
   await goals.load()
   await wishlist.load()
   const goalId = route.query.goalId
@@ -110,7 +116,7 @@ function startDrag(e, type) {
   e.preventDefault()
   isDraggingImage.value = true
   dragStartY = e.clientY || e.touches?.[0]?.clientY || 0
-  
+
   if (type === 'new-goal') dragStartPercent = newGoalPositionY.value
   else if (type === 'edit-goal') dragStartPercent = editGoalPositionY.value
   else if (type === 'new-wish') dragStartPercent = newWishPositionY.value
@@ -120,15 +126,15 @@ function startDrag(e, type) {
     if (!isDraggingImage.value) return
     const currentY = moveEvent.clientY || moveEvent.touches?.[0]?.clientY || 0
     const deltaY = currentY - dragStartY
-    
+
     // Cover container height is 192px (h-48 = 12rem = 192px)
     const containerHeight = 192
     const deltaPercent = (deltaY / containerHeight) * 100
-    
+
     // Dragging down shifts image down (so position Y percentage should decrease to show top)
     let newY = dragStartPercent - deltaPercent
     newY = Math.max(0, Math.min(100, Math.round(newY)))
-    
+
     if (type === 'new-goal') newGoalPositionY.value = newY
     else if (type === 'edit-goal') editGoalPositionY.value = newY
     else if (type === 'new-wish') newWishPositionY.value = newY
@@ -348,7 +354,7 @@ function openNewWish() {
   newWishUrl.value = ''
   newWishImageUrl.value = ''
   newWishGoalId.value = null
-  newWishUnit.value = ''
+  newWishUnit.value = settingsStore.get('default_spending_currency', '₹')
   newWishGoal.value = 0
   newWishCurrent.value = 0
   newWishPurchased.value = false
@@ -445,7 +451,8 @@ function formatCurrency(val) {
 }
 
 function formatWishValue(val, unit) {
-  const u = unit?.trim() || '$'
+  const defaultSym = settingsStore.get('default_spending_currency', '₹')
+  const u = (unit?.trim() || defaultSym)
   if (u === '$' || u === '₹' || u === '€' || u === '£') {
     return `${u}${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
   }
@@ -516,14 +523,16 @@ function cleanImageUrl(url) {
 
 function formatWishPrice(w) {
   if (w.price === undefined || w.price === null || w.price === '') return ''
-  const unit = w.unit || (w.goalId ? goals.items.find(g => g.id === w.goalId)?.unit : '') || ''
-  if (unit === '$' || unit === '₹' || unit === '€' || unit === '£') {
-    return `${unit}${Number(w.price).toLocaleString()}`
+  const defaultSym = settingsStore.get('default_spending_currency', '₹')
+  const unit = (w.unit || (w.goalId ? goals.items.find(g => g.id === w.goalId)?.unit : '') || defaultSym).trim()
+  if (unit === '$' || unit === '₹' || unit === '€' || unit === '£' || unit === 'INR' || unit === 'USD') {
+    const sym = unit === 'INR' ? '₹' : unit === 'USD' ? '$' : unit === 'EUR' ? '€' : unit === 'GBP' ? '£' : unit
+    return `${sym}${Number(w.price).toLocaleString()}`
   }
   if (unit) {
     return `${Number(w.price).toLocaleString()} ${unit}`
   }
-  return `₹${Number(w.price).toLocaleString()}`
+  return `${defaultSym}${Number(w.price).toLocaleString()}`
 }
 
 function daysLeftInYear() {
@@ -555,10 +564,17 @@ function getWishFallbackIcon(w) {
     <PageHeader overline="Horizon" title="Goals & Wishes" sub="The few large things this year is for." />
 
     <!-- Action Bar -->
-    <div class="card p-4 mb-8 bg-surface/50 border border-line flex items-center justify-between gap-3">
-      <span class="text-xs text-ink-3">Manage your long-term roadmap and aspirations.</span>
-      <span class="px-2.5 py-1 text-[11px] font-mono font-bold bg-canvas border border-line rounded-lg text-ink-3">
-        {{ daysLeftInYear() }} days left
+    <div class="card p-4 mb-8 bg-surface/50 border border-line flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+      <div v-if="favoriteQuote" class="flex items-center gap-2.5 min-w-0">
+        <Quote class="w-4 h-4 text-pri-strategic shrink-0" />
+        <span class="text-xs text-ink font-serif italic tracking-tight line-clamp-1">
+          “{{ favoriteQuote }}”
+          <span v-if="favoriteQuoteAuthor" class="font-sans font-semibold text-ink-3 uppercase text-[10px] not-italic ml-1">— {{ favoriteQuoteAuthor }}</span>
+        </span>
+      </div>
+      <span v-else class="text-xs text-ink-3">Manage your long-term roadmap and aspirations.</span>
+      <span class="px-2.5 py-1 text-[11px] font-mono font-bold bg-canvas border border-line rounded-lg text-ink-3 shrink-0">
+        {{ daysLeftInYear() }} days left this year
       </span>
     </div>
 
@@ -584,10 +600,12 @@ function getWishFallbackIcon(w) {
 
           <!-- Inner Card Content Area -->
           <div class="relative bg-surface rounded-[14px] p-5 flex flex-col gap-2 h-full z-1">
-            <div class="flex items-center gap-4 min-w-0">
-              <!-- Left decorative thumbnail or icon wrapper -->
-              <div class="relative shrink-0">
-                <img v-if="g.imageUrl" :src="cleanImageUrl(g.imageUrl)" class="w-24 h-24 rounded-2xl object-cover border border-line bg-canvas shrink-0" :style="{ objectPosition: `center ${g.imagePositionY || 50}%` }" @error="g.imageUrl = ''" />
+            <div class="flex items-start gap-4 min-w-0 h-full">
+              <!-- Left decorative thumbnail or icon wrapper (Vertically Centered) -->
+              <div class="relative shrink-0 self-center my-auto">
+                <img v-if="g.imageUrl" :src="cleanImageUrl(g.imageUrl)"
+                  class="w-24 h-24 rounded-2xl object-cover border border-line bg-canvas shrink-0"
+                  :style="{ objectPosition: `center ${g.imagePositionY || 50}%` }" @error="g.imageUrl = ''" />
                 <div v-else
                   class="w-24 h-24 rounded-2xl bg-canvas border border-line flex flex-col items-center justify-center text-ink-2 relative overflow-hidden">
                   <component :is="getGoalIcon(g)" class="w-8 h-8 stroke-[1.25]" />
@@ -597,8 +615,9 @@ function getWishFallbackIcon(w) {
                   </span>
                 </div>
                 <!-- Year Overlay Badge -->
-                <span class="absolute -top-1.5 -left-1.5 px-1.5 py-0.5 text-[8px] font-mono font-bold bg-ink text-surface rounded-md border border-line/10 shadow-sm select-none z-10">
-                  {{ yearsOf(g).map(y => y.year).join(', ') || '2026' }}
+                <span
+                  class="absolute -top-1.5 -left-1.5 px-1.5 py-0.5 text-[8px] font-mono font-bold bg-ink text-surface rounded-md border border-line/10 shadow-sm select-none z-10">
+                  {{yearsOf(g).map(y => y.year).join(', ') || '2026'}}
                 </span>
               </div>
 
@@ -610,12 +629,17 @@ function getWishFallbackIcon(w) {
                 <p v-if="g.description" class="text-xs text-ink-2 mt-2 line-clamp-2 leading-relaxed">
                   {{ g.description }}
                 </p>
-                <div v-if="g.startDate || g.targetDate" class="flex flex-wrap items-center gap-3 mt-3 text-[10px] font-mono text-ink-3 font-semibold select-none">
-                  <span v-if="g.startDate" class="inline-flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded text-ink-2">
-                    <span class="text-[8px] uppercase tracking-wider text-ink-3">Start</span> {{ formatDate(g.startDate) }}
+                <div v-if="g.startDate || g.targetDate"
+                  class="flex flex-wrap items-center gap-3 mt-3 text-[10px] font-mono text-ink-3 font-semibold select-none">
+                  <span v-if="g.startDate"
+                    class="inline-flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded text-ink-2">
+                    <span class="text-[8px] uppercase tracking-wider text-ink-3">Start</span> {{ formatDate(g.startDate)
+                    }}
                   </span>
-                  <span v-if="g.targetDate" class="inline-flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded text-ink-2">
-                    <span class="text-[8px] uppercase tracking-wider text-ink-3">Target</span> {{ formatDate(g.targetDate) }}
+                  <span v-if="g.targetDate"
+                    class="inline-flex items-center gap-1 bg-canvas border border-line px-1.5 py-0.5 rounded text-ink-2">
+                    <span class="text-[8px] uppercase tracking-wider text-ink-3">Target</span> {{
+                      formatDate(g.targetDate) }}
                   </span>
                 </div>
               </div>
@@ -667,11 +691,8 @@ function getWishFallbackIcon(w) {
           <div class="relative bg-surface rounded-[14px] overflow-hidden flex flex-col h-full z-1">
             <!-- Cover image at the top -->
             <div v-if="w.imageUrl" class="w-full h-36 border-b border-line bg-canvas overflow-hidden relative shrink-0">
-              <img :src="cleanImageUrl(w.imageUrl)" 
-                class="w-full h-full object-cover" 
-                :style="{ objectPosition: `center ${w.imagePositionY || 50}%` }" 
-                @error="w.imageUrl = ''" 
-              />
+              <img :src="cleanImageUrl(w.imageUrl)" class="w-full h-full object-cover"
+                :style="{ objectPosition: `center ${w.imagePositionY || 50}%` }" @error="w.imageUrl = ''" />
             </div>
             <div v-else
               class="w-full h-36 border-b border-line bg-canvas/30 flex items-center justify-center text-ink-3 shrink-0">
@@ -683,7 +704,8 @@ function getWishFallbackIcon(w) {
               <div class="flex items-baseline justify-between gap-3 min-w-0">
                 <h4 class="font-serif text-base font-semibold text-ink leading-snug break-words"
                   :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
-                <span v-if="w.price" class="text-xs font-mono font-bold text-ink shrink-0 select-none bg-canvas px-1.5 py-0.5 rounded border border-line">
+                <span v-if="w.price"
+                  class="text-xs font-mono font-bold text-ink shrink-0 select-none bg-canvas px-1.5 py-0.5 rounded border border-line">
                   {{ formatWishPrice(w) }}
                 </span>
               </div>
@@ -732,20 +754,17 @@ function getWishFallbackIcon(w) {
       <form @submit.prevent="create" @keydown.meta.enter.prevent="create" @keydown.ctrl.enter.prevent="create"
         class="relative w-full max-w-md card p-8 animate-rise-in">
         <!-- Banner Image if available -->
-        <div v-if="newImageUrl" 
+        <div v-if="newImageUrl"
           class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center cursor-ns-resize group select-none"
-          @mousedown="startDrag($event, 'new-goal')"
-          @touchstart="startDrag($event, 'new-goal')"
-        >
-          <img :src="cleanImageUrl(newImageUrl)" 
-            class="w-full h-full object-cover pointer-events-none select-none"
-            :style="{ objectPosition: `center ${ newGoalPositionY || 50 }%` }" 
-          />
-          <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          @mousedown="startDrag($event, 'new-goal')" @touchstart="startDrag($event, 'new-goal')">
+          <img :src="cleanImageUrl(newImageUrl)" class="w-full h-full object-cover pointer-events-none select-none"
+            :style="{ objectPosition: `center ${newGoalPositionY || 50}%` }" />
+          <div
+            class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             Drag image up/down to reposition
           </div>
         </div>
-        
+
         <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNew = false">
           <X class="w-4 h-4" />
         </button>
@@ -836,16 +855,13 @@ function getWishFallbackIcon(w) {
       <div class="relative w-full max-w-5xl card p-8 animate-rise-in shadow-2xl bg-surface"
         @keydown.meta.enter.prevent="saveGoalEdits" @keydown.ctrl.enter.prevent="saveGoalEdits">
         <!-- Banner Image if available -->
-        <div v-if="editImageUrl" 
+        <div v-if="editImageUrl"
           class="w-full h-56 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center cursor-ns-resize group select-none"
-          @mousedown="startDrag($event, 'edit-goal')"
-          @touchstart="startDrag($event, 'edit-goal')"
-        >
-          <img :src="cleanImageUrl(editImageUrl)" 
-            class="w-full h-full object-cover pointer-events-none select-none"
-            :style="{ objectPosition: `center ${ editGoalPositionY || 50 }%` }" 
-          />
-          <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          @mousedown="startDrag($event, 'edit-goal')" @touchstart="startDrag($event, 'edit-goal')">
+          <img :src="cleanImageUrl(editImageUrl)" class="w-full h-full object-cover pointer-events-none select-none"
+            :style="{ objectPosition: `center ${editGoalPositionY || 50}%` }" />
+          <div
+            class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             Drag image up/down to reposition
           </div>
         </div>
@@ -861,7 +877,7 @@ function getWishFallbackIcon(w) {
             <VInput ref="editTitleInput" v-model="editTitle" label="Goal Details" id="goal-details-title"
               class="font-serif text-lg" />
             <VTextarea v-model="editDesc" label="Why it matters" id="goal-details-desc" :rows="4" />
-            
+
             <VInput v-model="editImageUrl" label="Image URL (optional)" id="goal-details-image" />
 
             <div class="grid grid-cols-2 gap-4">
@@ -1013,15 +1029,14 @@ function getWishFallbackIcon(w) {
       <form @submit.prevent="createWish" @keydown.meta.enter.prevent="createWish" @keydown.ctrl.prevent="createWish"
         class="relative w-full max-w-lg card p-8 animate-rise-in animate-rise-in overflow-hidden">
         <!-- Banner Image if available -->
-        <div v-if="newWishImageUrl" 
+        <div v-if="newWishImageUrl"
           class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center cursor-ns-resize group select-none"
-          @mousedown="startDrag($event, 'new-wish')"
-          @touchstart="startDrag($event, 'new-wish')"
-        >
-          <img :src="cleanImageUrl(newWishImageUrl)" class="w-full h-full object-cover relative pointer-events-none select-none" 
-            :style="{ objectPosition: `center ${ newWishPositionY || 50 }%` }" 
-          />
-          <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          @mousedown="startDrag($event, 'new-wish')" @touchstart="startDrag($event, 'new-wish')">
+          <img :src="cleanImageUrl(newWishImageUrl)"
+            class="w-full h-full object-cover relative pointer-events-none select-none"
+            :style="{ objectPosition: `center ${newWishPositionY || 50}%` }" />
+          <div
+            class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             Drag image up/down to reposition
           </div>
         </div>
@@ -1046,7 +1061,8 @@ function getWishFallbackIcon(w) {
             <VUrlInput v-model="newWishImageUrl" label="Image URL (optional)" id="new-wish-image" />
           </VCol>
           <VCol cols="12" dense>
-            <VInput v-model.number="newWishPrice" label="Price (optional)" id="new-wish-price" type="number" step="any" min="0" />
+            <VInput v-model.number="newWishPrice" label="Price (optional)" id="new-wish-price" type="number" step="any"
+              min="0" />
           </VCol>
           <VCol cols="12" dense>
             <VSelect v-model="newWishGoalId" label="Link to Goal (optional)" id="new-wish-goal-id"
@@ -1097,15 +1113,14 @@ function getWishFallbackIcon(w) {
       <form @submit.prevent="saveWish" @keydown.meta.enter.prevent="saveWish" @keydown.ctrl.prevent="saveWish"
         class="relative w-full max-w-lg card p-8 animate-rise-in overflow-hidden">
         <!-- Banner Image if available -->
-        <div v-if="editWishImageUrl" 
+        <div v-if="editWishImageUrl"
           class="w-full h-48 overflow-hidden rounded-xl border border-line mb-6 relative bg-canvas flex items-center justify-center cursor-ns-resize group select-none"
-          @mousedown="startDrag($event, 'edit-wish')"
-          @touchstart="startDrag($event, 'edit-wish')"
-        >
-          <img :src="cleanImageUrl(editWishImageUrl)" class="w-full h-full object-cover relative pointer-events-none select-none" 
-            :style="{ objectPosition: `center ${ editWishPositionY || 50 }%` }" 
-          />
-          <div class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          @mousedown="startDrag($event, 'edit-wish')" @touchstart="startDrag($event, 'edit-wish')">
+          <img :src="cleanImageUrl(editWishImageUrl)"
+            class="w-full h-full object-cover relative pointer-events-none select-none"
+            :style="{ objectPosition: `center ${editWishPositionY || 50}%` }" />
+          <div
+            class="absolute bottom-0 inset-x-0 bg-ink/70 py-1.5 text-center text-[10px] text-surface font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             Drag image up/down to reposition
           </div>
         </div>
@@ -1130,7 +1145,8 @@ function getWishFallbackIcon(w) {
             <VUrlInput v-model="editWishImageUrl" label="Image URL (optional)" id="edit-wish-image" />
           </VCol>
           <VCol cols="12" dense>
-            <VInput v-model.number="editWishPrice" label="Price (optional)" id="edit-wish-price" type="number" step="any" min="0" />
+            <VInput v-model.number="editWishPrice" label="Price (optional)" id="edit-wish-price" type="number"
+              step="any" min="0" />
           </VCol>
           <VCol cols="12" dense>
             <VSelect v-model="editWishGoalId" label="Link to Goal (optional)" id="edit-wish-goal-id"

@@ -504,15 +504,7 @@ watch(showAddResourceModal, (open) => {
     </div>
 
     <!-- QUICK STATS -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="card py-1.5 px-3 border bg-surface/50 flex items-center justify-between gap-2.5">
-        <div class="flex items-center gap-1.5 text-ink-3 min-w-0">
-          <Clock class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-          <span class="overline text-[9px] tracking-wider truncate">Hours</span>
-        </div>
-        <span class="font-serif text-lg font-bold shrink-0"
-          :class="totalTrackedHours > 0 ? 'text-ink' : 'text-ink-3'">{{ totalTrackedHours.toFixed(1) }}h</span>
-      </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="card py-1.5 px-3 border bg-surface/50 flex items-center justify-between gap-2.5">
         <div class="flex items-center gap-1.5 text-ink-3 min-w-0">
           <Receipt class="w-3.5 h-3.5 text-ink-3 shrink-0" />

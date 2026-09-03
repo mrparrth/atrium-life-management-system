@@ -10,7 +10,12 @@ export const DEFAULT_SETTINGS = {
   user_name: "",
   show_workspace_alerts: true,
   initialized: true,
+  firstRun: false,
+  lastDailyReview: null,
+  lastWeeklyReview: null,
   tree_confetti_duration: 10,
+  tree_streak_count: 0,
+  tree_streak_last_date: "",
   work_default_currency: "USD",
   work_drive_root: "AtriumWork",
   work_drive_folder_url: "",
@@ -31,10 +36,30 @@ export const DEFAULT_SETTINGS = {
   bank_swift: "",
   bank_micr: "",
   financeStartMonth: "01",
+  financeOverviewChartSelectionMode: "single",
+  financeOverviewSelectedCategory: "",
   clientsViewMode: "grid",
   clientsSortBy: "updatedAt",
+  follows_custom_categories: [],
+  favorite_bookmark_tags: "project_idea, resource, reading",
+  bookmark_tag_colors: {},
+  favorite_quote: "",
+  favorite_quote_author: "",
   daily_goal_splash_enabled: true,
   daily_goal_splash_duration: "3",
+  default_spending_currency: "₹",
+  resurface_note_days: 21,
+  resurface_bookmark_days: 30,
+  resurface_goal_interval: 15,
+  resurface_wish_interval: 15,
+  resurface_radar_interval: 7,
+  resurface_goal_count: 1,
+  resurface_wish_count: 1,
+  resurface_note_count: 1,
+  resurface_bookmark_count: 1,
+  resurface_radar_count: 1,
+  resurface_task_ignored_days: 7,
+  resurface_project_stale_days: 14,
 };
 
 export const useSettingsStore = defineStore("settings", () => {
@@ -43,7 +68,12 @@ export const useSettingsStore = defineStore("settings", () => {
   async function load() {
     const row = await db.settings.get(SETTINGS_ID);
     if (row) {
-      _cache.value = { ...DEFAULT_SETTINGS, ...row };
+      const merged = { ...DEFAULT_SETTINGS, ...row };
+      _cache.value = merged;
+      const missingKeys = Object.keys(DEFAULT_SETTINGS).filter(k => !(k in row));
+      if (missingKeys.length > 0) {
+        await db.settings.put(merged);
+      }
     } else {
       _cache.value = { ...DEFAULT_SETTINGS };
       await db.settings.put({ id: SETTINGS_ID, ...DEFAULT_SETTINGS });

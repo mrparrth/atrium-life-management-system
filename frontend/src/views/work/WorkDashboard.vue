@@ -384,9 +384,6 @@ onUnmounted(() => {
           </div>
         </section>
 
-        <!-- SCOPE CREEP INTEL -->
-        <ScopeCreepWidget />
-
       </div>
 
       <!-- METRICS SIDEBAR (RIGHT 1 COL) -->

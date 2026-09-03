@@ -65,9 +65,8 @@ const overruns = computed(() => analyticsStore.scopeCreepAlerts)
       <!-- CLIENT PROFITABILITY (LEFT 2 COLS) -->
       <div class="lg:col-span-2 space-y-6">
         <div class="card p-6 border bg-surface space-y-4">
-          <h3 class="font-serif text-lg font-bold text-ink">Client Yield Analysis</h3>
-          <p class="text-xs text-ink-2 leading-relaxed">Calculated by dividing client invoiced subtotal by actual hours
-            spent. Highlights the true financial output per hour of work.</p>
+          <h3 class="font-serif text-lg font-bold text-ink">Client Invoicing Output</h3>
+          <p class="text-xs text-ink-2 leading-relaxed">Summary of total financial volume invoiced per client account.</p>
 
           <div class="overflow-x-auto pt-2">
             <table class="w-full text-left border-collapse text-xs">
@@ -75,48 +74,18 @@ const overruns = computed(() => analyticsStore.scopeCreepAlerts)
                 <tr
                   class="bg-canvas border-b border-line text-ink-3 uppercase tracking-wider text-[10px] font-semibold">
                   <th class="p-3">Client</th>
-                  <th class="p-3 text-center">Tracked Hours</th>
                   <th class="p-3 text-right">Invoiced Amount</th>
-                  <th class="p-3 text-right">Yield Rate</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="c in clientProfitability" :key="c.id"
                   class="border-b border-line/60 last:border-0 hover:bg-canvas/20">
                   <td class="p-3 font-semibold text-ink">{{ c.name }}</td>
-                  <td class="p-3 text-center text-ink-2 font-mono">{{ c.totalHours.toFixed(1) }}h</td>
-                  <td class="p-3 text-right text-ink-2">${{ c.totalInvoiced.toLocaleString() }}</td>
-                  <td class="p-3 text-right font-serif font-bold"
-                    :class="c.hourlyYield >= 100 ? 'text-pri-strategic' : c.hourlyYield > 0 && c.hourlyYield < 50 ? 'text-pri-critical' : 'text-ink'">
-                    ${{ c.hourlyYield }}/hr
-                  </td>
+                  <td class="p-3 text-right font-serif font-bold text-ink">${{ c.totalInvoiced.toLocaleString() }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
-
-        <!-- SCOPE OVERRUNS -->
-        <div class="card p-6 border bg-surface space-y-4">
-          <h3 class="font-serif text-lg font-bold text-ink">Scoped Overruns Tracker</h3>
-          <p class="text-xs text-ink-2 leading-relaxed">Work items where actual hours exceeded estimated parameters.
-            Helps review sizing accuracy.</p>
-
-          <ul v-if="overruns.length" class="space-y-3">
-            <li v-for="item in overruns" :key="item.id"
-              class="bg-canvas/50 border border-line p-3.5 rounded-xl text-xs flex justify-between items-center gap-4">
-              <div class="min-w-0">
-                <div class="font-medium text-ink truncate">{{ item.title }}</div>
-                <div class="text-[10px] text-ink-3 mt-0.5">Client: {{ item.clientName }} · Estimated: {{
-                  item.estimatedHours }}h</div>
-              </div>
-              <div class="text-right shrink-0">
-                <div class="font-semibold text-pri-critical">+{{ item.overrun.toFixed(1) }}h overrun</div>
-                <div class="text-[10px] text-ink-3 mt-0.5">Tracked: {{ item.actualHours }}h ({{ item.percent }}%)</div>
-              </div>
-            </li>
-          </ul>
-          <p v-else class="text-xs text-ink-3 italic">All items are tracking within estimated parameters.</p>
         </div>
       </div>
 

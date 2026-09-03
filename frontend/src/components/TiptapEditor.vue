@@ -7,7 +7,7 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
-import { Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Quote, Code, Minus, Link2, HelpCircle } from 'lucide-vue-next'
+import { Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Quote, Code, Minus, Link2, HelpCircle, X } from 'lucide-vue-next'
 import { useNotesStore } from '@/stores/notes'
 
 const props = defineProps({

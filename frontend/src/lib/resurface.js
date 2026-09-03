@@ -9,11 +9,22 @@ export const RESURFACE = {
   bookmarkResurfaceDays: 30,
 };
 
+export function toLocalDateStr(val) {
+  if (!val) return null;
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return null;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function isSnoozed(task) {
   if (!task?.snoozedUntil) return false;
-  const until = new Date(task.snoozedUntil); until.setHours(0, 0, 0, 0);
-  const now = new Date(); now.setHours(0, 0, 0, 0);
-  return until > now;
+  const snoozeDate = toLocalDateStr(task.snoozedUntil);
+  const today = toLocalDateStr(new Date());
+  return snoozeDate > today;
 }
 
 export function isTaskOpen(task) {
@@ -65,31 +76,19 @@ function sortTodayFocus(list) {
 }
 
 export function getTaskEffectiveDate(t, todayStr) {
-  const today = todayStr || new Date().toISOString().slice(0, 10);
-  
-  // 1. If snoozed to a date in the future, that future date is considered
-  if (t?.snoozedUntil) {
-    const snoozeDate = t.snoozedUntil.slice(0, 10);
-    if (snoozeDate > today) {
-      return snoozeDate;
-    }
-  }
+  const due = toLocalDateStr(t?.dueDate);
+  const scheduled = toLocalDateStr(t?.scheduledDate);
+  const snoozed = toLocalDateStr(t?.snoozedUntil);
 
-  // 2. Otherwise (snooze date is past/today/none), check other dates (scheduledDate, dueDate)
-  const scheduled = t?.scheduledDate ? t.scheduledDate.slice(0, 10) : null;
-  const due = t?.dueDate ? t.dueDate.slice(0, 10) : null;
+  const dates = [due, scheduled, snoozed].filter(Boolean);
+  if (dates.length === 0) return null;
 
-  if (scheduled && due) {
-    return scheduled > due ? scheduled : due;
-  }
-  if (scheduled) return scheduled;
-  if (due) return due;
-
-  return null;
+  dates.sort();
+  return dates[dates.length - 1]; // Whichever is later!
 }
 
 export function isTaskActiveToday(t, todayStr) {
-  const today = todayStr || new Date().toISOString().slice(0, 10);
+  const today = todayStr || toLocalDateStr(new Date());
 
   if (t?.status === 'done') {
     return isToday(t.completedAt);
@@ -100,7 +99,7 @@ export function isTaskActiveToday(t, todayStr) {
   // If no date at all, it's active today
   if (!effectiveDate) return true;
 
-  // If effective date is in the future (> today), it is NOT active today
+  // If effective date (the highest of due, scheduled, snoozed) is in the future (> today), it is NOT active today
   if (effectiveDate > today) return false;
 
   // If effective date is today or past (<= today), it IS active today
@@ -108,14 +107,14 @@ export function isTaskActiveToday(t, todayStr) {
 }
 
 export function isTaskHandledToday(t, todayStr) {
-  const today = todayStr || new Date().toISOString().slice(0, 10);
+  const today = todayStr || toLocalDateStr(new Date());
 
   if (t?.status === 'done') {
     return isToday(t.completedAt);
   }
 
   if (t?.snoozedUntil) {
-    const snoozeDate = t.snoozedUntil.slice(0, 10);
+    const snoozeDate = toLocalDateStr(t.snoozedUntil);
     if (snoozeDate > today) {
       return true;
     }
@@ -139,15 +138,13 @@ export function todayFocus(tasks) {
 }
 
 export function upcomingTasks(tasks) {
-  return tasks.filter(
-    (t) =>
-      isTaskOpen(t) &&
-      !isSnoozed(t) &&
-      t.dueDate &&
-      !isToday(t.scheduledDate) &&
-      !isToday(t.dueDate) &&
-      (isWithinDays(t.scheduledDate, 7) || isWithinDays(t.dueDate, 7)),
-  );
+  const today = toLocalDateStr(new Date());
+  return tasks.filter((t) => {
+    if (!isTaskOpen(t)) return false;
+    const effectiveDate = getTaskEffectiveDate(t, today);
+    if (!effectiveDate) return false;
+    return effectiveDate > today && isWithinDays(effectiveDate, 7);
+  });
 }
 
 export function recentlyIgnored(tasks) {
@@ -176,21 +173,31 @@ export function getProjectLastTouched(project) {
   return project.createdAt;
 }
 
-export function staleProjects(projects, tasks) {
+export function staleProjects(projects, tasks, customStaleDays = null) {
   return projects
     .filter(
       (p) => {
         if (p.status === "archived" || p.status === "completed") return false;
         if (p.reviewFrequency === "0") return false;
-        const threshold = p.reviewFrequency ? Number(p.reviewFrequency) : RESURFACE.projectStaleDays;
+        const threshold = p.reviewFrequency ? Number(p.reviewFrequency) : (customStaleDays || RESURFACE.projectStaleDays);
         return daysSince(getProjectLastTouched(p)) >= threshold;
       }
     )
     .map((p) => ({ ...p, openTaskCount: tasks.filter((t) => t.projectId === p.id && isTaskOpen(t)).length }));
 }
 
-export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate) {
+export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate, customConfig = {}) {
   const currentDateStr = currentDate ? currentDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0];
+
+  const goalInterval = Number(customConfig.resurface_goal_interval || RESURFACE.goalStaleDays || 15);
+  const wishInterval = Number(customConfig.resurface_wish_interval || 15);
+  const noteDays = Number(customConfig.resurface_note_days || RESURFACE.noteResurfaceDays || 21);
+  const bookmarkDays = Number(customConfig.resurface_bookmark_days || RESURFACE.bookmarkResurfaceDays || 30);
+
+  const goalCount = customConfig.resurface_goal_count !== undefined ? Number(customConfig.resurface_goal_count) : 1;
+  const wishCount = customConfig.resurface_wish_count !== undefined ? Number(customConfig.resurface_wish_count) : 1;
+  const noteCount = customConfig.resurface_note_count !== undefined ? Number(customConfig.resurface_note_count) : 1;
+  const bookmarkCount = customConfig.resurface_bookmark_count !== undefined ? Number(customConfig.resurface_bookmark_count) : 1;
 
   function hashString(str) {
     let hash = 0;
@@ -213,8 +220,8 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
   const seed = hashString(currentDateStr);
   const randGen = mulberry32(seed);
 
-  function selectFromPool(pool, count, strict = false) {
-    if (!pool || pool.length === 0) return [];
+  function selectFromPool(pool, count, minInterval = 15, strict = false) {
+    if (!pool || pool.length === 0 || count <= 0) return [];
     
     // Items viewed today were resurfaced and clicked today!
     // They MUST remain in today's chosen set so they stay in the list (turned grey).
@@ -230,12 +237,13 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
 
     let poolWithPriority = unviewedPool.map(item => {
       const D = daysSince(item.lastViewedAt);
-      const priority = D >= 15 ? D : D * 0.0001;
-      return { item, D, priority };
+      const threshold = item.minDays || minInterval;
+      const priority = D >= threshold ? D : D * 0.0001;
+      return { item, D, priority, threshold };
     });
 
     if (strict) {
-      poolWithPriority = poolWithPriority.filter(p => p.D >= 15);
+      poolWithPriority = poolWithPriority.filter(p => p.D >= p.threshold);
     }
 
     if (poolWithPriority.length === 0) return chosen;
@@ -252,24 +260,25 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
     return chosen;
   }
 
-  // 1. Goal & Wish List Resurfacing (max 1 of each per day, strictly once in 15 days)
+  // 1. Goal & Wish List Resurfacing
   const activeGoals = (goals || []).filter(g => g.status !== 'completed' && g.status !== 'archived');
-  const goalList = selectFromPool(activeGoals.map(g => ({ ...g, type: 'goal' })), 1, true);
-  const goal = goalList.length > 0 ? goalList[0] : null;
+  const goalsResurfaced = selectFromPool(activeGoals.map(g => ({ ...g, type: 'goal', minDays: goalInterval })), goalCount, goalInterval, true);
+  const goal = goalsResurfaced.length > 0 ? goalsResurfaced[0] : null;
 
   const activeWishes = (wishlist || []).filter(w => w.status === 'active' && !w.purchased);
-  const wishList = selectFromPool(activeWishes.map(w => ({ ...w, type: 'wish' })), 1, true);
-  const wish = wishList.length > 0 ? wishList[0] : null;
+  const wishesResurfaced = selectFromPool(activeWishes.map(w => ({ ...w, type: 'wish', minDays: wishInterval })), wishCount, wishInterval, true);
+  const wish = wishesResurfaced.length > 0 ? wishesResurfaced[0] : null;
 
-  // 2. Note / Bookmark Resurfacing (exactly 2 note/bookmarks in a day)
-  const notesAndBookmarksPool = [
-    ...(notes || []).map(n => ({ ...n, type: 'note' })),
-    ...(bookmarks || []).map(b => ({ ...b, type: 'bookmark' }))
-  ];
+  // 2. Note / Bookmark Resurfacing
+  const notesPool = (notes || []).map(n => ({ ...n, type: 'note', minDays: noteDays }));
+  const noteItems = selectFromPool(notesPool, noteCount, noteDays);
 
-  const items = selectFromPool(notesAndBookmarksPool, 2);
+  const bookmarksPool = (bookmarks || []).map(b => ({ ...b, type: 'bookmark', minDays: bookmarkDays }));
+  const bookmarkItems = selectFromPool(bookmarksPool, bookmarkCount, bookmarkDays);
 
-  return { goal, wish, items };
+  const items = [...noteItems, ...bookmarkItems];
+
+  return { goal, goals: goalsResurfaced, wish, wishes: wishesResurfaced, items };
 }
 
 export function criticalCount(tasks) {

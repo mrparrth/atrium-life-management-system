@@ -159,9 +159,11 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Prefixed project allocation dropdown options with their associated Client Name (`[Client Name] - [Task Title]`).
 - DOCS: Synchronized context.md and walkthrough.md.
 
-### August 25, 2026
-- UX: Updated `<SectionHeader overline="Drifting">` in `PersonalDashboard.vue` to `:hint="stale.length ? 'These projects are drifting. Time to review them to move forward.' : ''"`, hiding the hint when no projects are drifting.
-- FEATURE: Implemented `getTaskEffectiveDate`, `isTaskActiveToday`, and `isTaskHandledToday` in `resurface.js`. Tasks snoozed to the future evaluate their future snooze date; tasks with expired past snooze dates evaluate `scheduledDate`/`dueDate`, preventing past snoozed items from appearing in today's active pool.
-- FEATURE: Built `DailyGoalsSplash.vue` full-screen morning affirmation overlay displaying `"Remember what you are working towards"` and a clean, minimalist list of active goals on first load each day.
-- UX: Added `daily_goal_splash_duration` setting in `settings.js` and rendered a custom `<VSelect>` dropdown (`Disabled`, `3 Seconds`, `5 Seconds`, `10 Seconds`, `20 Seconds`) and Test button in `Settings.vue` matching the Growth Tree setting layout.
-- DOCS: Synchronized context.md and walkthrough.md.
+### September 3, 2026
+- FEATURE: Migrated all application settings (user theme, workspace mode, user name, invoicing sender profile, bank details, and backup parameters) into IndexedDB (`db.settings`). Used `localStorage` strictly as a fast-boot cache mirror to eliminate initial theme flash.
+- FEATURE: Expanded database backup and restore engine in `drive.js` to cover all 36 active IndexedDB tables, ensuring full backup completeness across work mode deliverables, client cards, meetings, follows, subscriptions, and wishlist items. Added automatic settings cache re-sync on database restore.
+- UX: Overhauled Reference Link cards in `WorkClientDetail.vue` by removing text badges (`WEBSITE`/`FILE`/`FOLDER`) in favor of brand-colored type icons (`Globe`, `Folder`, `FileText`). Positioned action buttons in the top-right corner with smooth hover fade-ins and added details padding to prevent title text wrapping.
+- UX: Redesigned Credentials Vault cards in `WorkClientDetail.vue` and `WorkResources.vue` by eliminating nested inner rounded container boxes. Replaced titles with clean sans-serif typography accompanied by an inline amber `Vault` key badge, and left-aligned `URL`, `USER`, and `PASS` fields next to fixed-width high-contrast labels to prevent URL truncation.
+- FEATURE: Refactored Growth Tree progress formula in `GrowthTree.vue`. Assigned fixed 20% weights to Memory Resurfacing and Drifting Projects, and a 60% weight to a unified Tasks pool combining Personal Tasks, Work Tasks, and Work Briefing Alerts (counting as 1 task unit total, where 1 task = 1 task unit).
+- UX: Enabled direct click-to-edit functionality on Subscription and Fixed Cost cards in `FinanceSubscriptions.vue` (`@click="openEditModal(sub)"` with `cursor-pointer`). Prevented menu event bubbling on kebab dropdown triggers and fixed the title tooltip parameter binding.
+- DOCS: Updated context.md checkpoint log.

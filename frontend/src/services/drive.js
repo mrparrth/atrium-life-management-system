@@ -215,7 +215,16 @@ const TABLES = [
 
 export async function exportAllData() {
   const data = {};
-  for (const t of TABLES) data[t] = await db.table(t).toArray();
+  const { DEFAULT_SETTINGS } = await import('@/stores/settings');
+  const tableNames = db.tables.map(t => t.name);
+  for (const t of tableNames) {
+    if (t === 'settings') {
+      const rows = await db.table('settings').toArray();
+      data.settings = rows.map(r => r.id === 'app' ? { ...DEFAULT_SETTINGS, ...r } : r);
+    } else {
+      data[t] = await db.table(t).toArray();
+    }
+  }
   return data;
 }
 
@@ -249,7 +258,8 @@ export async function syncSettingsToLocalStorage() {
 }
 
 export async function importAllData(data) {
-  for (const t of TABLES) {
+  const tableNames = db.tables.map(t => t.name);
+  for (const t of tableNames) {
     if (!Array.isArray(data[t])) continue;
     await db.table(t).clear();
     if (data[t].length) await db.table(t).bulkAdd(data[t]);

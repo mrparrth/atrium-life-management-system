@@ -84,11 +84,27 @@ export const useFinanceStore = defineStore('finance', () => {
     if (!log) return 0
     return (log.entries || []).reduce((s, e) => s + (e.type === 'asset' ? +e.value : -+e.value), 0)
   }
+  function logLiquidTotal(log) {
+    if (!log) return 0
+    const illiquidKeys = ['real_estate', 'gold', 'others']
+    return (log.entries || []).reduce((s, e) => {
+      if (e.type === 'liability') return s - +e.value
+      if (e.type === 'asset') {
+        const cat = categories.value.find(c => c.scope === 'asset' && c.name === e.category)
+        const isIlliquid = (cat && cat.group && cat.group.toLowerCase().includes('illiquid')) ||
+                           illiquidKeys.includes((e.category || '').toLowerCase())
+        if (isIlliquid) return s
+        return s + +e.value
+      }
+      return s
+    }, 0)
+  }
   function logAssets(log) { return (log?.entries || []).filter(e => e.type === 'asset').reduce((s, e) => s + +e.value, 0) }
   function logLiabilities(log) { return (log?.entries || []).filter(e => e.type === 'liability').reduce((s, e) => s + +e.value, 0) }
 
   const latestNetworth = computed(() => networthLogs.value[0] || null)
   const currentNetWorth = computed(() => logTotal(latestNetworth.value))
+  const currentLiquidNetWorth = computed(() => logLiquidTotal(latestNetworth.value))
   const networthSeries = computed(() => [...networthLogs.value].reverse().map(l => ({ date: l.date, value: logTotal(l) })))
 
   const allocation = computed(() => {
@@ -367,9 +383,9 @@ export const useFinanceStore = defineStore('finance', () => {
 
   return {
     networthLogs, cashflowPeriods, categories, subscriptions,
-    latestNetworth, currentNetWorth, networthSeries, allocation,
+    latestNetworth, currentNetWorth, currentLiquidNetWorth, networthSeries, allocation,
     latestCashflow, cashflowSeries, expenseBreakdownLatest,
-    logTotal, logAssets, logLiabilities, periodTotals,
+    logTotal, logLiquidTotal, logAssets, logLiabilities, periodTotals,
     load,
     addNetworthLog, updateNetworthLog, removeNetworthLog,
     addCashflowPeriod, updateCashflowPeriod, removeCashflowPeriod,

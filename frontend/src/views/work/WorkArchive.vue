@@ -131,7 +131,6 @@ function getClientName(clientId) {
               </span>
             </div>
             <div class="flex items-center gap-4 shrink-0 text-xs text-ink-3">
-              <span>{{ item.actualHours }}h tracked</span>
               <span>{{ dayjs(item.closedDate || item.updatedAt).format('MMM D, YYYY') }}</span>
             </div>
           </div>

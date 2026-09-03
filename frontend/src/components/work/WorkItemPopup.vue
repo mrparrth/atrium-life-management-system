@@ -401,9 +401,6 @@ onUnmounted(() => {
                     Task Feedback Rating
                   </label>
                 </div>
-
-                <!-- Tracked Hours Input -->
-                <VInput type="number" v-model="actualHours" min="0" step="0.5" label="Tracked Hours" id="item-actualhours" />
               </div>
             </div>
           </div>
