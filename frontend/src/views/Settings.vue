@@ -403,10 +403,29 @@ async function triggerOfflineBackup() {
   }
 }
 
+const offlineIntervalOptions = [
+  { value: 60, label: 'Every 1 Hour' },
+  { value: 360, label: 'Every 6 Hours' },
+  { value: 720, label: 'Every 12 Hours' },
+  { value: 1440, label: 'Every 24 Hours' },
+  { value: 10080, label: 'Every Week' }
+]
+
+const offlineKeepDaysOptions = [
+  { value: 7, label: 'Keep 7 Days' },
+  { value: 14, label: 'Keep 14 Days' },
+  { value: 30, label: 'Keep 30 Days' },
+  { value: 90, label: 'Keep 90 Days' },
+  { value: 0, label: 'Keep All' }
+]
+
 function saveOfflineSettings() {
   localStorage.setItem('atrium.offline.enabled', offlineEnabled.value ? '1' : '0')
   localStorage.setItem('atrium.offline.interval', String(offlineInterval.value))
   localStorage.setItem('atrium.offline.keepDays', String(offlineKeepDays.value))
+  settings.set('offline_enabled', offlineEnabled.value)
+  settings.set('offline_interval', offlineInterval.value)
+  settings.set('offline_keep_days', offlineKeepDays.value)
   ui.showToast('Offline backup settings saved', 'success')
 }
 
@@ -941,6 +960,32 @@ function matchesSearch(text) {
               <input v-model="offlineFolderName" placeholder="No backup directory selected" readonly
                 class="w-full bg-canvas/30 border border-line rounded-xl px-4 py-2 text-xs font-mono text-ink-2 outline-none select-none" />
             </div>
+
+            <template v-if="offlineEnabled">
+              <hr class="border-line/40" />
+
+              <div class="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p class="text-sm text-ink font-medium">Auto-Backup Frequency</p>
+                  <p class="text-xs text-ink-3">How often automatic timestamped snapshots are written to disk.</p>
+                </div>
+                <div class="w-48 shrink-0">
+                  <VSelect v-model="offlineInterval" :options="offlineIntervalOptions" @change="saveOfflineSettings" />
+                </div>
+              </div>
+
+              <hr class="border-line/40" />
+
+              <div class="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p class="text-sm text-ink font-medium">Retention Policy</p>
+                  <p class="text-xs text-ink-3">Automatically prune older local snapshots to save disk space.</p>
+                </div>
+                <div class="w-48 shrink-0">
+                  <VSelect v-model="offlineKeepDays" :options="offlineKeepDaysOptions" @change="saveOfflineSettings" />
+                </div>
+              </div>
+            </template>
 
             <hr class="border-line/40" />
 

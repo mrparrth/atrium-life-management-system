@@ -168,4 +168,5 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Enabled direct click-to-edit functionality on Subscription and Fixed Cost cards in `FinanceSubscriptions.vue` (`@click="openEditModal(sub)"` with `cursor-pointer`). Prevented menu event bubbling on kebab dropdown triggers and fixed the title tooltip parameter binding.
 - DESKTOP: Configured Tauri 2.0 native macOS desktop bundle (`src-tauri/`) with `com.atrium.app` identifier, 1280x840 default window dimensions, and added `npm run tauri:dev` / `npm run tauri:build` scripts to `package.json`.
 - DESKTOP: Integrated `@tauri-apps/plugin-dialog`, `@tauri-apps/plugin-fs`, and `@tauri-apps/plugin-opener` into `Settings.vue` and `offlineSync.js`. Enabled native macOS folder picking, filesystem snapshot writing, and popup window opening capabilities.
+- UX: Added custom `<VSelect>` controls to `Settings.vue` for `Auto-Backup Frequency` (1h, 6h, 12h, 24h, 1w) and `Retention Policy` (7d, 14d, 30d, 90d, Keep All) inside the Offline Disk Backup card.
 - DOCS: Updated context.md checkpoint log.
