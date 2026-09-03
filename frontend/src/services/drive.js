@@ -102,61 +102,23 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
   if (!clientId) throw new Error("Google Client ID not set. Add it in Settings.");
 
   if (isTauriEnv()) {
-    // Exact desktop app origin (http://tauri.localhost) for Tauri 2.0 bundle
-    const redirectUri = "http://tauri.localhost";
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${encodeURIComponent(clientId)}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `response_type=token&` +
-      `scope=${encodeURIComponent(scope)}` +
-      (prompt ? `&prompt=${encodeURIComponent(prompt)}` : "");
-
     return new Promise(async (resolve, reject) => {
-      let resolved = false;
-
-      // Listen for OAuth token relay broadcast
-      let bc;
       try {
-        bc = new BroadcastChannel("atrium_oauth_channel");
-        bc.onmessage = (event) => {
-          if (event.data?.type === "oauth_success" && event.data?.token) {
-            resolved = true;
-            setManualToken(event.data.token);
-            if (bc) bc.close();
-            resolve(event.data.token);
+        const { invoke } = await import("@tauri-apps/api/core");
+        const { listen } = await import("@tauri-apps/api/event");
+
+        const unlisten = await listen("oauth-token-received", (event) => {
+          if (event.payload) {
+            setManualToken(event.payload);
+            if (unlisten) unlisten();
+            resolve(event.payload);
           }
-        };
-      } catch (e) {}
+        });
 
-      // Storage event listener fallback
-      const storageHandler = (e) => {
-        if (e.key === "atrium.drive.accessToken" && e.newValue) {
-          resolved = true;
-          window.removeEventListener("storage", storageHandler);
-          if (bc) bc.close();
-          resolve(e.newValue);
-        }
-      };
-      window.addEventListener("storage", storageHandler);
-
-      // Open Google Sign-In in system default browser (Safari / Arc / Chrome)
-      try {
-        const { openUrl } = await import("@tauri-apps/plugin-opener");
-        await openUrl(authUrl);
-      } catch (e) {
-        window.open(authUrl, "_blank");
+        await invoke("start_native_oauth", { clientId, scope });
+      } catch (err) {
+        reject(err);
       }
-
-      // Timeout safety (2 minutes)
-      setTimeout(() => {
-        if (!resolved) {
-          window.removeEventListener("storage", storageHandler);
-          if (bc) bc.close();
-          if (!accessToken) {
-            reject(new Error("Google Sign-In timed out. Please try again."));
-          }
-        }
-      }, 120000);
     });
   }
 
