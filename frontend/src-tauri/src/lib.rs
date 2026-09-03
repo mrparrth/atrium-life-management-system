@@ -4,10 +4,19 @@ use tauri::Emitter;
 
 #[tauri::command]
 fn start_native_oauth(app: tauri::AppHandle, client_id: String, scope: String) -> Result<(), String> {
-  let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
+  // Bind to port 3000 (standard registered redirect URI in Google Cloud Console for Web Client IDs)
+  let listener = TcpListener::bind("127.0.0.1:3000")
+    .or_else(|_| TcpListener::bind("127.0.0.1:0"))
+    .map_err(|e| e.to_string())?;
+
   let port = listener.local_addr().map_err(|e| e.to_string())?.port();
 
-  let redirect_uri = format!("http://127.0.0.1:{}", port);
+  let redirect_uri = if port == 3000 {
+    "http://localhost:3000".to_string()
+  } else {
+    format!("http://127.0.0.1:{}", port)
+  };
+
   let auth_url = format!(
     "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=token&scope={}",
     urlencoding::encode(&client_id),
@@ -43,10 +52,7 @@ fn start_native_oauth(app: tauri::AppHandle, client_id: String, scope: String) -
         }
       }
 
-      let html = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><head><title>Atrium OAuth</title></head><body style='font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;'><div style='text-align:center;padding:2rem;background:#1e293b;border-radius:1rem;'><h2 id='st'>Authenticating...</h2><p id='sub' style='color:#94a3b8;'>Connecting your Google account to Atrium</p></div><script>const h=window.location.hash||window.location.search;if(h){{fetch('http://127.0.0.1:{}/token?'+h.substring(1)).then(()=>{{document.getElementById('st').innerHTML='<span style=\"color:#34d399\">&#10004; Connected to Atrium!</span>';document.getElementById('sub').innerText='You can now close this tab and return to Atrium.';}}).catch(e=>console.error(e));}}</script></body></html>",
-        port
-      );
+      let html = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><head><title>Atrium OAuth</title></head><body style='font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;'><div style='text-align:center;padding:2rem;background:#1e293b;border-radius:1rem;'><h2 id='st'>Authenticating...</h2><p id='sub' style='color:#94a3b8;'>Connecting your Google account to Atrium</p></div><script>const h=window.location.hash||window.location.search;if(h){fetch('/token?'+h.substring(1)).then(()=>{document.getElementById('st').innerHTML='<span style=\"color:#34d399\">&#10004; Connected to Atrium!</span>';document.getElementById('sub').innerText='You can now close this tab and return to Atrium.';}).catch(e=>console.error(e));}</script></body></html>";
       let _ = stream.write_all(html.as_bytes());
       let _ = stream.flush();
     }
