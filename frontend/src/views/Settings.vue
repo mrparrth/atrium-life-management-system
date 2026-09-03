@@ -940,25 +940,26 @@ function matchesSearch(text) {
 
             <hr class="border-line/40" />
 
-            <div class="space-y-3">
-              <div class="flex items-center justify-between gap-4 flex-wrap">
-                <div>
-                  <p class="text-sm text-ink font-medium">Backup Target Folder</p>
-                  <p class="text-xs text-ink-3 mt-0.5 leading-relaxed">Selected directory for local offline backups.</p>
-                </div>
-                <div class="flex items-center gap-2 flex-wrap shrink-0">
-                  <button @click="selectOfflineFolder"
-                    class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5 shrink-0 h-[38px]">
-                    <FolderOpen class="w-3.5 h-3.5" /> {{ offlineFolderName ? 'Change Folder' : 'Select Folder' }}
-                  </button>
-                  <button v-if="offlineNeedsPermission" @click="authorizeOfflineFolder"
-                    class="btn-secondary !py-2 px-3 text-xs text-amber-600 border-amber-500/30 bg-amber-500/10 flex items-center gap-1.5 shrink-0 h-[38px]">
-                    <ShieldAlert class="w-3.5 h-3.5" /> Authorize Access
-                  </button>
-                </div>
+            <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+              <div>
+                <p class="text-sm text-ink font-medium">Backup Target Folder</p>
+                <p class="text-xs text-ink-3 mt-0.5">Selected directory for local offline backups.</p>
               </div>
-              <input v-model="offlineFolderName" placeholder="No backup directory selected" readonly
-                class="w-full bg-canvas/30 border border-line rounded-xl px-4 py-2 text-xs font-mono text-ink-2 outline-none select-none" />
+              <div class="flex items-center gap-2 max-w-xs w-full shrink-0">
+                <input v-model="offlineFolderName" placeholder="No backup directory selected" readonly
+                  class="flex-grow min-w-0 bg-canvas/30 border border-line rounded-xl px-3 py-2 text-xs font-mono text-ink-2 outline-none select-none truncate"
+                  :title="offlineFolderName || 'No backup directory selected'" />
+                <button @click="selectOfflineFolder" type="button"
+                  class="btn-secondary !p-2 shrink-0 h-[36px] w-[36px] flex items-center justify-center"
+                  :title="offlineFolderName ? 'Change Folder' : 'Select Folder'">
+                  <FolderOpen class="w-4 h-4" />
+                </button>
+                <button v-if="offlineNeedsPermission" @click="authorizeOfflineFolder" type="button"
+                  class="btn-secondary !p-2 text-amber-600 border-amber-500/30 bg-amber-500/10 shrink-0 h-[36px] w-[36px] flex items-center justify-center"
+                  title="Authorize Access">
+                  <ShieldAlert class="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <template v-if="offlineEnabled">
