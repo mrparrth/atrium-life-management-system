@@ -2,9 +2,18 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use tauri::Emitter;
 
+fn send_http_response(stream: &mut std::net::TcpStream, body: &str) {
+  let response = format!(
+    "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{}",
+    body.as_bytes().len(),
+    body
+  );
+  let _ = stream.write_all(response.as_bytes());
+  let _ = stream.flush();
+}
+
 #[tauri::command]
 fn start_native_oauth(app: tauri::AppHandle, client_id: String, scope: String) -> Result<(), String> {
-  // Bind to port 3000 (standard registered redirect URI in Google Cloud Console for Web Client IDs)
   let listener = TcpListener::bind("127.0.0.1:3000")
     .or_else(|_| TcpListener::bind("127.0.0.1:0"))
     .map_err(|e| e.to_string())?;
@@ -28,13 +37,7 @@ fn start_native_oauth(app: tauri::AppHandle, client_id: String, scope: String) -
     .map_err(|e| format!("Failed to open default browser: {}", e))?;
 
   std::thread::spawn(move || {
-    let mut token_found = false;
-
     for stream in listener.incoming() {
-      if token_found {
-        break;
-      }
-
       let Ok(mut stream) = stream else { continue };
       let mut buffer = [0; 4096];
       let Ok(bytes_read) = stream.read(&mut buffer) else { continue };
@@ -43,18 +46,15 @@ fn start_native_oauth(app: tauri::AppHandle, client_id: String, scope: String) -
       if request.contains("GET /token?") || request.contains("access_token=") {
         if let Some(token_val) = extract_param(&request, "access_token") {
           let _ = app.emit("oauth-token-received", token_val);
-          token_found = true;
 
-          let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body style='font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;'><div style='text-align:center;padding:2rem;background:#1e293b;border-radius:1rem;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);'><h2 style='color:#34d399;'>&#10004; Connected to Atrium!</h2><p style='color:#94a3b8;'>You can now close this browser tab and return to your Atrium app.</p></div></body></html>";
-          let _ = stream.write_all(response.as_bytes());
-          let _ = stream.flush();
+          let success_html = "<!DOCTYPE html><html><body style='font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;'><div style='text-align:center;padding:2rem;background:#1e293b;border-radius:1rem;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);'><h2 style='color:#34d399;'>&#10004; Connected to Atrium!</h2><p style='color:#94a3b8;'>You can now close this browser tab and return to your Atrium app.</p></div></body></html>";
+          send_http_response(&mut stream, success_html);
           break;
         }
       }
 
-      let html = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><head><title>Atrium OAuth</title></head><body style='font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;'><div style='text-align:center;padding:2rem;background:#1e293b;border-radius:1rem;'><h2 id='st'>Authenticating...</h2><p id='sub' style='color:#94a3b8;'>Connecting your Google account to Atrium</p></div><script>const h=window.location.hash||window.location.search;if(h){fetch('/token?'+h.substring(1)).then(()=>{document.getElementById('st').innerHTML='<span style=\"color:#34d399\">&#10004; Connected to Atrium!</span>';document.getElementById('sub').innerText='You can now close this tab and return to Atrium.';}).catch(e=>console.error(e));}</script></body></html>";
-      let _ = stream.write_all(html.as_bytes());
-      let _ = stream.flush();
+      let landing_html = "<!DOCTYPE html><html><head><title>Atrium OAuth</title></head><body style='font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;'><div style='text-align:center;padding:2rem;background:#1e293b;border-radius:1rem;'><h2 id='st'>Authenticating...</h2><p id='sub' style='color:#94a3b8;'>Connecting your Google account to Atrium</p></div><script>const h=window.location.hash||window.location.search;if(h){fetch('/token?'+h.substring(1)).then(()=>{document.getElementById('st').innerHTML='<span style=\"color:#34d399\">&#10004; Connected to Atrium!</span>';document.getElementById('sub').innerText='You can now close this tab and return to Atrium.';}).catch(e=>console.error(e));}</script></body></html>";
+      send_http_response(&mut stream, landing_html);
     }
   });
 
