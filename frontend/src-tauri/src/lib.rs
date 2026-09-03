@@ -47,13 +47,13 @@ fn start_native_oauth(app: tauri::AppHandle, client_id: String, scope: String) -
         if let Some(token_val) = extract_param(&request, "access_token") {
           let _ = app.emit("oauth-token-received", token_val);
 
-          let success_html = "<!DOCTYPE html><html><body style='font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;'><div style='text-align:center;padding:2rem;background:#1e293b;border-radius:1rem;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);'><h2 style='color:#34d399;'>&#10004; Connected to Atrium!</h2><p style='color:#94a3b8;'>You can now close this browser tab and return to your Atrium app.</p></div></body></html>";
+          let success_html = "<!DOCTYPE html><html style='width:100%;height:100%;margin:0;padding:0;background:#090d16;'><head><meta charset='UTF-8'><title>Atrium - Connected</title></head><body style='width:100%;height:100%;margin:0;padding:0;font-family:-apple-system,sans-serif;background:#090d16;color:#fff;display:flex;align-items:center;justify-content:center;'><div style='background:#131b2e;border:1px solid #1e293b;padding:2.5rem 3rem;border-radius:1.25rem;text-align:center;max-width:440px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);'><h1 style='color:#34d399;font-size:1.75rem;margin:0 0 0.5rem 0;'>&#10004; Connected to Atrium</h1><p style='color:#94a3b8;font-size:1rem;margin:0;'>Google Drive is successfully linked.<br>You can now close this browser tab.</p></div></body></html>";
           send_http_response(&mut stream, success_html);
           break;
         }
       }
 
-      let landing_html = "<!DOCTYPE html><html><head><title>Atrium OAuth</title></head><body style='font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;'><div style='text-align:center;padding:2rem;background:#1e293b;border-radius:1rem;'><h2 id='st'>Authenticating...</h2><p id='sub' style='color:#94a3b8;'>Connecting your Google account to Atrium</p></div><script>const h=window.location.hash||window.location.search;if(h){fetch('/token?'+h.substring(1)).then(()=>{document.getElementById('st').innerHTML='<span style=\"color:#34d399\">&#10004; Connected to Atrium!</span>';document.getElementById('sub').innerText='You can now close this tab and return to Atrium.';}).catch(e=>console.error(e));}</script></body></html>";
+      let landing_html = "<!DOCTYPE html><html><head><script>if(window.location.hash){window.location.href='/token?'+window.location.hash.substring(1);}</script></head><body style='background:#090d16;'></body></html>";
       send_http_response(&mut stream, landing_html);
     }
   });
