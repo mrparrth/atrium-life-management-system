@@ -308,6 +308,7 @@ function saveWorkSettings() {
 
 import { saveDirectoryHandle, getDirectoryHandle, executeOfflineBackup, verifyPermission, isTauriEnv } from '@/services/offlineSync'
 
+const isTauri = ref(isTauriEnv())
 const offlineEnabled = ref(Boolean(settings.get('offline_enabled', false)))
 const offlineInterval = ref(Number(settings.get('offline_interval', 1440)))
 const offlineKeepDays = ref(Number(settings.get('offline_keep_days', 7)))
@@ -862,8 +863,8 @@ function matchesSearch(text) {
               </div>
             </div>
 
-            <!-- OAuth Client ID -->
-            <div>
+            <!-- OAuth Client ID (Only shown when running in web browser mode) -->
+            <div v-if="!isTauri">
               <p class="text-sm text-ink font-medium">Google OAuth Client ID</p>
               <p class="text-xs text-ink-3 mt-1 leading-relaxed">
                 Create a Web OAuth Client in <a href="https://console.cloud.google.com/apis/credentials" target="_blank"
@@ -871,7 +872,7 @@ function matchesSearch(text) {
                 Add <code
                   class="bg-surface border border-line px-1.5 py-0.5 rounded text-xs font-mono">{{ origin }}</code> as
                 an Authorized JavaScript origin.
-                Enable the Drive API and Calendar API (If you want to use calendar feature) on the project.
+                Enable the Drive API and Calendar API on the project.
               </p>
               <div class="flex items-center gap-2 mt-3">
                 <input v-model="clientIdInput" :disabled="!isEditingClientId"
@@ -887,7 +888,7 @@ function matchesSearch(text) {
               </div>
             </div>
 
-            <hr class="border-line/40" />
+            <hr v-if="!isTauri" class="border-line/40" />
 
             <!-- Connection Actions -->
             <div class="flex items-center justify-between gap-4 flex-wrap">

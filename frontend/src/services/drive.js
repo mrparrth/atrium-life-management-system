@@ -34,8 +34,10 @@ function loadGisScript() {
   });
 }
 
+const DEFAULT_CLIENT_ID = "242665320379-ns0robt8ok06ui80ncgfo17bgr2lr7me.apps.googleusercontent.com";
+
 export function getClientId() {
-  return localStorage.getItem("atrium.drive.clientId") || "";
+  return localStorage.getItem("atrium.drive.clientId") || DEFAULT_CLIENT_ID;
 }
 export function setClientId(id) {
   localStorage.setItem("atrium.drive.clientId", id || "");
@@ -46,6 +48,27 @@ export function isConnected() {
 }
 export function lastBackupAt() {
   return localStorage.getItem("atrium.drive.lastBackup") || null;
+}
+
+export function checkAndCaptureOAuthRedirect() {
+  const full = (window.location.hash || "") + (window.location.search || "");
+  if (full.includes("access_token=")) {
+    const raw = full.replace(/^[#?]\/?/, "");
+    const params = new URLSearchParams(raw);
+    const token = params.get("access_token");
+    const expiresIn = params.get("expires_in") || "3600";
+    if (token) {
+      accessToken = token;
+      tokenExpiresAt = Date.now() + (Number(expiresIn) || 3600) * 1000;
+      localStorage.setItem("atrium.drive.accessToken", token);
+      localStorage.setItem("atrium.drive.tokenExpiresAt", String(tokenExpiresAt));
+      localStorage.setItem("atrium.drive.connected", "1");
+
+      window.history.replaceState(null, "", window.location.pathname);
+      return true;
+    }
+  }
+  return false;
 }
 
 import { isTauriEnv } from "./offlineSync";
@@ -87,12 +110,49 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
       (prompt ? `&prompt=${encodeURIComponent(prompt)}` : "");
 
     try {
+      const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+      
+      return new Promise((resolve, reject) => {
+        const webview = new WebviewWindow("google-auth-" + Date.now(), {
+          url: authUrl,
+          title: "Sign in with Google",
+          width: 540,
+          height: 680,
+          resizable: false,
+          center: true,
+        });
+
+        const checkTokenInterval = setInterval(async () => {
+          try {
+            const currentUrl = await webview.url();
+            if (currentUrl && currentUrl.includes("access_token=")) {
+              clearInterval(checkTokenInterval);
+              const hash = currentUrl.substring(currentUrl.indexOf("access_token="));
+              const params = new URLSearchParams(hash);
+              const token = params.get("access_token");
+              if (token) {
+                setManualToken(token);
+                await webview.close();
+                resolve(token);
+              }
+            }
+          } catch (err) {
+            // ignore navigation errors before page load
+          }
+        }, 500);
+
+        webview.once("tauri://destroyed", () => {
+          clearInterval(checkTokenInterval);
+          if (!accessToken) {
+            reject(new Error("Google Sign-In window closed."));
+          }
+        });
+      });
+    } catch (e) {
       const { openUrl } = await import("@tauri-apps/plugin-opener");
       await openUrl(authUrl);
-    } catch (e) {
-      window.open(authUrl, "_blank");
+      throw new Error("Google Sign-In opened in your browser. Complete sign-in to connect.");
     }
-    throw new Error("Google Sign-In opened in your browser. Complete sign-in to connect.");
   }
 
   await loadGisScript();

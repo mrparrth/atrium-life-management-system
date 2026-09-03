@@ -24,7 +24,7 @@ import { useWorkForecastStore } from '@/stores/workForecast'
 import { useWorkTemplatesStore } from '@/stores/workTemplates'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { db, seedIfEmpty } from '@/db'
-import { autoBackup } from '@/services/drive'
+import { autoBackup, checkAndCaptureOAuthRedirect } from '@/services/drive'
 import { autoOfflineBackup } from '@/services/offlineSync'
 import { initNotificationsOnLoad } from '@/lib/notifications'
 
@@ -58,10 +58,6 @@ const openWorkTasksCount = computed(() => {
   const now = new Date(); now.setHours(0, 0, 0, 0)
   return workItemsStore.items.filter(w => {
     if (workItemsStore.isCompleted(w.status)) return false
-    if (w.snoozedUntil) {
-      const until = new Date(w.snoozedUntil); until.setHours(0, 0, 0, 0)
-      if (until > now) return false
-    }
     return !w.dueDate || w.dueDate <= today
   }).length
 })
@@ -85,6 +81,9 @@ function switchSpace() {
 
 
 onMounted(async () => {
+  if (checkAndCaptureOAuthRedirect()) {
+    ui.showToast('Connected to Google Drive successfully', 'success')
+  }
   initNotificationsOnLoad()
   await db.open()
   await seedIfEmpty()
