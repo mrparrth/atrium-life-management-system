@@ -48,8 +48,20 @@ export function lastBackupAt() {
   return localStorage.getItem("atrium.drive.lastBackup") || null;
 }
 
+import { isTauriEnv } from "./offlineSync";
+
 let currentScope = null;
 let tokenExpiresAt = 0;
+
+export function setManualToken(token) {
+  if (!token) return;
+  const cleanToken = token.trim();
+  accessToken = cleanToken;
+  tokenExpiresAt = Date.now() + 3600 * 1000;
+  localStorage.setItem("atrium.drive.accessToken", cleanToken);
+  localStorage.setItem("atrium.drive.tokenExpiresAt", String(tokenExpiresAt));
+  localStorage.setItem("atrium.drive.connected", "1");
+}
 
 async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
   if (!accessToken) {
@@ -64,14 +76,33 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
 
   const clientId = getClientId();
   if (!clientId) throw new Error("Google Client ID not set. Add it in Settings.");
+
+  if (isTauriEnv()) {
+    const redirectUri = "http://localhost:3000";
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(clientId)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=token&` +
+      `scope=${encodeURIComponent(scope)}` +
+      (prompt ? `&prompt=${encodeURIComponent(prompt)}` : "");
+
+    try {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl(authUrl);
+    } catch (e) {
+      window.open(authUrl, "_blank");
+    }
+    throw new Error("Google Sign-In opened in your browser. Complete sign-in to connect.");
+  }
+
   await loadGisScript();
   return new Promise((resolve, reject) => {
     if (!tokenClient || currentScope !== scope) {
       tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: scope,
-        callback: () => {}, // overridden per-request
-        error_callback: () => {}, // overridden per-request
+        callback: () => {},
+        error_callback: () => {},
       });
       currentScope = scope;
     }
@@ -88,10 +119,26 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
       localStorage.setItem("atrium.drive.accessToken", accessToken);
       localStorage.setItem("atrium.drive.tokenExpiresAt", String(tokenExpiresAt));
       localStorage.setItem("atrium.drive.tokenScope", scope);
+      localStorage.setItem("atrium.drive.connected", "1");
 
       resolve(accessToken);
     };
-    tokenClient.error_callback = (err) => {
+    tokenClient.error_callback = async (err) => {
+      if (err?.type === "popup_failed_to_open") {
+        const redirectUri = "http://localhost:3000";
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+          `client_id=${encodeURIComponent(clientId)}&` +
+          `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+          `response_type=token&` +
+          `scope=${encodeURIComponent(scope)}`;
+        try {
+          const { openUrl } = await import("@tauri-apps/plugin-opener");
+          await openUrl(authUrl);
+        } catch (e2) {
+          window.open(authUrl, "_blank");
+        }
+        return reject(new Error("Google Sign-In opened in system browser. Complete sign in to connect."));
+      }
       reject(new Error(err?.type || "Popup closed or authentication failed"));
     };
     tokenClient.requestAccessToken({ prompt, scope });
