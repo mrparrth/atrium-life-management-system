@@ -306,7 +306,7 @@ function saveWorkSettings() {
   refresh()
 }
 
-import { saveDirectoryHandle, getDirectoryHandle, executeOfflineBackup, verifyPermission } from '@/services/offlineSync'
+import { saveDirectoryHandle, getDirectoryHandle, executeOfflineBackup, verifyPermission, isTauriEnv } from '@/services/offlineSync'
 
 const offlineEnabled = ref(Boolean(settings.get('offline_enabled', false)))
 const offlineInterval = ref(Number(settings.get('offline_interval', 1440)))
@@ -319,12 +319,17 @@ const offlineNeedsPermission = ref(false)
 async function checkOfflineFolder() {
   const handle = await getDirectoryHandle()
   if (handle) {
-    offlineFolderName.value = handle.name
-    try {
-      const status = await handle.queryPermission({ mode: 'readwrite' })
-      offlineNeedsPermission.value = status !== 'granted'
-    } catch (e) {
-      offlineNeedsPermission.value = true
+    if (typeof handle === 'string') {
+      offlineFolderName.value = handle
+      offlineNeedsPermission.value = false
+    } else {
+      offlineFolderName.value = handle.name
+      try {
+        const status = await handle.queryPermission({ mode: 'readwrite' })
+        offlineNeedsPermission.value = status !== 'granted'
+      } catch (e) {
+        offlineNeedsPermission.value = true
+      }
     }
   } else {
     offlineFolderName.value = ''
@@ -334,12 +339,33 @@ async function checkOfflineFolder() {
 
 async function selectOfflineFolder() {
   try {
-    const handle = await window.showDirectoryPicker({
-      mode: 'readwrite'
-    })
-    await saveDirectoryHandle(handle)
-    await checkOfflineFolder()
-    ui.showToast('Backup directory selected successfully', 'success')
+    if (isTauriEnv()) {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select Offline Backup Directory'
+      })
+      if (selected) {
+        const folderPath = Array.isArray(selected) ? selected[0] : selected
+        await saveDirectoryHandle(folderPath)
+        await checkOfflineFolder()
+        ui.showToast('Backup directory selected successfully', 'success')
+      }
+      return
+    }
+
+    if (typeof window.showDirectoryPicker === 'function') {
+      const handle = await window.showDirectoryPicker({
+        mode: 'readwrite'
+      })
+      await saveDirectoryHandle(handle)
+      await checkOfflineFolder()
+      ui.showToast('Backup directory selected successfully', 'success')
+      return
+    }
+
+    ui.showToast('Automatic folder sync is supported in Chrome, Edge, or the Atrium Mac app.', 'info')
   } catch (e) {
     if (e.name !== 'AbortError') {
       ui.showToast(`Folder selection failed: ${e.message}`, 'error')
@@ -895,23 +921,25 @@ function matchesSearch(text) {
 
             <hr class="border-line/40" />
 
-            <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
-              <div class="shrink-0 max-w-xs">
-                <p class="text-sm text-ink font-medium">Backup Target Folder</p>
-                <p class="text-xs text-ink-3 mt-0.5 leading-relaxed">Selected directory for local offline backups.</p>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p class="text-sm text-ink font-medium">Backup Target Folder</p>
+                  <p class="text-xs text-ink-3 mt-0.5 leading-relaxed">Selected directory for local offline backups.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap shrink-0">
+                  <button @click="selectOfflineFolder"
+                    class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5 shrink-0 h-[38px]">
+                    <FolderOpen class="w-3.5 h-3.5" /> {{ offlineFolderName ? 'Change Folder' : 'Select Folder' }}
+                  </button>
+                  <button v-if="offlineNeedsPermission" @click="authorizeOfflineFolder"
+                    class="btn-secondary !py-2 px-3 text-xs text-amber-600 border-amber-500/30 bg-amber-500/10 flex items-center gap-1.5 shrink-0 h-[38px]">
+                    <ShieldAlert class="w-3.5 h-3.5" /> Authorize Access
+                  </button>
+                </div>
               </div>
-              <div class="flex-grow flex items-center gap-2 max-w-md w-full">
-                <input v-model="offlineFolderName" placeholder="No backup directory selected"
-                  class="flex-grow bg-surface border border-line rounded-xl px-4 py-2 text-sm font-mono text-ink outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 transition-all" />
-                <button @click="selectOfflineFolder"
-                  class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5 shrink-0 h-[38px]">
-                  <FolderOpen class="w-3.5 h-3.5" /> {{ offlineFolderName ? 'Change Folder' : 'Select Folder' }}
-                </button>
-                <button v-if="offlineNeedsPermission" @click="authorizeOfflineFolder"
-                  class="btn-secondary !py-2 px-3 text-xs text-amber-600 flex items-center gap-1.5 shrink-0 h-[38px]">
-                  <ShieldAlert class="w-3.5 h-3.5" /> Authorize Access
-                </button>
-              </div>
+              <input v-model="offlineFolderName" placeholder="No backup directory selected" readonly
+                class="w-full bg-canvas/30 border border-line rounded-xl px-4 py-2 text-xs font-mono text-ink-2 outline-none select-none" />
             </div>
 
             <hr class="border-line/40" />
