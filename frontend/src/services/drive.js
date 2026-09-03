@@ -101,7 +101,7 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
   if (!clientId) throw new Error("Google Client ID not set. Add it in Settings.");
 
   if (isTauriEnv()) {
-    const redirectUri = "http://localhost:3000";
+    const redirectUri = window.location.origin;
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${encodeURIComponent(clientId)}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -185,7 +185,7 @@ async function ensureToken({ prompt = "", scope = SCOPE } = {}) {
     };
     tokenClient.error_callback = async (err) => {
       if (err?.type === "popup_failed_to_open") {
-        const redirectUri = "http://localhost:3000";
+        const redirectUri = window.location.origin;
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
           `client_id=${encodeURIComponent(clientId)}&` +
           `redirect_uri=${encodeURIComponent(redirectUri)}&` +
