@@ -5,6 +5,7 @@ import { useGoalsStore } from '@/stores/goals'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
 import { useFinanceStore } from '@/stores/finance'
+import { useHabitsStore } from '@/stores/habits'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -18,6 +19,7 @@ const goals = useGoalsStore()
 const projects = useProjectsStore()
 const tasks = useTasksStore()
 const finance = useFinanceStore()
+const habitsStore = useHabitsStore()
 
 import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
@@ -98,6 +100,11 @@ const tasksStats = computed(() => {
   const done = relevantTasks.filter(t => t.status === 'done').length
   const open = relevantTasks.filter(t => t.status === 'open').length
   return { total: relevantTasks.length, done, open, pct: relevantTasks.length ? Math.round((done / relevantTasks.length) * 100) : 0 }
+})
+
+const habitStats = computed(() => {
+  if (!selectedYear.value) return { totalHabits: 0, completionRate: 0, completedCount: 0, expectedCount: 0 }
+  return habitsStore.getYearHabitStats(selectedYear.value)
 })
 
 function getLinkedProjects(goalId) {
@@ -445,7 +452,7 @@ function formatMonth(m) {
         </div>
 
         <!-- Core Statistics Bento Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <div class="card p-6" data-testid="summary-stat-goals">
             <div class="overline flex items-center gap-2">
               <Target class="w-3.5 h-3.5" /> Horizon Goals
@@ -470,6 +477,17 @@ function formatMonth(m) {
             <div class="mt-4 h-1.5 rounded-full bg-elevated overflow-hidden">
               <div class="h-full bg-ink rounded-full transition-all duration-700"
                 :style="{ width: tasksStats.pct + '%' }"></div>
+            </div>
+          </div>
+          <div class="card p-6" data-testid="summary-stat-habits">
+            <div class="overline flex items-center gap-2">
+              <Sparkles class="w-3.5 h-3.5 text-emerald-500" /> Habits Consistency
+            </div>
+            <div class="font-serif text-4xl mt-3">{{ habitStats.completionRate }}%</div>
+            <p class="text-xs text-ink-3 mt-2">{{ habitStats.completedCount }} / {{ habitStats.expectedCount }} check-ins · {{ habitStats.totalHabits }} habit{{ habitStats.totalHabits === 1 ? '' : 's' }}</p>
+            <div class="mt-4 h-1.5 rounded-full bg-elevated overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                :style="{ width: habitStats.completionRate + '%' }"></div>
             </div>
           </div>
         </div>

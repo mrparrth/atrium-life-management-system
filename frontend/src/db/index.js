@@ -113,6 +113,12 @@ db.version(12).stores({
   wishlist: "id, title, goalValue, currentValue, url, description, status, createdAt"
 });
 
+// v13 - Habit Tracker & Completion Logs
+db.version(13).stores({
+  habits: "id, title, frequency, createdAt, updatedAt",
+  habit_logs: "id, habitId, date, completed, createdAt"
+});
+
 export function newId() {
   return nanoid(12);
 }

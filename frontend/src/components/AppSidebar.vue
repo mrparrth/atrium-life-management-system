@@ -6,7 +6,7 @@ import {
   LayoutGrid, Sun, Moon, CheckSquare, FolderKanban, Compass,
   BookOpen, Archive, Calendar, Target, NotebookPen, Bookmark,
   Wallet, Sparkles, Settings, Command, Plus, ListChecks, GitFork,
-  TrendingUp, Briefcase, Receipt, BarChart2
+  TrendingUp, Briefcase, Receipt, BarChart2, Flame
 } from 'lucide-vue-next'
 
 const ui = useUIStore()
@@ -17,9 +17,8 @@ const RAW_SECTIONS_PERSONAL = [
   {
     label: 'Action',
     items: [
-      { to: '/today', name: 'Today focus', icon: Sparkles, testid: 'nav-today' },
-      { to: '/next-steps', name: 'Next steps', icon: ListChecks, testid: 'nav-next-steps' },
       { to: '/tasks', name: 'Tasks', icon: CheckSquare, testid: 'nav-tasks' },
+      { to: '/next-steps', name: 'Next steps', icon: ListChecks, testid: 'nav-next-steps' },
       { to: '/projects', name: 'Projects', icon: FolderKanban, testid: 'nav-projects' },
     ],
   },
@@ -42,6 +41,7 @@ const RAW_SECTIONS_PERSONAL = [
   {
     label: 'Track',
     items: [
+      { to: '/habits', name: 'Habits', icon: Flame, testid: 'nav-habits' },
       { to: '/finance', name: 'Finance', icon: Wallet, testid: 'nav-finance' },
       { to: '/reviews', name: 'Reviews', icon: Sparkles, testid: 'nav-reviews' },
       { to: '/archives', name: 'Archives', icon: Archive, testid: 'nav-archives' },
@@ -140,7 +140,7 @@ function handleKeydown(e) {
         if (targetItem) {
           router.push(targetItem.to)
         } else {
-          router.push('/today')
+          router.push('/tasks')
         }
       }, 200)
     }

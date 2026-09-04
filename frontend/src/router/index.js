@@ -20,6 +20,7 @@ const routes = [
   { path: '/reviews', name: 'reviews', component: () => import('@/views/Reviews.vue') },
   { path: '/settings', name: 'settings', component: () => import('@/views/Settings.vue') },
   { path: '/summary', name: 'summary', component: () => import('@/views/Summary.vue') },
+  { path: '/habits', name: 'habits', component: () => import('@/views/Habits.vue') },
   { path: '/radar', name: 'radar', component: () => import('@/views/Follows.vue') },
   
   // Work Mode Routes

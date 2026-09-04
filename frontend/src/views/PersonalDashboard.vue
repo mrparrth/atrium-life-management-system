@@ -13,6 +13,7 @@ import { useReviewsStore } from '@/stores/reviews'
 import { useYearsStore } from '@/stores/years'
 import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
+import { useHabitsStore } from '@/stores/habits'
 import { useFollowsStore, BRAND_SVG_PATHS, getPlatformStyles } from '@/stores/follows'
 import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, getProjectLastTouched } from '@/lib/resurface'
 import { fromNow, isToday, daysSince } from '@/lib/date'
@@ -24,10 +25,16 @@ import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { ArrowRight, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass, PanelRightClose, PanelRightOpen, Target, Gift, ShieldAlert, RefreshCw, X } from 'lucide-vue-next'
+import { ArrowRight, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass, PanelRightClose, PanelRightOpen, Target, Gift, ShieldAlert, RefreshCw, X, Check, Sparkles, Plus, Flame } from 'lucide-vue-next'
 
 const router = useRouter()
 const tasks = useTasksStore()
+const habitsStore = useHabitsStore()
+
+const todayHabits = computed(() => {
+  const todayStr = dayjs().format('YYYY-MM-DD')
+  return habitsStore.activeHabits.filter(h => habitsStore.isHabitDueOn(h, todayStr))
+})
 const projects = useProjectsStore()
 const notes = useNotesStore()
 const bookmarks = useBookmarksStore()
@@ -214,11 +221,6 @@ const todayUnscheduledCount = computed(() => {
   return todayFocus(tasks.items).filter(t => !t.workHour).length
 })
 
-const upcomingCount = computed(() => {
-  currentDate.value
-  return upcomingTasks(tasks.items).length
-})
-
 const priorityWeight = {
   backlog: 1,
   interruptive: 2,
@@ -229,18 +231,6 @@ const priorityWeight = {
 const sortedToday = computed(() => {
   currentDate.value
   return todayFocus(tasks.items).slice(0, 5)
-})
-
-const sortedUpcoming = computed(() => {
-  currentDate.value
-  const list = [...upcomingTasks(tasks.items)]
-  list.sort((a, b) => {
-    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
-    if (a.dueDate) return -1
-    if (b.dueDate) return 1
-    return b.createdAt.localeCompare(a.createdAt)
-  })
-  return list.slice(0, 5)
 })
 
 const todayOverline = computed(() => {
@@ -255,12 +245,6 @@ const todayOverline = computed(() => {
   return str
 })
 
-const upcomingOverline = computed(() => {
-  const displayed = sortedUpcoming.value.length
-  const total = upcomingCount.value
-  if (total === 0) return 'Coming up'
-  return `Coming up · Showing ${displayed} of ${total}`
-})
 const settingsStore = useSettingsStore()
 
 const stale = computed(() => {
@@ -423,9 +407,9 @@ async function openDailyJournal() {
 
     <PageHeader :overline="todayDate" :title="`${greeting}.`" :sub="'Clear today. Start tomorrow lighter.'">
       <template #right>
-        <button class="btn-ghost" @click="openDailyJournal" title="Open or create today's daily journal entry"
+        <button class="btn-ghost flex items-center gap-1.5" @click="openDailyJournal" title="Open or create today's noteworthy entry"
           data-testid="dash-journal-btn">
-          <BookOpen class="w-4 h-4" /> Today's Journal <span class="kbd ml-1.5 select-none">⌘2</span>
+          <Plus class="w-4 h-4" /> Something Noteworthy Today <span class="kbd ml-1.5 select-none">⌘2</span>
         </button>
 
         <button class="btn-ghost" @click="toggleSidebar" data-testid="dash-toggle-sidebar-btn">
@@ -442,7 +426,7 @@ async function openDailyJournal() {
       <!-- Left Column (70%): Task planning and execution -->
       <div :class="[isSidebarCollapsed ? 'lg:col-span-3' : 'lg:col-span-2', 'space-y-6 transition-all duration-300']">
         <!-- TODAY FOCUS -->
-        <section data-testid="section-today-focus" class="mt-4">
+        <section data-testid="section-today-focus">
           <SectionHeader :overline="todayOverline" />
           <div v-if="sortedToday.length" class="space-y-3">
             <TaskCard v-for="t in sortedToday" :key="t.id" :task="t" :single-line="true" :show-project="false"
@@ -451,14 +435,22 @@ async function openDailyJournal() {
           <EmptyState v-else title="An open day" hint="Capture something gentle to begin." />
         </section>
 
-        <!-- COMING UP -->
-        <section data-testid="section-upcoming">
-          <SectionHeader :overline="upcomingOverline" />
-          <div v-if="sortedUpcoming.length" class="space-y-3">
-            <TaskCard v-for="t in sortedUpcoming.slice(0, 2)" :key="t.id" :task="t" :single-line="true"
-              :show-project="false" priority-numeric />
+        <!-- HABITS (Below Today section, 1 clean button per habit) -->
+        <section v-if="todayHabits.length" data-testid="section-habits" class="space-y-3">
+          <SectionHeader overline="Habits" :show-all-link="false" />
+          <div class="flex flex-wrap items-center gap-3">
+            <button v-for="habit in todayHabits" :key="habit.id"
+              @click="habitsStore.toggleHabitLog(habit.id)"
+              class="px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer select-none"
+              :class="[
+                habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD'))
+                  ? 'bg-emerald-500 border-emerald-500 text-canvas shadow-sm'
+                  : 'bg-surface border-line hover:border-line-2 text-ink hover:bg-surface-2'
+              ]">
+              <span class="text-sm shrink-0">{{ habit.icon || '⚡' }}</span>
+              <span>{{ habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD')) ? `Logged ${habit.title}` : `Log ${habit.title}` }}</span>
+            </button>
           </div>
-          <EmptyState v-else title="A clear horizon" hint="Plan when ready." />
         </section>
 
         <!-- STALE PROJECTS -->

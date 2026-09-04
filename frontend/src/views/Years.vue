@@ -5,9 +5,10 @@ import { useGoalsStore } from '@/stores/goals'
 import { useProjectsStore } from '@/stores/projects'
 import { useFinanceStore } from '@/stores/finance'
 import { useUIStore } from '@/stores/ui'
+import { useHabitsStore } from '@/stores/habits'
 import PageHeader from '@/components/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus, X, Trash2, Calendar, TrendingUp, TrendingDown, Landmark, PiggyBank, Briefcase } from 'lucide-vue-next'
+import { Plus, X, Trash2, Calendar, TrendingUp, TrendingDown, Landmark, PiggyBank, Briefcase, Sparkles, Check } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import { onKeyStroke } from '@vueuse/core'
 
@@ -15,6 +16,7 @@ const years = useYearsStore()
 const goals = useGoalsStore()
 const projects = useProjectsStore()
 const financeStore = useFinanceStore()
+const habitsStore = useHabitsStore()
 const ui = useUIStore()
 
 const showNew = ref(false)
@@ -22,6 +24,76 @@ const newYear = ref(new Date().getFullYear() + 1)
 const newTheme = ref('')
 
 const selectedYear = ref(null)
+
+// Habit Modal states for selected year
+const showAddHabit = ref(false)
+const habitTitle = ref('')
+const habitIcon = ref('⚡')
+const habitFrequency = ref('daily')
+const habitWeeklyDays = ref([1, 2, 3, 4, 5])
+
+const ICON_OPTIONS = ['⚡', '🔥', '💧', '📚', '🏃', '🧘', '🎯', '🏋️', '🎨', '💻', '🥗', '😴', '🌿', '💊', '✍️', '❤️', '🚀', '🧠', '💰', '✨']
+
+const WEEKDAY_OPTIONS = [
+  { day: 1, label: 'M' },
+  { day: 2, label: 'T' },
+  { day: 3, label: 'W' },
+  { day: 4, label: 'T' },
+  { day: 5, label: 'F' },
+  { day: 6, label: 'S' },
+  { day: 0, label: 'S' }
+]
+
+function toggleHabitDay(dayNum) {
+  if (habitWeeklyDays.value.includes(dayNum)) {
+    habitWeeklyDays.value = habitWeeklyDays.value.filter(d => d !== dayNum)
+  } else {
+    habitWeeklyDays.value.push(dayNum)
+  }
+}
+
+const selectedYearHabits = computed(() => {
+  if (!selectedYear.value) return []
+  return habitsStore.getHabitsByYearId(selectedYear.value.id)
+})
+
+function openAddHabitModal() {
+  if (selectedYearHabits.value.length >= 3) {
+    ui.showToast('Maximum 3 core habits allowed per year to maintain focus.', 'warning')
+    return
+  }
+  habitTitle.value = ''
+  habitIcon.value = '⚡'
+  habitFrequency.value = 'daily'
+  habitWeeklyDays.value = [1, 2, 3, 4, 5]
+  showAddHabit.value = true
+}
+
+async function createHabitForYear() {
+  if (!habitTitle.value.trim()) return
+  if (selectedYearHabits.value.length >= 3) {
+    ui.showToast('Maximum 3 core habits allowed per year to maintain focus.', 'warning')
+    showAddHabit.value = false
+    return
+  }
+  await habitsStore.addHabit({
+    title: habitTitle.value,
+    icon: habitIcon.value,
+    frequency: habitFrequency.value,
+    weeklyDays: habitWeeklyDays.value,
+    yearIds: [selectedYear.value.id]
+  })
+  ui.showToast('Habit added to year', 'success')
+  showAddHabit.value = false
+}
+
+async function removeHabitFromYear(habitId) {
+  const habit = habitsStore.items.find(h => h.id === habitId)
+  if (!habit) return
+  const updatedYears = (habit.yearIds || []).filter(yid => yid !== selectedYear.value.id)
+  await habitsStore.updateHabit(habitId, { yearIds: updatedYears })
+  ui.showToast('Habit removed from year', 'info')
+}
 
 function goalCount(yid) { 
   return goals.items.filter(g => g.yearId === yid || (g.yearIds && g.yearIds.includes(yid))).length 
@@ -279,6 +351,47 @@ onKeyStroke('Escape', (e) => {
 
           </div>
 
+          <!-- CORE HABITS SECTION (MAX 3) -->
+          <div class="border-t border-line/60 pt-6 mt-6 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xs uppercase tracking-wider font-semibold text-ink-3 font-mono flex items-center gap-1.5">
+                  <Sparkles class="w-3.5 h-3.5 text-emerald-500" /> Core Habits ({{ selectedYearHabits.length }}/3)
+                </h3>
+                <p class="text-[11px] text-ink-3 mt-0.5">Recommendation: Keep it within 3 core habits for max focus.</p>
+              </div>
+
+              <button v-if="selectedYearHabits.length < 3" @click="openAddHabitModal"
+                class="btn-secondary !py-1.5 !px-3 text-xs flex items-center gap-1">
+                <Plus class="w-3.5 h-3.5" /> Add Habit
+              </button>
+            </div>
+
+            <div v-if="selectedYearHabits.length" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+              <div v-for="habit in selectedYearHabits" :key="habit.id"
+                class="p-3.5 bg-canvas/40 rounded-xl border border-line flex items-center justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <h4 class="text-xs font-semibold text-ink truncate flex items-center gap-1.5">
+                    <span>{{ habit.icon || '⚡' }}</span>
+                    <span class="truncate">{{ habit.title }}</span>
+                  </h4>
+                  <p class="text-[10px] text-ink-3 font-mono uppercase mt-0.5">
+                    {{ habit.frequency }}
+                    <template v-if="habit.frequency === 'weekly' && habit.weeklyDays && habit.weeklyDays.length">
+                      · {{ habit.weeklyDays.length }} days/wk
+                    </template>
+                  </p>
+                </div>
+                <button @click="removeHabitFromYear(habit.id)" class="text-ink-3 hover:text-red-500 p-1 rounded transition-colors shrink-0" title="Remove habit from this year">
+                  <X class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <p v-else class="text-xs text-ink-3 italic text-center py-6 bg-canvas/20 rounded-xl border border-dashed border-line">
+              No habits linked to {{ selectedYear.year }} yet. Add up to 3 core habits to build annual momentum.
+            </p>
+          </div>
+
           <!-- Bottom Retrospective Journal -->
           <div class="border-t border-line/60 pt-6 mt-6 space-y-4">
             <h3 class="text-xs uppercase tracking-wider font-semibold text-ink-3 font-mono">Retrospective Journal</h3>
@@ -351,6 +464,78 @@ onKeyStroke('Escape', (e) => {
           <button type="button" class="btn-ghost" @click="showNew = false">Cancel</button>
           <button type="submit" class="btn-primary">
             Create <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ADD HABIT DIALOG -->
+    <div v-if="showAddHabit" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showAddHabit = false"></div>
+      <form @submit.prevent="createHabitForYear"
+        @keydown.meta.enter.prevent="createHabitForYear"
+        @keydown.ctrl.enter.prevent="createHabitForYear"
+        class="relative w-full max-w-md card p-8 animate-rise-in space-y-5">
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showAddHabit = false"><X class="w-4 h-4" /></button>
+        <div>
+          <div class="overline">Core Habit</div>
+          <h2 class="font-serif text-2xl mt-1">Add habit to {{ selectedYear?.year }}</h2>
+          <p class="text-xs text-ink-3 mt-1">Recommendation: Keep it within 3 core habits for max focus.</p>
+        </div>
+
+        <div class="v-field-group">
+          <input v-model="habitTitle" placeholder=" " class="v-field-input text-base font-sans" id="habit-title" required autofocus />
+          <label for="habit-title" class="v-field-label text-base font-semibold">Habit title *</label>
+        </div>
+
+        <!-- Icon Selector -->
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-ink-2 uppercase tracking-wider">Habit Icon</label>
+          <div class="flex flex-wrap gap-2 p-2 bg-surface rounded-xl border border-line max-h-28 overflow-y-auto">
+            <button v-for="ic in ICON_OPTIONS" :key="ic" type="button" @click="habitIcon = ic"
+              class="w-8 h-8 rounded-lg text-base flex items-center justify-center transition-all cursor-pointer select-none"
+              :class="habitIcon === ic ? 'bg-canvas border border-line-2 shadow-sm scale-110' : 'hover:bg-canvas/50'">
+              {{ ic }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-ink-2 uppercase tracking-wider">Frequency</label>
+          <div class="flex bg-elevated rounded-xl p-1 border border-line text-sm">
+            <button type="button" @click="habitFrequency = 'daily'"
+              class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+              :class="habitFrequency === 'daily' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'">
+              Daily
+            </button>
+            <button type="button" @click="habitFrequency = 'weekly'"
+              class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+              :class="habitFrequency === 'weekly' ? 'bg-surface text-ink shadow-sm' : 'text-ink-3 hover:text-ink'">
+              Weekly
+            </button>
+          </div>
+        </div>
+
+        <!-- Weekly Days Selector -->
+        <div v-if="habitFrequency === 'weekly'" class="space-y-2 pt-1">
+          <label class="block text-xs font-semibold text-ink-2 uppercase tracking-wider">Repeat on Days</label>
+          <div class="flex items-center justify-between gap-1.5">
+            <button v-for="opt in WEEKDAY_OPTIONS" :key="opt.day" type="button"
+              @click="toggleHabitDay(opt.day)"
+              class="w-9 h-9 rounded-xl border text-xs font-bold font-mono transition-all cursor-pointer"
+              :class="habitWeeklyDays.includes(opt.day)
+                ? 'bg-pri-strategic border-pri-strategic text-canvas shadow-sm'
+                : 'bg-surface border-line text-ink-3 hover:border-line-2'">
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-line/40">
+          <button type="button" class="btn-ghost" @click="showAddHabit = false">Cancel</button>
+          <button type="submit" class="btn-primary">
+            <span>Add Habit</span>
+            <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1.5">⌘Enter</span>
           </button>
         </div>
       </form>

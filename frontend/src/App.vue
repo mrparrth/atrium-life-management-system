@@ -23,6 +23,7 @@ import { useWorkMeetingsStore } from '@/stores/workMeetings'
 import { useWorkForecastStore } from '@/stores/workForecast'
 import { useWorkTemplatesStore } from '@/stores/workTemplates'
 import { useWorkResourcesStore } from '@/stores/workResources'
+import { useHabitsStore } from '@/stores/habits'
 import { db, seedIfEmpty } from '@/db'
 import { autoBackup, checkAndCaptureOAuthRedirect } from '@/services/drive'
 import { autoOfflineBackup } from '@/services/offlineSync'
@@ -55,10 +56,15 @@ const openPersonalTasksCount = computed(() => {
 
 const openWorkTasksCount = computed(() => {
   const today = dayjs().format('YYYY-MM-DD')
-  const now = new Date(); now.setHours(0, 0, 0, 0)
   return workItemsStore.items.filter(w => {
     if (workItemsStore.isCompleted(w.status)) return false
-    return !w.dueDate || w.dueDate <= today
+    let effDate = w.dueDate || ''
+    if (w.snoozedUntil) {
+      const snoozeStr = dayjs(w.snoozedUntil).format('YYYY-MM-DD')
+      if (!effDate || snoozeStr > effDate) effDate = snoozeStr
+    }
+    if (!effDate) return false
+    return effDate <= today
   }).length
 })
 
@@ -131,6 +137,7 @@ onMounted(async () => {
     useWorkForecastStore().load(),
     useWorkTemplatesStore().load(),
     useWorkResourcesStore().load(),
+    useHabitsStore().load(),
   ])
 
   // Dynamic periodic auto-backup check (runs silent checks in the background)

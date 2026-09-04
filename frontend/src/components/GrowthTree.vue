@@ -15,6 +15,7 @@ import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useFollowsStore } from '@/stores/follows'
 import { useReviewsStore } from '@/stores/reviews'
 import { useSettingsStore } from '@/stores/settings'
+import { useHabitsStore } from '@/stores/habits'
 import { todayFocus, upcomingTasks, staleProjects, memoryResurfacing, isSnoozed, isTaskActiveToday, isTaskHandledToday } from '@/lib/resurface'
 import { isToday, isOverdue, daysSince } from '@/lib/date'
 
@@ -34,6 +35,7 @@ const workLeadsStore = useWorkLeadsStore()
 const followsStore = useFollowsStore()
 const reviewsStore = useReviewsStore()
 const settingsStore = useSettingsStore()
+const habitsStore = useHabitsStore()
 import { useUIStore } from '@/stores/ui'
 const ui = useUIStore()
 
@@ -419,15 +421,32 @@ const activeReviews = computed(() => {
   return list.filter(r => r.show)
 })
 
+const todayHabitsList = computed(() => {
+  const todayStr = currentDate.value.format('YYYY-MM-DD')
+  return habitsStore.activeHabits.filter(h => habitsStore.isHabitDueOn(h, todayStr))
+})
+
+const habitScore = computed(() => {
+  if (todayHabitsList.value.length === 0) return 1
+  const todayStr = currentDate.value.format('YYYY-MM-DD')
+  const completed = todayHabitsList.value.filter(h => habitsStore.isCompletedOn(h.id, todayStr)).length
+  return completed / todayHabitsList.value.length
+})
+
 // Overall combined progress score (0 to 100)
 const progress = computed(() => {
   // Base weights
   const projectsWeight = 0.20 // 20%
   const memoryWeight = 0.20   // 20%
-  const tasksWeight = 0.60   // 60%
+  const habitWeight = 0.05    // 5%
+  const tasksWeight = 0.55    // 55%
 
   let totalWeight = 0
   let weightedScore = 0
+
+  // Habits (5%)
+  totalWeight += habitWeight
+  weightedScore += habitScore.value * habitWeight
 
   // Projects (Drifting)
   const hasProjects = staleProjectsList.value.length > 0

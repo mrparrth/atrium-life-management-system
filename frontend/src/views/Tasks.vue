@@ -3,42 +3,86 @@ import { computed, ref } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
-import { derivePriority } from '@/lib/priority'
-import { isSnoozed, isTaskOpen } from '@/lib/resurface'
+import { derivePriority, PRIORITY } from '@/lib/priority'
+import { isTaskOpen } from '@/lib/resurface'
 import PageHeader from '@/components/PageHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { Plus } from 'lucide-vue-next'
+import { Plus, ChevronDown, ChevronRight, CheckCheck } from 'lucide-vue-next'
+import dayjs from 'dayjs'
 
 const tasks = useTasksStore()
 const projects = useProjectsStore()
 const ui = useUIStore()
 
-import { PRIORITY } from "@/lib/priority"
+const priorityFilter = ref("all")
+const projectFilter = ref("all")
+const showCompleted = ref(false)
 
-const filter = ref("open"); // open | done | all
-const priorityFilter = ref("all");
-const projectFilter = ref("all");
+const getTaskEffectiveDate = (t) => {
+  let date = t.dueDate || t.scheduledDate || ''
+  if (t.snoozedUntil) {
+    const snoozeStr = dayjs(t.snoozedUntil).format('YYYY-MM-DD')
+    if (!date || snoozeStr > date) date = snoozeStr
+  }
+  return date
+}
 
-const filtered = computed(() => {
-  let list = tasks.items
-  if (filter.value === 'open') list = list.filter(t => isTaskOpen(t))
-  else if (filter.value === 'done') list = list.filter(t => t.status === 'done')
-  if (priorityFilter.value !== 'all') list = list.filter(t => derivePriority(t.important, t.urgent).key === priorityFilter.value)
-  if (projectFilter.value !== 'all') list = list.filter(t => t.projectId === projectFilter.value)
-  return list
+const dateGroups = computed(() => {
+  const openTasks = tasks.items.filter(t => isTaskOpen(t))
+  
+  let list = openTasks
+  if (priorityFilter.value !== 'all') {
+    list = list.filter(t => derivePriority(t.important, t.urgent).key === priorityFilter.value)
+  }
+  if (projectFilter.value !== 'all') {
+    list = list.filter(t => t.projectId === projectFilter.value)
+  }
+
+  const today = dayjs().startOf('day')
+  const endOfWeek = dayjs().endOf('week')
+
+  const groups = [
+    { key: 'overdue', label: 'Overdue', dotClass: 'bg-red-500', items: [] },
+    { key: 'today', label: 'Due Today', dotClass: 'bg-emerald-500', items: [] },
+    { key: 'this_week', label: 'This Week', dotClass: 'bg-amber-500', items: [] },
+    { key: 'upcoming', label: 'Upcoming', dotClass: 'bg-blue-500', items: [] },
+    { key: 'no_due_date', label: 'No Due Date', dotClass: 'bg-slate-400', items: [] },
+  ]
+
+  list.forEach(t => {
+    const effDate = getTaskEffectiveDate(t)
+    if (!effDate) {
+      groups.find(g => g.key === 'no_due_date').items.push(t)
+    } else {
+      const due = dayjs(effDate).startOf('day')
+      if (due.isBefore(today)) {
+        groups.find(g => g.key === 'overdue').items.push(t)
+      } else if (due.isSame(today, 'day')) {
+        groups.find(g => g.key === 'today').items.push(t)
+      } else if (due.isAfter(today) && (due.isBefore(endOfWeek) || due.isSame(endOfWeek, 'day'))) {
+        groups.find(g => g.key === 'this_week').items.push(t)
+      } else {
+        groups.find(g => g.key === 'upcoming').items.push(t)
+      }
+    }
+  })
+
+  return groups.filter(g => g.items.length > 0)
 })
 
-const groups = computed(() => {
-  const g = { critical: [], strategic: [], interruptive: [], backlog: [] }
-  for (const t of filtered.value) g[derivePriority(t.important, t.urgent).key].push(t)
-  return g
+const completedTasks = computed(() => {
+  return tasks.items.filter(t => t.status === 'done')
+})
+
+const totalOpenCount = computed(() => {
+  return tasks.items.filter(t => isTaskOpen(t)).length
 })
 </script>
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="tasks-view">
-    <PageHeader overline="All tasks" title="Tasks" sub="Grouped quietly by the meaning they carry.">
+    <PageHeader overline="Action" title="Tasks" sub="Organized by schedule and effective due dates.">
       <template #right>
         <button class="btn-primary" @click="ui.openQuickCapture" data-testid="tasks-capture-btn">
           <Plus class="w-4 h-4" /> Capture <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
@@ -46,13 +90,8 @@ const groups = computed(() => {
       </template>
     </PageHeader>
 
-    <div class="flex flex-wrap items-center gap-2 mb-8" data-testid="tasks-filters">
-      <div class="flex bg-elevated rounded-xl p-1 border border-line text-sm">
-        <button v-for="f in ['open', 'done', 'all']" :key="f" :data-testid="`filter-${f}`"
-          class="px-3 py-1.5 rounded-lg transition-colors duration-200"
-          :class="filter === f ? 'bg-surface text-ink' : 'text-ink-2 hover:text-ink'" @click="filter = f">{{ f
-          }}</button>
-      </div>
+    <!-- Filters Bar -->
+    <div class="flex flex-wrap items-center gap-3 mb-8" data-testid="tasks-filters">
       <select v-model="priorityFilter" class="input-block !w-auto text-sm" data-testid="filter-priority">
         <option value="all">All priorities</option>
         <option v-for="(p, key) in PRIORITY" :key="key" :value="p.key">{{ p.label }}</option>
@@ -61,20 +100,39 @@ const groups = computed(() => {
         <option value="all">All projects</option>
         <option v-for="p in projects.items" :key="p.id" :value="p.id">{{ p.title }}</option>
       </select>
+
+      <span class="text-xs text-ink-3 font-mono ml-auto">
+        {{ totalOpenCount }} open task{{ totalOpenCount === 1 ? '' : 's' }}
+      </span>
     </div>
 
+    <!-- Date Grouped Task Lists -->
     <div class="space-y-10">
-      <section v-for="(items, key) in groups" :key="key" v-show="items.length" :data-testid="`group-${key}`">
+      <section v-for="group in dateGroups" :key="group.key" :data-testid="`group-${group.key}`">
         <div class="flex items-center gap-2 mb-4">
-          <span class="priority-dot" :class="`bg-pri-${key}`"></span>
-          <h3 class="text-lg font-medium capitalize">{{ key }}</h3>
-          <span class="text-ink-3 text-sm">· {{ items.length }}</span>
+          <span class="w-2 h-2 rounded-full shrink-0" :class="group.dotClass"></span>
+          <h3 class="text-lg font-medium">{{ group.label }}</h3>
+          <span class="text-ink-3 text-sm">· {{ group.items.length }}</span>
         </div>
         <div class="space-y-2">
-          <TaskCard v-for="t in items" :key="t.id" :task="t" :single-line="true" />
+          <TaskCard v-for="t in group.items" :key="t.id" :task="t" :single-line="true" />
         </div>
       </section>
-      <EmptyState v-if="!filtered.length" title="Nothing here" hint="Try a different filter, or capture a new task." />
+
+      <EmptyState v-if="!dateGroups.length" title="No open tasks" hint="You are all caught up! Capture a new task whenever needed." />
+
+      <!-- Optional Completed Tasks Accordion -->
+      <div v-if="completedTasks.length" class="pt-8 border-t border-line/40">
+        <button @click="showCompleted = !showCompleted" class="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-ink-3 hover:text-ink transition-colors">
+          <component :is="showCompleted ? ChevronDown : ChevronRight" class="w-4 h-4" />
+          <CheckCheck class="w-3.5 h-3.5 text-emerald-500" />
+          <span>Completed Tasks ({{ completedTasks.length }})</span>
+        </button>
+
+        <div v-if="showCompleted" class="mt-4 space-y-2">
+          <TaskCard v-for="t in completedTasks" :key="t.id" :task="t" :single-line="true" />
+        </div>
+      </div>
     </div>
   </div>
 </template>

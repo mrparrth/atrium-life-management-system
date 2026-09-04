@@ -171,3 +171,13 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Added custom `<VSelect>` controls to `Settings.vue` for `Auto-Backup Frequency` (1h, 6h, 12h, 24h, 1w) and `Retention Policy` (7d, 14d, 30d, 90d, Keep All) inside the Offline Disk Backup card.
 - DESKTOP: Implemented Solution A native macOS Custom Protocol Scheme (`atrium://oauth-callback`) via `@tauri-apps/plugin-deep-link` and `tauri-plugin-deep-link`. Registered `atrium` scheme in `tauri.conf.json` and added `onOpenUrl` listener in `App.vue` and `drive.js` for zero-server, 1-click browser to macOS app token handoff.
 - DOCS: Updated context.md checkpoint log.
+
+### September 4, 2026
+- FEATURE: Implemented Habit Tracker system with IndexedDB `v13` schema (`habits` and `habit_logs` tables) and Pinia store (`stores/habits.js`).
+- FEATURE: Supported daily and weekly habits (with custom weekday selection), habit-to-year linking (with 3 habits per year limit hint), 7-day completion heatmaps, and habit lifecycle states (Active vs Paused with stopped date & duration calculation).
+- FEATURE: Added `/habits` route and registered **Habits** in `AppSidebar.vue` under Track section with `Flame` icon and keyboard shortcut `h`.
+- FEATURE: Built full Habit Management view (`views/Habits.vue`) with Active/Paused tabs, single-click card editing, habit pausing/resuming, `⌘Enter` modal save shortcut, and custom icon palette selection.
+- UX: Streamlined `PersonalDashboard.vue` by removing the "Coming Up" section and placing a simple button-only **Habits** list directly below the Today section (1 clean button per active habit displaying custom icon and `Log [Title]` / `Logged [Title]` toggle).
+- UX: Added 5% habit progress weightage to `GrowthTree.vue` daily growth score calculation and added Habits Consistency metric card in `Summary.vue`.
+- UX: Updated `Tasks.vue` to group open tasks by due dates (`Overdue`, `Due Today`, `This Week`, `Upcoming`, `No Due Date`) and re-mapped shortcuts (single `t` -> `/tasks`, quick double `tt` -> `/settings`).
+- DOCS: Updated context.md checkpoint log.
