@@ -181,3 +181,11 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Added 5% habit progress weightage to `GrowthTree.vue` daily growth score calculation and added Habits Consistency metric card in `Summary.vue`.
 - UX: Updated `Tasks.vue` to group open tasks by due dates (`Overdue`, `Due Today`, `This Week`, `Upcoming`, `No Due Date`) and re-mapped shortcuts (single `t` -> `/tasks`, quick double `tt` -> `/settings`).
 - DOCS: Updated context.md checkpoint log.
+
+### September 7, 2026
+- UX: Removed strikethrough styling from logged habit buttons on `PersonalDashboard.vue` and updated logged state to a clean, normal grey canvas background (`bg-canvas border-line-2 text-ink-3`) with a muted grey filled check icon (`bg-ink-3`).
+- UX: Removed heavy black bold serif typography from Goal and Wishlist titles on `Goals.vue` and `GoalDetail.vue`, switching to clean, subtle sans-serif headings (`text-base font-medium text-ink`).
+- FEATURE: Audited memory resurfacing algorithm in `resurface.js`. Clamped `Infinity` priority values for items lacking `lastViewedAt` to prevent `NaN` array sorting, and replaced UTC `toISOString()` date fallback with local `dayjs().format('YYYY-MM-DD')`.
+- FEATURE: Standardized `snoozedUntil` to be stored and evaluated strictly as a 10-character `YYYY-MM-DD` calendar date string. Updated `toLocalDateStr` to use `val.slice(0, 10)` for ISO strings, eliminating UTC time-of-day conversions that previously shifted UTC evening snoozed tasks into tomorrow ("This Week" section).
+- BUGFIX: Added missing `import dayjs from 'dayjs'` to `stores/tasks.js` to fix runtime `ReferenceError` during task sorting.
+- DOCS: Updated context.md checkpoint log.

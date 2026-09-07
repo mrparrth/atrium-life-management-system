@@ -310,7 +310,7 @@ const workTasks = computed(() => {
       return true
     }
     // 2. If it was snoozed or rescheduled to the future today, it is part of today's work tasks (we handled/postponed it today)
-    const isSnoozedFuture = w.snoozedUntil && new Date(w.snoozedUntil) > now
+    const isSnoozedFuture = w.snoozedUntil && (w.snoozedUntil.length === 10 ? w.snoozedUntil > today : dayjs(w.snoozedUntil).format('YYYY-MM-DD') > today)
     const isRescheduledFuture = w.dueDate && w.dueDate > today
     if (isToday(w.updatedAt) && (isSnoozedFuture || isRescheduledFuture)) {
       return true
@@ -322,7 +322,7 @@ const workTasks = computed(() => {
         activeDate = w.dueDate
       }
       if (w.snoozedUntil) {
-        const snoozeDate = dayjs(w.snoozedUntil).format('YYYY-MM-DD')
+        const snoozeDate = w.snoozedUntil.length === 10 ? w.snoozedUntil : dayjs(w.snoozedUntil).format('YYYY-MM-DD')
         if (!activeDate || snoozeDate > activeDate) {
           activeDate = snoozeDate
         }
@@ -337,11 +337,10 @@ const workTasks = computed(() => {
 })
 const workTasksTotal = computed(() => workTasks.value.length)
 const workTasksHandled = computed(() => {
-  const now = new Date()
   const today = currentDate.value.format('YYYY-MM-DD')
   return workTasks.value.filter(w => {
     const isCompleted = workItemsStore.isCompleted(w.status)
-    const isSnoozedFuture = w.snoozedUntil && new Date(w.snoozedUntil) > now
+    const isSnoozedFuture = w.snoozedUntil && (w.snoozedUntil.length === 10 ? w.snoozedUntil > today : dayjs(w.snoozedUntil).format('YYYY-MM-DD') > today)
     const isRescheduledFuture = w.dueDate && w.dueDate > today
     return isCompleted || isSnoozedFuture || isRescheduledFuture
   }).length

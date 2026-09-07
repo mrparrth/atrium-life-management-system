@@ -11,7 +11,9 @@ export const RESURFACE = {
 
 export function toLocalDateStr(val) {
   if (!val) return null;
-  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  if (typeof val === 'string' && val.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+    return val.slice(0, 10);
+  }
   const d = new Date(val);
   if (isNaN(d.getTime())) return null;
   const year = d.getFullYear();
@@ -187,7 +189,7 @@ export function staleProjects(projects, tasks, customStaleDays = null) {
 }
 
 export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate, customConfig = {}) {
-  const currentDateStr = currentDate ? currentDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0];
+  const currentDateStr = currentDate ? (typeof currentDate === 'string' ? currentDate : currentDate.format('YYYY-MM-DD')) : dayjs().format('YYYY-MM-DD');
 
   const goalInterval = Number(customConfig.resurface_goal_interval || RESURFACE.goalStaleDays || 15);
   const wishInterval = Number(customConfig.resurface_wish_interval || 15);
@@ -236,7 +238,9 @@ export function memoryResurfacing(notes, bookmarks, goals, wishlist, currentDate
     let unviewedPool = pool.filter(item => !chosenIds.has(item.id));
 
     let poolWithPriority = unviewedPool.map(item => {
-      const D = daysSince(item.lastViewedAt);
+      const dateVal = item.lastViewedAt || item.createdAt || item.updatedAt;
+      const rawD = daysSince(dateVal);
+      const D = rawD === Infinity ? 9999 : rawD;
       const threshold = item.minDays || minInterval;
       const priority = D >= threshold ? D : D * 0.0001;
       return { item, D, priority, threshold };

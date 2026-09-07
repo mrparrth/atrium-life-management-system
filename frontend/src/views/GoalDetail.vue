@@ -355,7 +355,7 @@ function getProjectProgress(proj) {
         {{yearsOf(goal).map(y => y.year).join(', ') || 'Goal'}}
       </span>
       <input v-model="formTitle" type="text" placeholder="Goal Title..."
-        class="font-serif text-2xl md:text-3xl font-bold text-ink bg-transparent hover:bg-canvas/50 focus:bg-surface border-b border-transparent focus:border-pri-strategic/50 outline-none transition-all py-1 px-1 -ml-1 rounded-lg w-full"
+        class="text-2xl md:text-3xl font-semibold text-ink bg-transparent hover:bg-canvas/50 focus:bg-surface border-b border-transparent focus:border-pri-strategic/50 outline-none transition-all py-1 px-1 -ml-1 rounded-lg w-full"
         @blur="handleTitleBlur" @keydown.enter="$event.target.blur()" />
     </div>
 

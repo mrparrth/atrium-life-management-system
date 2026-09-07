@@ -4,7 +4,7 @@ import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
 import { derivePriority, PRIORITY } from '@/lib/priority'
-import { isTaskOpen } from '@/lib/resurface'
+import { isTaskOpen, toLocalDateStr } from '@/lib/resurface'
 import PageHeader from '@/components/PageHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -20,9 +20,9 @@ const projectFilter = ref("all")
 const showCompleted = ref(false)
 
 const getTaskEffectiveDate = (t) => {
-  let date = t.dueDate || t.scheduledDate || ''
+  let date = toLocalDateStr(t.dueDate) || toLocalDateStr(t.scheduledDate) || ''
   if (t.snoozedUntil) {
-    const snoozeStr = dayjs(t.snoozedUntil).format('YYYY-MM-DD')
+    const snoozeStr = toLocalDateStr(t.snoozedUntil)
     if (!date || snoozeStr > date) date = snoozeStr
   }
   return date

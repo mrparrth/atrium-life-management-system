@@ -623,7 +623,7 @@ function getWishFallbackIcon(w) {
 
               <!-- Middle details -->
               <div class="min-w-0 flex-1">
-                <h4 class="font-serif text-base font-bold text-ink leading-snug break-words">
+                <h4 class="text-base font-medium text-ink leading-snug break-words">
                   {{ g.title }}
                 </h4>
                 <p v-if="g.description" class="text-xs text-ink-2 mt-2 line-clamp-2 leading-relaxed">
@@ -702,7 +702,7 @@ function getWishFallbackIcon(w) {
             <!-- Content Area below cover -->
             <div class="p-5 flex-1 flex flex-col justify-center min-w-0">
               <div class="flex items-baseline justify-between gap-3 min-w-0">
-                <h4 class="font-serif text-base font-semibold text-ink leading-snug break-words"
+                <h4 class="text-base font-medium text-ink leading-snug break-words"
                   :class="{ 'line-through text-ink-3': w.purchased }">{{ w.title }}</h4>
                 <span v-if="w.price"
                   class="text-xs font-mono font-bold text-ink shrink-0 select-none bg-canvas px-1.5 py-0.5 rounded border border-line">

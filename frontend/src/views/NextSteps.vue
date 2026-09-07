@@ -111,101 +111,74 @@ async function onDrop(targetId) {
 
 <template>
   <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto animate-fade-in" data-testid="next-steps-view">
-    <PageHeader overline="Horizon" title="Next steps" sub="A quiet space for local checklists and notes.">
+    <PageHeader overline="Horizon" title="Next steps" sub="A quiet space for planning your next steps in your life.">
       <template #right>
         <button class="btn-primary text-sm" @click="showNewSectionModal = true" data-testid="ns-add-section-btn">
-          <Plus class="w-4 h-4" /> Add section <span class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
+          <Plus class="w-4 h-4" /> Add section <span
+            class="kbd ml-1.5 !bg-canvas/20 !border-canvas/10 !text-canvas select-none">⌘1</span>
         </button>
       </template>
     </PageHeader>
 
-    <div v-if="nextSteps.sections.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="ns-sections-grid">
-      <div 
-        v-for="sec in nextSteps.sections" 
-        :key="sec.id" 
-        draggable="true"
-        @dragstart="onDragStart(sec.id)"
-        @dragover.prevent
-        @drop.prevent="onDrop(sec.id)"
+    <div v-if="nextSteps.sections.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      data-testid="ns-sections-grid">
+      <div v-for="sec in nextSteps.sections" :key="sec.id" draggable="true" @dragstart="onDragStart(sec.id)"
+        @dragover.prevent @drop.prevent="onDrop(sec.id)"
         class="card p-6 flex flex-col hover:border-line-2 transition-all duration-300 group"
-        :class="{ 'ring-2 ring-line-2': dragId === sec.id }"
-        :data-testid="`ns-section-${sec.id}`"
-      >
+        :class="{ 'ring-2 ring-line-2': dragId === sec.id }" :data-testid="`ns-section-${sec.id}`">
         <!-- Section Header -->
         <div class="flex items-start justify-between gap-3 mb-4">
           <div class="flex-1 min-w-0 flex items-center gap-2">
             <GripVertical class="w-4 h-4 text-ink-3/45 cursor-grab shrink-0" />
             <template v-if="editingSectionId === sec.id">
-              <input 
-                v-model="editSectionTitle"
-                @keydown.enter="commitRenameSection(sec.id)"
-                @keydown.esc="editingSectionId = null"
-                @blur="commitRenameSection(sec.id)"
+              <input v-model="editSectionTitle" @keydown.enter="commitRenameSection(sec.id)"
+                @keydown.esc="editingSectionId = null" @blur="commitRenameSection(sec.id)"
                 class="bg-transparent border-b border-line-2 font-serif text-lg text-ink font-medium w-full focus:outline-none"
-                autofocus
-                :data-testid="`ns-section-rename-input-${sec.id}`"
-              />
+                autofocus :data-testid="`ns-section-rename-input-${sec.id}`" />
             </template>
             <template v-else>
-              <h3 
-                @dblclick="startRenameSection(sec)"
+              <h3 @dblclick="startRenameSection(sec)"
                 class="font-serif text-lg text-ink font-medium leading-snug cursor-text truncate hover:text-ink-2"
-                :title="`Double click to rename`"
-                :data-testid="`ns-section-title-${sec.id}`"
-              >
+                :title="`Double click to rename`" :data-testid="`ns-section-title-${sec.id}`">
                 {{ sec.title }}
               </h3>
             </template>
           </div>
           <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
-            <button @click="startRenameSection(sec)" class="btn-ghost !p-1.5" title="Rename section"><Edit3 class="w-3.5 h-3.5" /></button>
-            <button @click="deleteSection(sec)" class="btn-ghost !p-1.5 hover:text-pri-critical" title="Delete section" :data-testid="`ns-section-delete-${sec.id}`"><Trash2 class="w-3.5 h-3.5" /></button>
+            <button @click="startRenameSection(sec)" class="btn-ghost !p-1.5" title="Rename section">
+              <Edit3 class="w-3.5 h-3.5" />
+            </button>
+            <button @click="deleteSection(sec)" class="btn-ghost !p-1.5 hover:text-pri-critical" title="Delete section"
+              :data-testid="`ns-section-delete-${sec.id}`">
+              <Trash2 class="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
         <!-- Checklist items -->
         <div class="space-y-2 mb-4 flex-1">
-          <div 
-            v-for="it in sec.items" 
-            :key="it.id"
+          <div v-for="it in sec.items" :key="it.id"
             class="flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg hover:bg-elevated/40 transition-colors group/item"
-            :class="{ 'opacity-55': it.done }"
-            :data-testid="`ns-item-${it.id}`"
-          >
-            <VCheckbox
-              :modelValue="it.done"
-              @update:modelValue="nextSteps.toggleItem(sec.id, it.id)"
-              class="shrink-0"
-              :id="`ns-item-cb-${it.id}`"
-              :data-testid="`ns-item-toggle-${it.id}`"
-            />
+            :class="{ 'opacity-55': it.done }" :data-testid="`ns-item-${it.id}`">
+            <VCheckbox :modelValue="it.done" @update:modelValue="nextSteps.toggleItem(sec.id, it.id)" class="shrink-0"
+              :id="`ns-item-cb-${it.id}`" :data-testid="`ns-item-toggle-${it.id}`" />
 
             <div class="flex-1 min-w-0">
               <template v-if="editingItemId === it.id && editingItemSectionId === sec.id">
-                <input 
-                  v-model="editItemTitle"
-                  @keydown.enter="commitRenameItem(sec.id)"
-                  @keydown.esc="editingItemId = null"
-                  @blur="commitRenameItem(sec.id)"
-                  class="bg-transparent border-b border-line-2 text-sm text-ink w-full focus:outline-none"
-                  autofocus
-                />
+                <input v-model="editItemTitle" @keydown.enter="commitRenameItem(sec.id)"
+                  @keydown.esc="editingItemId = null" @blur="commitRenameItem(sec.id)"
+                  class="bg-transparent border-b border-line-2 text-sm text-ink w-full focus:outline-none" autofocus />
               </template>
               <template v-else>
-                <label 
-                  :for="`ns-item-cb-${it.id}`"
-                  @dblclick.prevent="startRenameItem(sec.id, it)"
+                <label :for="`ns-item-cb-${it.id}`" @dblclick.prevent="startRenameItem(sec.id, it)"
                   class="text-sm cursor-pointer break-words block select-none"
-                  :class="{ 'line-through text-ink-3': it.done }"
-                >{{ it.title }}</label>
+                  :class="{ 'line-through text-ink-3': it.done }">{{ it.title }}</label>
               </template>
             </div>
 
-            <button 
-              @click="deleteItem(sec.id, it.id)" 
+            <button @click="deleteItem(sec.id, it.id)"
               class="opacity-0 group-hover/item:opacity-100 hover:text-pri-critical transition-opacity ml-auto"
-              :data-testid="`ns-item-delete-${it.id}`"
-            >
+              :data-testid="`ns-item-delete-${it.id}`">
               <X class="w-3 h-3 text-ink-3" />
             </button>
           </div>
@@ -213,68 +186,60 @@ async function onDrop(targetId) {
           <!-- Add Item Input -->
           <form @submit.prevent="createItem(sec.id)" class="flex items-center gap-2 mt-2 pt-2 border-t border-line/40">
             <Plus class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-            <input 
-              v-model="newItemTitles[sec.id]"
-              placeholder="Add next step…"
+            <input v-model="newItemTitles[sec.id]" placeholder="Add next step…"
               class="bg-transparent text-xs text-ink placeholder:text-ink-3 flex-1 focus:outline-none py-1"
-              :data-testid="`ns-item-add-input-${sec.id}`"
-            />
+              :data-testid="`ns-item-add-input-${sec.id}`" />
           </form>
         </div>
 
         <!-- Section Notes -->
         <div class="border-t border-dashed border-line pt-3 mt-auto">
           <span class="overline text-[10px] block mb-1">Section Notes</span>
-          <textarea
-            v-model="sec.notes"
-            @input="nextSteps.updateNotes(sec.id, sec.notes)"
-            placeholder="Earthy, private logs..."
-            rows="3"
+          <textarea v-model="sec.notes" @input="nextSteps.updateNotes(sec.id, sec.notes)"
+            placeholder="Earthy, private logs..." rows="3"
             class="w-full bg-elevated/30 hover:bg-elevated/50 focus:bg-elevated/70 border border-line/50 rounded-xl p-2.5 text-xs text-ink placeholder:text-ink-3 outline-none resize-none transition-all duration-300 font-sans"
-            :data-testid="`ns-section-notes-${sec.id}`"
-          ></textarea>
+            :data-testid="`ns-section-notes-${sec.id}`"></textarea>
         </div>
 
         <!-- Section footer actions -->
-        <div class="flex items-center justify-between mt-3 text-[10px] text-ink-3 font-mono border-t border-line/30 pt-2 select-none">
-          <span>{{ sec.items.filter(x => !x.done).length }} open · {{ sec.items.filter(x => x.done).length }} done</span>
-          <button 
-            v-if="sec.items.some(x => x.done)" 
-            @click="clearSectionDone(sec.id)" 
+        <div
+          class="flex items-center justify-between mt-3 text-[10px] text-ink-3 font-mono border-t border-line/30 pt-2 select-none">
+          <span>{{sec.items.filter(x => !x.done).length}} open · {{sec.items.filter(x => x.done).length}}
+            done</span>
+          <button v-if="sec.items.some(x => x.done)" @click="clearSectionDone(sec.id)"
             class="hover:text-ink transition-colors flex items-center gap-1"
-            :data-testid="`ns-section-clear-done-${sec.id}`"
-          >
+            :data-testid="`ns-section-clear-done-${sec.id}`">
             Clear completed
           </button>
         </div>
       </div>
     </div>
-    
+
     <EmptyState v-else title="Checklist is empty" hint="Create a new section above to start organizing." />
 
     <!-- Create Section Dialog Modal -->
-    <div v-if="showNewSectionModal" @keydown.window.esc="showNewSectionModal = false" class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="new-section-modal">
+    <div v-if="showNewSectionModal" @keydown.window.esc="showNewSectionModal = false"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="new-section-modal">
       <div class="fixed inset-0 bg-ink/40 backdrop-blur-sm animate-fade-in" @click="showNewSectionModal = false"></div>
-      <form @submit.prevent="createSection" @keydown.meta.enter.prevent="createSection" @keydown.ctrl.enter.prevent="createSection" class="relative w-full max-w-md card p-6 shadow-2xl shadow-black/20 animate-rise-in">
-        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewSectionModal = false"><X class="w-4 h-4" /></button>
+      <form @submit.prevent="createSection" @keydown.meta.enter.prevent="createSection"
+        @keydown.ctrl.enter.prevent="createSection"
+        class="relative w-full max-w-md card p-6 shadow-2xl shadow-black/20 animate-rise-in">
+        <button type="button" class="absolute top-4 right-4 btn-ghost !p-1.5" @click="showNewSectionModal = false">
+          <X class="w-4 h-4" />
+        </button>
         <div class="overline">Horizon</div>
         <h2 class="font-serif text-2xl mt-1 mb-5">Create a next steps section</h2>
         <div class="v-field-group mb-5">
-          <input 
-            ref="newSectionInput"
-            v-model="newSectionTitle" 
-            placeholder=" " 
-            class="v-field-input text-lg font-bold font-sans" 
-            id="new-section-title"
-            required 
-            data-testid="new-section-title-input" 
-          />
+          <input ref="newSectionInput" v-model="newSectionTitle" placeholder=" "
+            class="v-field-input text-lg font-bold font-sans" id="new-section-title" required
+            data-testid="new-section-title-input" />
           <label for="new-section-title" class="v-field-label text-base font-semibold">Section Name *</label>
         </div>
         <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showNewSectionModal = false">Cancel</button>
           <button type="submit" class="btn-primary" data-testid="new-section-save-btn">
-            Create section <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
+            Create section <span
+              class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
         </div>
       </form>
@@ -286,7 +251,8 @@ async function onDrop(targetId) {
 .ns-checkbox {
   appearance: none;
   -webkit-appearance: none;
-  width: 1.0625rem;  /* 17px — slightly larger than before for easier clicking */
+  width: 1.0625rem;
+  /* 17px — slightly larger than before for easier clicking */
   height: 1.0625rem;
   border-radius: 0.3rem;
   border: 2px solid var(--color-line-2, #888);

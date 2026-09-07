@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
+import dayjs from 'dayjs';
 import { db, newId, now, plain } from "@/db";
 
 export const useTasksStore = defineStore("tasks", () => {
@@ -25,15 +26,12 @@ export const useTasksStore = defineStore("tasks", () => {
   };
 
   function sortTasks(list) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTime = today.getTime();
+    const todayStr = dayjs().format('YYYY-MM-DD');
 
     const isTaskSnoozed = (t) => {
       if (!t?.snoozedUntil) return false;
-      const until = new Date(t.snoozedUntil);
-      until.setHours(0, 0, 0, 0);
-      return until.getTime() >= todayTime;
+      const snoozeDate = t.snoozedUntil.length === 10 ? t.snoozedUntil : dayjs(t.snoozedUntil).format('YYYY-MM-DD');
+      return snoozeDate > todayStr;
     };
 
     list.sort((a, b) => {
@@ -131,10 +129,8 @@ export const useTasksStore = defineStore("tasks", () => {
   }
 
   async function snooze(id, days = 1) {
-    const until = new Date();
-    until.setHours(0, 0, 0, 0);
-    until.setDate(until.getDate() + days);
-    await update(id, { snoozedUntil: until.toISOString() });
+    const dateStr = dayjs().add(days, 'day').format('YYYY-MM-DD');
+    await update(id, { snoozedUntil: dateStr });
   }
 
   async function markViewed(id) {

@@ -23,6 +23,7 @@ import { useWorkMeetingsStore } from '@/stores/workMeetings'
 import { useWorkForecastStore } from '@/stores/workForecast'
 import { useWorkTemplatesStore } from '@/stores/workTemplates'
 import { useWorkResourcesStore } from '@/stores/workResources'
+import { toLocalDateStr } from '@/lib/resurface'
 import { useHabitsStore } from '@/stores/habits'
 import { db, seedIfEmpty } from '@/db'
 import { autoBackup, checkAndCaptureOAuthRedirect } from '@/services/drive'
@@ -58,9 +59,9 @@ const openWorkTasksCount = computed(() => {
   const today = dayjs().format('YYYY-MM-DD')
   return workItemsStore.items.filter(w => {
     if (workItemsStore.isCompleted(w.status)) return false
-    let effDate = w.dueDate || ''
+    let effDate = toLocalDateStr(w.dueDate) || ''
     if (w.snoozedUntil) {
-      const snoozeStr = dayjs(w.snoozedUntil).format('YYYY-MM-DD')
+      const snoozeStr = toLocalDateStr(w.snoozedUntil)
       if (!effDate || snoozeStr > effDate) effDate = snoozeStr
     }
     if (!effDate) return false

@@ -25,7 +25,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { ArrowRight, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass, PanelRightClose, PanelRightOpen, Target, Gift, ShieldAlert, RefreshCw, X, Check, Sparkles, Plus, Flame } from 'lucide-vue-next'
+import { ArrowRight, FolderKanban, NotebookPen, Bookmark, BookOpen, Compass, PanelRightClose, PanelRightOpen, Target, Gift, ShieldAlert, RefreshCw, X, Check, Sparkles, Plus, Flame, Quote } from 'lucide-vue-next'
 
 const router = useRouter()
 const tasks = useTasksStore()
@@ -45,6 +45,10 @@ const reviews = useReviewsStore()
 const years = useYearsStore()
 const ui = useUIStore()
 const follows = useFollowsStore()
+const settingsStore = useSettingsStore()
+
+const favoriteQuote = computed(() => settingsStore.get('favorite_quote', ''))
+const favoriteQuoteAuthor = computed(() => settingsStore.get('favorite_quote_author', ''))
 
 const backupAlert = ref(null)
 const retryingBackup = ref(false)
@@ -230,7 +234,7 @@ const priorityWeight = {
 
 const sortedToday = computed(() => {
   currentDate.value
-  return todayFocus(tasks.items).slice(0, 5)
+  return todayFocus(tasks.items).slice(0, 10)
 })
 
 const todayOverline = computed(() => {
@@ -244,8 +248,6 @@ const todayOverline = computed(() => {
   }
   return str
 })
-
-const settingsStore = useSettingsStore()
 
 const stale = computed(() => {
   const customStaleDays = Number(settingsStore.get('resurface_project_stale_days', 14))
@@ -275,7 +277,7 @@ function markClicked(id) {
   clickedMemoryItems.value = new Set(clickedMemoryItems.value)
   localStorage.setItem(`atrium.clicked_memory_${dayjs().format('YYYY-MM-DD')}`, JSON.stringify([...clickedMemoryItems.value]))
   window.dispatchEvent(new CustomEvent('atrium-memory-clicked', { detail: { id } }))
-  
+
   setTimeout(() => {
     sortedMemoryItems.value.add(id)
     sortedMemoryItems.value = new Set(sortedMemoryItems.value)
@@ -369,9 +371,10 @@ async function openDailyJournal() {
     <div v-if="backupAlert"
       class="p-4 mb-6 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-between gap-4 text-xs text-red-900 dark:text-red-200 shadow-sm animate-fade-in"
       data-testid="dash-backup-alert">
-      
+
       <div class="flex items-center gap-3 min-w-0">
-        <div class="w-8 h-8 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+        <div
+          class="w-8 h-8 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
           <ShieldAlert class="w-4 h-4" />
         </div>
         <div class="min-w-0">
@@ -392,13 +395,14 @@ async function openDailyJournal() {
           <span>{{ retryingBackup ? 'Backing up...' : 'Retry Backup' }}</span>
         </button>
 
-        <RouterLink to="/settings"
-          class="btn-primary !py-1.5 !px-3 text-xs flex items-center gap-1"
+        <RouterLink to="/settings" class="btn-primary !py-1.5 !px-3 text-xs flex items-center gap-1"
           data-testid="dash-fix-backup-settings-btn">
-          Fix in Settings <ArrowRight class="w-3.5 h-3.5" />
+          Fix in Settings
+          <ArrowRight class="w-3.5 h-3.5" />
         </RouterLink>
 
-        <button @click="dismissBackupAlert" class="text-red-700/60 dark:text-red-300/60 hover:text-red-700 dark:hover:text-red-200 p-1"
+        <button @click="dismissBackupAlert"
+          class="text-red-700/60 dark:text-red-300/60 hover:text-red-700 dark:hover:text-red-200 p-1"
           title="Dismiss alert">
           <X class="w-4 h-4" />
         </button>
@@ -407,8 +411,8 @@ async function openDailyJournal() {
 
     <PageHeader :overline="todayDate" :title="`${greeting}.`" :sub="'Clear today. Start tomorrow lighter.'">
       <template #right>
-        <button class="btn-ghost flex items-center gap-1.5" @click="openDailyJournal" title="Open or create today's noteworthy entry"
-          data-testid="dash-journal-btn">
+        <button class="btn-ghost flex items-center gap-1.5" @click="openDailyJournal"
+          title="Open or create today's noteworthy entry" data-testid="dash-journal-btn">
           <Plus class="w-4 h-4" /> Something Noteworthy Today <span class="kbd ml-1.5 select-none">⌘2</span>
         </button>
 
@@ -439,23 +443,30 @@ async function openDailyJournal() {
         <section v-if="todayHabits.length" data-testid="section-habits" class="space-y-3">
           <SectionHeader overline="Habits" :show-all-link="false" />
           <div class="flex flex-wrap items-center gap-3">
-            <button v-for="habit in todayHabits" :key="habit.id"
-              @click="habitsStore.toggleHabitLog(habit.id)"
+            <button v-for="habit in todayHabits" :key="habit.id" @click="habitsStore.toggleHabitLog(habit.id)"
               class="px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer select-none"
               :class="[
                 habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD'))
-                  ? 'bg-emerald-500 border-emerald-500 text-canvas shadow-sm'
+                  ? 'bg-canvas border-line-2 text-ink-3 shadow-sm'
                   : 'bg-surface border-line hover:border-line-2 text-ink hover:bg-surface-2'
               ]">
-              <span class="text-sm shrink-0">{{ habit.icon || '⚡' }}</span>
-              <span>{{ habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD')) ? `Logged ${habit.title}` : `Log ${habit.title}` }}</span>
+              <span v-if="habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD'))"
+                class="w-4 h-4 rounded-full bg-ink-3 text-white flex items-center justify-center shrink-0">
+                <Check class="w-2.5 h-2.5 stroke-[3]" />
+              </span>
+              <span v-else class="text-sm shrink-0">{{ habit.icon || '⚡' }}</span>
+              <span>
+                {{ habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD')) ? habit.title : `Log
+                ${habit.title}` }}
+              </span>
             </button>
           </div>
         </section>
 
-        <!-- STALE PROJECTS -->
+        <!-- STALE PROJECTS (DRIFTING) -->
         <section data-testid="section-stale">
-          <SectionHeader overline="Drifting" :hint="stale.length ? 'These projects are drifting. Time to review them to move forward.' : ''"
+          <SectionHeader overline="Drifting"
+            :hint="stale.length ? 'These projects are drifting. Time to review them to move forward.' : ''"
             :show-all-link="false" />
           <div v-if="stale.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <RouterLink v-for="p in stale" :key="p.id" :to="`/projects/${p.id}`"
@@ -468,26 +479,15 @@ async function openDailyJournal() {
               <p v-if="p.description" class="text-sm text-ink-2 line-clamp-2">{{ p.description }}</p>
               <div class="mt-4 text-xs text-ink-3">last touched {{ fromNow(getProjectLastTouched(p)) }} · {{
                 p.openTaskCount
-              }}
+                }}
                 open
                 task<template v-if="p.openTaskCount !== 1">s</template></div>
             </RouterLink>
           </div>
-          <EmptyState v-else title="Everything is in motion" hint="No project has gone quiet." />
-        </section>
-
-        <!-- WEEKLY REFLECTION -->
-        <section data-testid="section-reflection">
-          <SectionHeader overline="Weekly reflection" />
-          <div class="card p-8 flex items-center justify-between gap-6 flex-wrap">
-            <div>
-              <div class="font-serif text-2xl">What did this week make of me?</div>
-              <p class="text-ink-2 mt-2 max-w-md">A quiet review keeps the system honest. Three minutes is enough.</p>
-              <p v-if="lastWeeklyReview" class="text-xs text-ink-3 mt-3">Last reflection {{
-                fromNow(lastWeeklyReview.createdAt)
-              }}</p>
-            </div>
-            <RouterLink to="/reviews" class="btn-primary" data-testid="open-reviews">Open reviews</RouterLink>
+          <div v-else
+            class="p-3.5 px-4 rounded-xl border border-line bg-surface flex items-center gap-2.5 text-xs text-ink-3">
+            <FolderKanban class="w-3.5 h-3.5 text-ink-3/40" />
+            <span>Everything is in motion · No project has gone quiet.</span>
           </div>
         </section>
       </div>
@@ -636,6 +636,19 @@ async function openDailyJournal() {
         </section>
       </div>
     </div>
+
+    <!-- FAVORITE QUOTE FOOTER (Bottom of full page layout) -->
+    <footer v-if="favoriteQuote" data-testid="section-quote"
+      class="mt-16 pt-8 border-t border-line/30 flex justify-center">
+      <div class="text-center space-y-1.5 max-w-xl">
+        <blockquote class="font-serif text-sm text-ink italic leading-relaxed">
+          “{{ favoriteQuote }}”
+        </blockquote>
+        <p v-if="favoriteQuoteAuthor" class="text-[11px] font-serif text-ink-3 italic">
+          — {{ favoriteQuoteAuthor }}
+        </p>
+      </div>
+    </footer>
   </div>
 </template>
 
