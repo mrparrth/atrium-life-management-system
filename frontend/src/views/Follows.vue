@@ -135,15 +135,107 @@ const q = ref('')
 // Utility to figure out handle / name from profile URL
 function getHandleFromUrl(url, fallback = 'unknown') {
   if (!url) return fallback
-  const clean = url.trim().replace(/\/$/, '') // strip trailing slash
-  if (!clean.includes('/')) {
-    // Just a handle was added
-    return clean.startsWith('@') ? clean : '@' + clean
+  const raw = url.trim()
+  if (!raw) return fallback
+
+  // If input doesn't contain a slash, it's just a handle (e.g. "@woodsrach" or "woodsrach")
+  if (!raw.includes('/')) {
+    return raw.startsWith('@') ? raw : '@' + raw
   }
+
   try {
-    const parts = clean.split('/')
-    const last = parts[parts.length - 1]
-    return last.startsWith('@') ? last : '@' + last
+    let parsed
+    try {
+      parsed = new URL(raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`)
+    } catch (_) {
+      const clean = raw.replace(/\/$/, '')
+      const parts = clean.split('/').filter(Boolean)
+      const last = parts[parts.length - 1]
+      return last ? (last.startsWith('@') ? last : '@' + last) : fallback
+    }
+
+    const host = parsed.hostname.toLowerCase()
+    const segments = parsed.pathname.split('/').filter(Boolean)
+
+    if (segments.length === 0) return fallback
+
+    let handle = ''
+
+    // 1. LinkedIn
+    if (host.includes('linkedin.com')) {
+      const inIdx = segments.indexOf('in')
+      const compIdx = segments.indexOf('company')
+      const pubIdx = segments.indexOf('pub')
+      const schoolIdx = segments.indexOf('school')
+
+      if (inIdx !== -1 && segments[inIdx + 1]) {
+        handle = segments[inIdx + 1]
+      } else if (compIdx !== -1 && segments[compIdx + 1]) {
+        handle = segments[compIdx + 1]
+      } else if (pubIdx !== -1 && segments[pubIdx + 1]) {
+        handle = segments[pubIdx + 1]
+      } else if (schoolIdx !== -1 && segments[schoolIdx + 1]) {
+        handle = segments[schoolIdx + 1]
+      }
+    }
+    // 2. Upwork
+    else if (host.includes('upwork.com')) {
+      const flIdx = segments.indexOf('fl')
+      const freeIdx = segments.indexOf('freelancers')
+      if (flIdx !== -1 && segments[flIdx + 1]) {
+        handle = segments[flIdx + 1]
+      } else if (freeIdx !== -1 && segments[freeIdx + 1]) {
+        handle = segments[freeIdx + 1]
+      }
+    }
+    // 3. YouTube
+    else if (host.includes('youtube.com') || host.includes('youtu.be')) {
+      const atSeg = segments.find(s => s.startsWith('@'))
+      if (atSeg) {
+        handle = atSeg
+      } else {
+        const cIdx = segments.indexOf('c')
+        const userIdx = segments.indexOf('user')
+        const chanIdx = segments.indexOf('channel')
+        if (cIdx !== -1 && segments[cIdx + 1]) handle = segments[cIdx + 1]
+        else if (userIdx !== -1 && segments[userIdx + 1]) handle = segments[userIdx + 1]
+        else if (chanIdx !== -1 && segments[chanIdx + 1]) handle = segments[chanIdx + 1]
+      }
+    }
+
+    // 4. Any URL with explicit `@username` segment (e.g. Threads, X, Medium, YouTube)
+    if (!handle) {
+      const atSeg = segments.find(s => s.startsWith('@'))
+      if (atSeg) {
+        handle = atSeg
+      }
+    }
+
+    // 5. Generic fallback for X, Instagram, Threads, Github, etc.
+    if (!handle) {
+      const subPages = new Set([
+        'recent-activity', 'all', 'posts', 'details', 'experience', 'reels', 'videos',
+        'status', 'with_replies', 'likes', 'followers', 'following', 'feed', 'about',
+        'photos', 'tagged', 'saved', 'highlights', 'home', 'explore', 'notifications',
+        'messages', 'settings', 'p', 'reel', 'stories', 'direct', 'post'
+      ])
+
+      for (const seg of segments) {
+        if (!subPages.has(seg.toLowerCase())) {
+          handle = seg
+          break
+        }
+      }
+    }
+
+    if (!handle && segments.length > 0) {
+      handle = segments[0]
+    }
+
+    if (!handle) return fallback
+
+    handle = decodeURIComponent(handle)
+    return handle.startsWith('@') ? handle : '@' + handle
   } catch (_) {
     return fallback
   }

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '@/stores/notes'
 import { useProjectsStore } from '@/stores/projects'
 import { useUIStore } from '@/stores/ui'
@@ -11,6 +11,7 @@ import { wikilinkPreprocess, backlinksOf, findWikiTargets, resolveTitle } from '
 import { ArrowLeft, Trash2, Edit3, Save, Link2 } from 'lucide-vue-next'
 
 const props = defineProps({ id: String })
+const route = useRoute()
 const router = useRouter()
 const notes = useNotesStore()
 const projects = useProjectsStore()
@@ -33,11 +34,19 @@ function load() {
     notes.markViewed(note.value.id)
     draftTitle.value = note.value.title
     draftBody.value = note.value.body
+    if (route.query.edit === 'true' || route.query.edit === '1') {
+      editing.value = true
+    }
   }
 }
 
 onMounted(load)
-watch(() => props.id, load)
+watch(() => [props.id, route.query.edit], ([newId, newEdit]) => {
+  load()
+  if (newEdit === 'true' || newEdit === '1') {
+    editing.value = true
+  }
+})
 
 const html = computed(() => {
   const body = note.value?.body || ''
@@ -57,6 +66,9 @@ const incomingLinks = computed(() => backlinksOf(note.value, notes.items))
 async function save() {
   await notes.update(note.value.id, { title: draftTitle.value, body: draftBody.value })
   editing.value = false
+  const query = { ...route.query }
+  delete query.edit
+  router.replace({ query })
 }
 
 async function del() {
@@ -78,30 +90,32 @@ function onArticleClick(e) {
 
 <template>
   <div>
-    <div v-if="note" class="px-8 md:px-12 py-10 max-w-4xl mx-auto transition-all duration-300" data-testid="note-detail">
-      <button @click="router.back()" class="btn-ghost mb-4 text-sm">
-        <ArrowLeft class="w-3.5 h-3.5" /> Back
-      </button>
-      <div class="flex items-center justify-end gap-2 mb-4">
-        <button v-if="!editing" class="btn-ghost" @click="startEdit" data-testid="note-edit">
-          <Edit3 class="w-4 h-4" /> Edit
+    <div v-if="note" class="px-6 md:px-10 pt-3 pb-10 max-w-4xl mx-auto transition-all duration-300" data-testid="note-detail">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <button @click="router.back()" class="btn-ghost text-xs">
+          <ArrowLeft class="w-3.5 h-3.5" /> Back
         </button>
-        <button v-else class="btn-primary" @click="save" data-testid="note-save">
-          <Save class="w-4 h-4" /> Save
-        </button>
-        <button class="btn-ghost !text-pri-critical" @click="del" data-testid="note-delete">
-          <Trash2 class="w-4 h-4" />
-        </button>
+        <div class="flex items-center gap-2">
+          <button v-if="!editing" class="btn-ghost" @click="startEdit" data-testid="note-edit">
+            <Edit3 class="w-4 h-4" /> Edit
+          </button>
+          <button v-else class="btn-primary" @click="save" data-testid="note-save">
+            <Save class="w-4 h-4" /> Save
+          </button>
+          <button class="btn-ghost !text-pri-critical" @click="del" data-testid="note-delete">
+            <Trash2 class="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <template v-if="editing">
-        <input v-model="draftTitle" class="input-soft text-4xl font-serif mb-6" />
-        <TiptapEditor v-model="draftBody" />
+        <input v-model="draftTitle" placeholder="Note title..." class="w-full bg-transparent font-serif text-3xl md:text-4xl font-semibold text-ink focus:outline-none placeholder:text-ink-3/40 mb-4 pb-1 border-b border-transparent focus:border-line-2 transition-colors" />
+        <TiptapEditor v-model="draftBody" heightClass="min-h-[450px]" />
       </template>
 
       <template v-else>
-        <h1 class="font-serif text-4xl md:text-5xl tracking-tight leading-none mb-3">{{ note.title }}</h1>
-        <div v-if="linkedProject" class="text-sm text-ink-2 mb-6">Linked to <RouterLink
+        <h1 @click="startEdit" class="font-serif text-3xl md:text-4xl font-semibold tracking-tight leading-tight mb-3 cursor-pointer hover:text-pri-strategic transition-colors" title="Click to edit title">{{ note.title }}</h1>
+        <div v-if="linkedProject" class="text-sm text-ink-2 mb-4">Linked to <RouterLink
             :to="`/projects/${linkedProject.id}`" class="text-ink underline decoration-line-2 underline-offset-4">{{
               linkedProject.title }}</RouterLink>
         </div>

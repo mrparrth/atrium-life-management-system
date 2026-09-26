@@ -22,7 +22,7 @@ import ResurfacingCockpit from '@/components/work/ResurfacingCockpit.vue'
 import ScopeCreepWidget from '@/components/work/ScopeCreepWidget.vue'
 
 import {
-  ArrowRight, Plus, FolderKanban, Users, Target, Receipt,
+  ArrowRight, Plus, PlusCircle, FolderKanban, Users, Target, Receipt,
   BarChart2, ShieldAlert, Sparkles, Zap, Award, ChevronRight, Calendar, FileText,
   RefreshCw, Video, X
 } from 'lucide-vue-next'
@@ -307,40 +307,44 @@ onUnmounted(() => {
           </SectionHeader>
 
           <!-- Quick item add -->
-          <div class="p-2 mb-4 border border-line bg-canvas rounded-xl flex gap-2 flex-wrap items-center">
-            <input v-model="quickTitle" @keyup.enter="addQuickWork" placeholder="Add quick work item..."
-              class="dashboard-quick-input bg-surface border border-line rounded-md px-3 h-8 focus:outline-none focus:border-line-2 text-sm placeholder:text-ink-3 flex-1 min-w-[200px]" />
-            <span class="kbd text-[10px] select-none text-ink-3 mr-1">⌘3</span>
+          <div class="p-2 mb-6 border border-line/60 bg-surface/40 rounded-2xl flex gap-2.5 flex-wrap items-center shadow-2xs">
+            <div class="flex-1 min-w-[220px] relative flex items-center bg-surface border border-line/60 rounded-xl px-3.5 h-10 focus-within:border-pri-strategic shadow-2xs">
+              <PlusCircle class="w-4 h-4 text-ink-3 mr-2 shrink-0" />
+              <input v-model="quickTitle" @keyup.enter="addQuickWork" placeholder="Add quick work item..."
+                class="bg-transparent outline-none text-sm placeholder:text-ink-3 flex-1 text-ink" />
+              <span class="kbd text-[10px] select-none text-ink-3 ml-2 shrink-0">⌘3</span>
+            </div>
+
             <!-- Custom Combobox for Client -->
-            <div class="relative min-w-[150px] sm:min-w-[200px]">
+            <div class="relative min-w-[160px] sm:min-w-[200px]">
               <button @click="showClientDropdown = !showClientDropdown" type="button"
-                class="w-full text-left text-xs bg-surface border border-line rounded-md px-2.5 h-8 text-ink flex items-center justify-between gap-1.5 focus:outline-none hover:border-line-2 transition-colors">
+                class="w-full text-left text-xs bg-surface border border-line/60 rounded-xl px-3 h-10 text-ink flex items-center justify-between gap-2 focus:outline-none hover:border-line-2 transition-colors shadow-2xs">
                 <span class="truncate">{{ selectedClientName }}</span>
-                <span class="text-ink-3">▼</span>
+                <span class="text-ink-3 text-[10px]">▼</span>
               </button>
 
               <div v-if="showClientDropdown" class="fixed inset-0 z-10" @click="showClientDropdown = false"></div>
 
               <div v-if="showClientDropdown"
-                class="absolute right-0 mt-1 w-full bg-surface border border-line rounded-md shadow-lg z-20 p-2 space-y-1.5 min-w-[220px]">
+                class="absolute right-0 mt-1.5 w-full bg-surface border border-line rounded-xl shadow-lg z-20 p-2 space-y-1.5 min-w-[220px]">
                 <input v-model="clientSearchQuery" placeholder="Search client..."
-                  class="w-full text-xs bg-canvas border border-line rounded px-2 py-1 focus:outline-none focus:border-line-2"
+                  class="w-full text-xs bg-canvas border border-line/60 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-pri-strategic"
                   @click.stop />
-                <div class="max-h-36 overflow-y-auto space-y-0.5">
-
+                <div class="max-h-40 overflow-y-auto space-y-0.5">
                   <button v-for="c in filteredClientsForDropdown" :key="c.id" @click="selectClientFromDropdown(c.id)"
                     type="button"
-                    class="w-full text-left text-xs px-2.5 py-1 rounded hover:bg-canvas text-ink transition-colors block truncate"
+                    class="w-full text-left text-xs px-2.5 py-1.5 rounded-lg hover:bg-canvas text-ink transition-colors block truncate"
                     :class="{ 'font-semibold bg-canvas': selectedClient === c.id }">
                     {{ c.name }}
                   </button>
-                  <div v-if="filteredClientsForDropdown.length === 0" class="text-[10px] text-ink-3 px-2 py-1">
+                  <div v-if="filteredClientsForDropdown.length === 0" class="text-[10px] text-ink-3 px-2.5 py-1.5">
                     No matches found
                   </div>
                 </div>
               </div>
             </div>
-            <button @click="addQuickWork" class="btn-primary h-8 !py-0 !px-4 text-xs !rounded-md">Add</button>
+
+            <button @click="addQuickWork" class="btn-primary h-10 !py-0 !px-5 text-xs !rounded-xl bg-ink text-canvas font-semibold shadow-2xs">Add</button>
           </div>
 
           <div class="space-y-6">

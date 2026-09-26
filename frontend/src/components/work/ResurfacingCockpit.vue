@@ -126,29 +126,6 @@ const alerts = computed(() => {
     }
   })
 
-  // 3. Stale Work Items (untouched for 14 days)
-  itemsStore.items.forEach(item => {
-    const key = `work-item-stale-${item.id}`
-    if (isSnoozed(key)) return
-    if (!itemsStore.isCompleted(item.status)) {
-      const daysSince = dayjs().diff(dayjs(item.updatedAt), 'day')
-      if (daysSince >= 14) {
-        list.push({
-          id: key,
-          type: 'work_item',
-          targetId: item.id,
-          title: `Untouched work: ${item.title}`,
-          description: `Paused for ${daysSince} days. Review if this is still strategic or needs snoozing/archiving.`,
-          actionText: 'Touch (mark active)',
-          action: () => {
-            itemsStore.update(item.id, { updatedAt: new Date().toISOString() })
-            ui.showToast('Item bumped to active status', 'success')
-          }
-        })
-      }
-    }
-  })
-
   // 4. Stale Leads
   leadsStore.items.forEach(lead => {
     const key = `lead-stale-${lead.id}`

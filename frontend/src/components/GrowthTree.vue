@@ -274,16 +274,6 @@ const workAlertsCount = computed(() => {
     if (inv.status !== 'paid' && inv.dueDate < today) count++
   })
 
-  // 3. Stale Work Items
-  workItemsStore.items.forEach(item => {
-    const key = `work-item-stale-${item.id}`
-    if (isSnoozed(key)) return
-    if (!workItemsStore.isCompleted(item.status)) {
-      const daysSince = currentDate.value.diff(dayjs(item.updatedAt), 'day')
-      if (daysSince >= 14) count++
-    }
-  })
-
   // 4. Stale Leads
   workLeadsStore.items.forEach(lead => {
     const key = `lead-stale-${lead.id}`

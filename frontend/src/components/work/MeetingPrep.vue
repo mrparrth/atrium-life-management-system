@@ -244,7 +244,7 @@ async function startMeetingNote(meeting) {
 
   const existing = notesStore.items.find(n => n.title === title)
   if (existing) {
-    router.push(`/work/notes?id=${existing.id}`)
+    router.push({ path: '/work/notes', query: { id: existing.id, edit: 'true' } })
     return
   }
 
@@ -268,7 +268,7 @@ async function startMeetingNote(meeting) {
   })
 
   ui.showToast('Meeting note initialized', 'success')
-  router.push(`/work/notes?id=${created.id}`)
+  router.push({ path: '/work/notes', query: { id: created.id, edit: 'true' } })
 }
 </script>
 

@@ -21,7 +21,7 @@ const props = defineProps({
   },
   heightClass: {
     type: String,
-    default: 'h-[calc(100vh-260px)] min-h-[500px]'
+    default: 'min-h-[350px]'
   }
 })
 
@@ -209,7 +209,7 @@ onMounted(() => {
     ],
     editorProps: {
       attributes: {
-        class: 'focus:outline-none min-h-[400px] h-full outline-none max-w-none text-ink prose-soft'
+        class: 'focus:outline-none min-h-[350px] outline-none max-w-none text-ink prose-soft'
       },
       handleKeyDown(view, event) {
         if (showSlashMenu.value) {
@@ -285,7 +285,7 @@ onUnmounted(() => {
 
 <template>
   <div @click="editor?.commands.focus()"
-    :class="['relative w-full border border-line bg-surface/30 rounded-2xl p-6 flex flex-col transition-all focus-within:border-pri-strategic focus-within:bg-surface/50', heightClass]">
+    :class="['relative w-full border border-line bg-surface/30 rounded-2xl p-4 md:p-5 flex flex-col transition-all focus-within:border-pri-strategic focus-within:bg-surface/50', heightClass]">
 
     <!-- Help Button -->
     <button @click.stop="showHelpModal = true" type="button"
@@ -294,7 +294,7 @@ onUnmounted(() => {
       <HelpCircle class="w-3.5 h-3.5" />
     </button>
 
-    <EditorContent :editor="editor" class="editor-content flex-1 overflow-y-auto" />
+    <EditorContent :editor="editor" class="editor-content flex-1" />
 
     <!-- Slash command popup -->
     <div v-if="showSlashMenu && filteredCommands.length"
@@ -422,17 +422,17 @@ onUnmounted(() => {
   font-style: italic;
 }
 
-/* Ensure editor stretches to full height of card container */
+/* Ensure editor stretches and grows naturally */
 .editor-content {
   display: flex;
   flex-direction: column;
-  flex: 1 1 0%;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: 250px;
 }
 
 .ProseMirror {
-  flex: 1 1 0%;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: 250px;
 }
 
 /* Custom bullet & ordered lists style within editor context */

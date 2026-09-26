@@ -120,6 +120,73 @@ const clientLocalTime = computed(() => {
 
 const quadrant = computed(() => itemsStore.getQuadrant(props.item))
 
+const clientInitials = computed(() => {
+  if (!client.value || !client.value.name) return ''
+  const parts = client.value.name.trim().split(/\s+/)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return parts[0].slice(0, 2).toUpperCase()
+})
+
+const clientAvatarBg = computed(() => {
+  if (!client.value || !client.value.name) return 'bg-[#ff8da1] text-white'
+  const name = client.value.name
+  const colors = [
+    'bg-[#ff8da1] text-white',
+    'bg-[#ffbe5b] text-white',
+    'bg-[#8b7ff7] text-white',
+    'bg-[#4dd0a1] text-white',
+    'bg-[#54c3f1] text-white',
+    'bg-[#f085e6] text-white'
+  ]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const index = Math.abs(hash) % colors.length
+  return colors[index]
+})
+
+const accentBarColor = computed(() => {
+  const status = props.item.status || 'in_progress'
+  if (itemsStore.isCompleted(status)) return 'bg-neutral-300 dark:bg-neutral-700'
+  if (isOverdue.value || status === 'critical' || quadrant.value === 'critical') return 'bg-[#ff3b68]'
+  if (status === 'on_hold') return 'bg-[#ff9500]'
+  if (status === 'waiting_feedback' || status === 'ask_milestone') return 'bg-[#3478f6]'
+  return 'bg-[#10b981]'
+})
+
+const cardBgStyle = computed(() => {
+  if (itemsStore.isCompleted(props.item.status)) return 'bg-surface/50 opacity-60 border-line/60'
+  const status = props.item.status || 'in_progress'
+  if (isOverdue.value || status === 'critical' || quadrant.value === 'critical' || status === 'in_progress') {
+    return 'bg-[#fff5f7] dark:bg-rose-950/20 border-[#ffe2e8] dark:border-rose-900/40'
+  }
+  if (status === 'on_hold') {
+    return 'bg-[#fffdf5] dark:bg-amber-950/20 border-[#fff3d6] dark:border-amber-900/40'
+  }
+  return 'bg-surface border-line/70 hover:border-line-2 shadow-2xs'
+})
+
+const formattedTags = computed(() => {
+  const tagsSet = new Set()
+  if (client.value && Array.isArray(client.value.tags)) {
+    client.value.tags.forEach(t => tagsSet.add(t.replace(/^#/, '')))
+  }
+  if (props.item.tags) {
+    if (Array.isArray(props.item.tags)) {
+      props.item.tags.forEach(t => tagsSet.add(t.replace(/^#/, '')))
+    } else if (typeof props.item.tags === 'string') {
+      props.item.tags.split(',').forEach(t => {
+        const clean = t.trim().replace(/^#/, '')
+        if (clean) tagsSet.add(clean)
+      })
+    }
+  }
+  return Array.from(tagsSet)
+})
+
 const priorityClass = computed(() => {
   switch (quadrant.value) {
     case 'critical':
@@ -301,24 +368,42 @@ watch(showEditModal, (isOpen) => {
 </script>
 
 <template>
-  <div class="card p-4 flex items-center justify-between gap-4 border transition-all duration-300 hover:shadow-sm"
-    :class="[itemsStore.isCompleted(props.item.status) ? 'opacity-60' : '', timerActive ? 'border-pri-strategic shadow-md shadow-pri-strategic/5' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
+  <div class="relative rounded-2xl p-4 md:p-4.5 border transition-all duration-300 hover:shadow-xs"
+    :class="[cardBgStyle, timerActive ? 'border-pri-strategic shadow-md shadow-pri-strategic/5' : '', (showMenu || showStatusMenu) ? 'z-30' : '']"
     data-testid="work-item-card">
 
-    <div class="flex items-start gap-3 flex-1 min-w-0">
-      <!-- Clickable Title & Details for Edit Modal -->
-      <div class="min-w-0 flex-1 cursor-pointer" @click="showEditModal = true">
-        <div class="flex items-center gap-2 flex-wrap mb-1">
-          <!-- Client Tag -->
-          <span v-if="client" @click.stop="goToClientPage"
-            class="text-[10px] uppercase tracking-wider font-semibold text-ink-3 bg-canvas border border-line px-2 py-0.5 rounded-full hover:bg-line/60 hover:text-ink transition-all cursor-pointer"
+    <!-- FAR LEFT VERTICAL ACCENT STRIPE -->
+    <div class="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+      <div class="absolute left-0 top-0 bottom-0 w-1" :class="accentBarColor"></div>
+    </div>
+
+    <div class="pl-1.5 space-y-2">
+      <!-- TOP METADATA ROW: CLIENT, TIME, STATUS, TAGS, DUE DATE, FOLDER LINK -->
+      <div class="flex items-center justify-between gap-3 text-xs flex-wrap sm:flex-nowrap">
+        <!-- LEFT: CLIENT AVATAR, NAME, TIME, STATUS PILL & TAGS -->
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+          <!-- Client Circle Avatar & Name -->
+          <div v-if="client" @click.stop="goToClientPage"
+            class="flex items-center gap-1.5 cursor-pointer group shrink-0"
             title="Go to client details">
-            {{ client.name }} <template v-if="clientLocalTime">· {{ clientLocalTime }} Local</template>
-          </span>
-          <!-- Status Tag with Dropdown Menu (Rightmost in labels list) -->
-          <div class="relative inline-block">
+            <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 shadow-2xs opacity-90"
+              :class="clientAvatarBg">
+              {{ clientInitials }}
+            </span>
+            <span class="text-[11px] font-medium uppercase tracking-wider text-ink-3 group-hover:text-ink-2 transition-colors">
+              {{ client.name }}
+            </span>
+            <span v-if="clientLocalTime" class="text-[11px] text-ink-3/80">
+              · {{ clientLocalTime }} LOCAL
+            </span>
+          </div>
+
+          <span v-if="client" class="text-line-2 text-xs select-none">|</span>
+
+          <!-- Status Dropdown Pill -->
+          <div class="relative inline-block shrink-0">
             <button @click.stop="showStatusMenu = !showStatusMenu"
-              class="text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1.5 hover:opacity-85 transition-all cursor-pointer"
+              class="text-[11px] font-medium px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 hover:opacity-85 transition-all cursor-pointer"
               :class="statusStyle.color" title="Change status">
               <span class="w-1.5 h-1.5 rounded-full" :class="statusStyle.dotColor"></span>
               {{ statusStyle.label }}
@@ -338,10 +423,7 @@ watch(showEditModal, (isOpen) => {
               </button>
 
               <!-- In Progress Group -->
-              <div
-                class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
-                In
-                progress</div>
+              <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">In progress</div>
               <button v-for="st in statusGroups.in_progress" :key="st.key" @click.stop="updateStatus(st.key)"
                 class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
@@ -349,9 +431,7 @@ watch(showEditModal, (isOpen) => {
               </button>
 
               <!-- Complete Group -->
-              <div
-                class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
-                Complete</div>
+              <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">Complete</div>
               <button v-for="st in statusGroups.complete" :key="st.key" @click.stop="updateStatus(st.key)"
                 class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
@@ -360,96 +440,101 @@ watch(showEditModal, (isOpen) => {
             </div>
           </div>
 
-          <!-- Consolidated Client Tags Badge (Placed after status) -->
-          <span v-if="client && client.tags && client.tags.length"
-            class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full">
-            {{ client.tags.map(t => '#' + t).join(' ') }}
-          </span>
+          <!-- Hashtag Tag Pills -->
+          <template v-if="formattedTags.length">
+            <span v-for="tag in formattedTags" :key="tag"
+              class="text-[11px] font-medium text-indigo-600 dark:text-indigo-300 bg-[#eeebff] dark:bg-indigo-950/40 border border-[#dcd6ff] dark:border-indigo-800/40 px-2.5 py-0.5 rounded-full">
+              #{{ tag }}
+            </span>
+          </template>
         </div>
 
-        <h4 class="font-medium text-ink text-sm leading-snug"
-          :class="{ 'line-through text-ink-3': itemsStore.isCompleted(props.item.status) }">
-          {{ props.item.title }}
-        </h4>
-        <p v-if="props.item.description" class="text-xs text-ink-2 mt-1 line-clamp-1">
-          {{ props.item.description }}
-        </p>
+        <!-- RIGHT: DUE DATE & DRIVE FOLDER LINK -->
+        <div class="flex items-center gap-2.5 shrink-0 text-[11px]">
+          <!-- Due Date Alert -->
+          <span v-if="props.item.dueDate" class="flex items-center gap-1 font-semibold"
+            :class="isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-rose-500/90 dark:text-rose-400/90'">
+            <AlertCircle class="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            Due {{ dayjs(props.item.dueDate).format('MMM D') }}
+          </span>
 
-        <!-- Metrics & Meta -->
-        <div class="flex items-center gap-4 text-[11px] text-ink-3 mt-2 flex-wrap">
-          <span v-if="props.item.dueDate" class="flex items-center gap-1 text-ink-2 font-medium" :class="{ 'text-pri-critical font-bold': isOverdue }">
-            <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
-            <Calendar v-else class="w-3.5 h-3.5" /> Due {{ dayjs(props.item.dueDate).format('MMM D') }}
+          <!-- Closed Date Badge -->
+          <span v-if="itemsStore.isCompleted(props.item.status)" class="flex items-center gap-1 text-pri-strategic font-semibold">
+            <CheckCircle2 class="w-3.5 h-3.5" /> Closed {{ dayjs(props.item.closedDate || props.item.updatedAt).format('MMM D') }}
           </span>
-          <!-- Closed date badge for completed items -->
-          <span v-if="itemsStore.isCompleted(props.item.status)"
-            class="flex items-center gap-1 text-pri-strategic font-semibold">
-            <CheckCircle2 class="w-3.5 h-3.5" /> Closed {{ dayjs(props.item.closedDate ||
-              props.item.updatedAt).format('MMM D, YYYY') }}
-          </span>
-          <span v-if="props.item.snoozedUntil && !dayjs(props.item.snoozedUntil).isBefore(dayjs(), 'day')" class="italic text-pri-interruptive">
-            Snoozed until {{ dayjs(props.item.snoozedUntil).format('MMM D') }}
-          </span>
+
+          <span v-if="props.item.dueDate || itemsStore.isCompleted(props.item.status)" class="text-line-2 text-xs select-none">|</span>
 
           <!-- Drive Folder Link -->
           <div @click.stop class="inline-flex items-center">
             <a v-if="driveFolderUrl" :href="driveFolderUrl" target="_blank"
-              class="text-[10px] text-pri-strategic hover:underline flex items-center gap-1 bg-pri-strategic-bg/20 border border-pri-strategic-bd/20 px-2 py-0.5 rounded">
-              <HardDrive class="w-3 h-3" /> Folder
+              class="text-[11px] text-ink-2 hover:text-ink flex items-center gap-1 font-medium transition-colors">
+              <HardDrive class="w-3.5 h-3.5 text-ink-3" /> Folder
             </a>
             <button v-else-if="!itemsStore.isCompleted(props.item.status)" @click="triggerLinkDriveFolder"
-              class="text-[10px] text-ink-3 hover:text-ink flex items-center gap-0.5">
+              class="text-[11px] text-ink-3 hover:text-ink flex items-center gap-1 font-medium transition-colors">
               + Link Drive
             </button>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Actions -->
-    <div class="flex items-center gap-2 shrink-0">
-      <!-- Checkbox / Mark Done -->
-      <button @click.stop="toggleStatus"
-        class="text-ink-3 hover:text-ink shrink-0 transition-colors mr-1 cursor-pointer">
-        <CheckCircle2 v-if="itemsStore.isCompleted(props.item.status)"
-          class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
-        <Circle v-else class="w-5 h-5" />
-      </button>
+      <!-- BOTTOM ROW: TASK TITLE, DESCRIPTION & RIGHT ACTION BUTTONS -->
+      <div class="flex items-start justify-between gap-4">
+        <!-- Title & Description (Clickable to Edit) -->
+        <div class="min-w-0 flex-1 cursor-pointer" @click="showEditModal = true">
+          <h4 class="font-semibold text-base text-ink leading-snug font-sans"
+            :class="{ 'line-through text-ink-3': itemsStore.isCompleted(props.item.status) }">
+            {{ props.item.title }}
+          </h4>
+          <p v-if="props.item.description" class="text-xs text-ink-3 mt-0.5 line-clamp-1 leading-snug">
+            {{ props.item.description }}
+          </p>
+        </div>
 
-      <!-- Easy One-Click Snooze Button -->
-      <VTooltip v-if="!itemsStore.isCompleted(props.item.status)" text="Snooze until tomorrow">
-        <button @click.stop="oneClickSnooze"
-          class="p-2 rounded-xl border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm flex items-center justify-center">
-          <BellOff class="w-4 h-4" />
-        </button>
-      </VTooltip>
+        <!-- Action Icons Group -->
+        <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+          <!-- Circle Mark Done Button -->
+          <VTooltip :text="itemsStore.isCompleted(props.item.status) ? 'Mark incomplete' : 'Mark complete'">
+            <button @click.stop="toggleStatus"
+              class="p-1 text-ink-3 hover:text-ink flex items-center justify-center cursor-pointer transition-colors shrink-0">
+              <CheckCircle2 v-if="itemsStore.isCompleted(props.item.status)" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
+              <Circle v-else class="w-5 h-5" />
+            </button>
+          </VTooltip>
 
-      <!-- Snooze / Delete Menu -->
-      <div class="relative">
-        <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-2">
-          <MoreVertical class="w-4 h-4 text-ink-3" />
-        </button>
+          <!-- Easy Snooze Bell Button -->
+          <VTooltip v-if="!itemsStore.isCompleted(props.item.status)" text="Snooze until tomorrow">
+            <button @click.stop="oneClickSnooze"
+              class="w-7 h-7 rounded-lg border border-line bg-surface/80 text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-2xs flex items-center justify-center cursor-pointer shrink-0">
+              <BellOff class="w-3.5 h-3.5" />
+            </button>
+          </VTooltip>
 
-        <div v-if="showMenu"
-          class="absolute right-0 top-10 w-40 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in">
-          <div class="overline px-2.5 py-1">Snooze options</div>
-          <button @click.stop="snooze(1)"
-            class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">Tomorrow</button>
-          <button @click.stop="snooze(3)"
-            class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">3
-            Days</button>
-          <button @click.stop="snooze(7)"
-            class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">1
-            Week</button>
-          <div class="border-t border-line my-1"></div>
-          <button @click.stop="showEditModal = true"
-            class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-            <Edit3 class="w-3.5 h-3.5 text-ink-3" /> Edit Details
-          </button>
-          <button @click.stop="deleteItem"
-            class="w-full text-left text-xs text-pri-critical hover:bg-pri-critical-bg/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-            <Trash class="w-3.5 h-3.5" /> Delete
-          </button>
+          <!-- More Options (Three Dots) -->
+          <div class="relative shrink-0">
+            <VTooltip text="More options" position="top-right">
+              <button @click.stop="showMenu = !showMenu"
+                class="p-1 text-ink-3 hover:text-ink flex items-center justify-center cursor-pointer transition-colors shrink-0">
+                <MoreVertical class="w-5 h-5" />
+              </button>
+            </VTooltip>
+
+            <div v-if="showMenu"
+              class="absolute right-0 top-9 w-40 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
+              <div class="overline px-2.5 py-1">Snooze options</div>
+              <button @click.stop="snooze(1)" class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">Tomorrow</button>
+              <button @click.stop="snooze(3)" class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">3 Days</button>
+              <button @click.stop="snooze(7)" class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">1 Week</button>
+              <div class="border-t border-line my-1"></div>
+              <button @click.stop="showEditModal = true" class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                <Edit3 class="w-3.5 h-3.5 text-ink-3" /> Edit Details
+              </button>
+              <button @click.stop="deleteItem" class="w-full text-left text-xs text-pri-critical hover:bg-pri-critical-bg/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                <Trash class="w-3.5 h-3.5" /> Delete
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

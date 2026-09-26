@@ -189,3 +189,14 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - FEATURE: Standardized `snoozedUntil` to be stored and evaluated strictly as a 10-character `YYYY-MM-DD` calendar date string. Updated `toLocalDateStr` to use `val.slice(0, 10)` for ISO strings, eliminating UTC time-of-day conversions that previously shifted UTC evening snoozed tasks into tomorrow ("This Week" section).
 - BUGFIX: Added missing `import dayjs from 'dayjs'` to `stores/tasks.js` to fix runtime `ReferenceError` during task sorting.
 - DOCS: Updated context.md checkpoint log.
+
+### September 26, 2026
+- REDESIGN: Overhauled Work Item Cards (`WorkItemCard.vue`) with custom left accent bars, soft tinted backgrounds, client initials avatar badge, and hashtag pills.
+- UX: Reduced title boldness (`font-semibold text-base`), reduced top padding, and adjusted client name typography.
+- UX: Configured note creation from Client pages (`WorkClientDetail.vue`) to open notes in Edit mode by default with auto-growing text containers.
+- BUGFIX: Fixed social link parser where URLs containing `/all/` incorrectly extracted `@all` as user mentions.
+- UX: Removed outer border rings from completion checkbox and 3-dots option menu buttons across task cards.
+- UX: Added `<VTooltip>` to status and options buttons with right-aligned (`position="top-right"`) positioning support to prevent edge clipping.
+- UX: Resolved dropdown menu clipping by removing `overflow-hidden` from `WorkItemCard.vue` container and wrapping the left accent stripe in a isolated `pointer-events-none` clipping mask overlay. Elevated card z-index (`z-30`) when dropdown menus are open.
+- DOCS: Updated context.md checkpoint log.
+

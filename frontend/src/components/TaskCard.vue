@@ -117,7 +117,7 @@ onUnmounted(() => {
 <template>
   <div v-if="!singleLine"
     class="card p-4 flex flex-col gap-2.5 border transition-all duration-300 hover:shadow-sm"
-    :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
+    :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '', (showMenu || showStatusMenu) ? 'z-30' : '']"
     :data-testid="`task-card-${task.id}`">
 
     <div class="flex items-center justify-between gap-4 w-full">
@@ -232,9 +232,11 @@ onUnmounted(() => {
 
         <!-- Snooze / Delete Menu -->
         <div class="relative">
-          <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-2" data-testid="task-menu-btn">
-            <MoreVertical class="w-4 h-4 text-ink-3" />
-          </button>
+          <VTooltip text="More options" position="top-right">
+            <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-2" data-testid="task-menu-btn">
+              <MoreVertical class="w-4 h-4 text-ink-3" />
+            </button>
+          </VTooltip>
 
           <div v-if="showMenu"
             class="absolute right-0 top-10 w-40 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
@@ -394,9 +396,11 @@ onUnmounted(() => {
 
         <!-- Snooze / Delete Menu -->
         <div class="relative">
-          <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-1.5" data-testid="task-menu-btn">
-            <MoreVertical class="w-3.5 h-3.5 text-ink-3" />
-          </button>
+          <VTooltip text="More options" position="top-right">
+            <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-1.5" data-testid="task-menu-btn">
+              <MoreVertical class="w-3.5 h-3.5 text-ink-3" />
+            </button>
+          </VTooltip>
 
           <div v-if="showMenu"
             class="absolute right-0 top-8 w-40 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">

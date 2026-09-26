@@ -173,7 +173,7 @@ async function submitNewNote() {
   })
   showAddNoteModal.value = false
   ui.showToast('Note created', 'success')
-  router.push(`/work/notes?id=${created.id}`)
+  router.push({ path: '/work/notes', query: { id: created.id, edit: 'true' } })
 }
 
 // Redirect to draft invoice creator
@@ -593,7 +593,7 @@ watch(showAddResourceModal, (open) => {
               </button>
             </div>
             <div v-if="clientNotes.length" class="space-y-2">
-              <div v-for="n in clientNotes.slice(0, 3)" :key="n.id" @click="router.push(`/work/notes?id=${n.id}`)"
+              <div v-for="n in clientNotes.slice(0, 3)" :key="n.id" @click="router.push({ path: '/work/notes', query: { id: n.id, edit: 'true' } })"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center gap-2.5 group">
                 <FileText class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
                 <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{
@@ -743,7 +743,7 @@ watch(showAddResourceModal, (open) => {
       </div>
 
       <div v-if="clientNotes.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div v-for="n in clientNotes" :key="n.id" @click="router.push(`/work/notes?id=${n.id}`)"
+        <div v-for="n in clientNotes" :key="n.id" @click="router.push({ path: '/work/notes', query: { id: n.id, edit: 'true' } })"
           class="card p-4 border bg-surface hover:border-line-2 cursor-pointer transition-all duration-300">
           <div class="flex items-center gap-2">
             <FileText class="w-4 h-4 text-ink-3" />

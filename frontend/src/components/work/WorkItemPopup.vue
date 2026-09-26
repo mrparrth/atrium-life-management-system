@@ -371,18 +371,16 @@ onUnmounted(() => {
               </VCol>
             </VRow>
 
-            <!-- Completion & Outcome -->
-            <div v-if="isEdit" class="">
+            <!-- Completion & Outcome (Only shown when task is completed) -->
+            <div v-if="isEdit && itemsStore.isCompleted(status)">
               <h3 class="text-[10px] uppercase tracking-wider font-bold text-ink-3 mb-4">Completion & Outcome</h3>
 
-              <div class="grid gap-4 items-start"
-                :class="itemsStore.isCompleted(status) ? 'grid-cols-3' : 'grid-cols-1 max-w-xs'">
+              <div class="grid grid-cols-2 gap-4 items-start">
                 <!-- Closed Date -->
-                <DateField v-if="itemsStore.isCompleted(status)" v-model="closedDate" label="Closed Date"
-                  id="item-closeddate" />
+                <DateField v-model="closedDate" label="Closed Date" id="item-closeddate" />
 
                 <!-- Rating -->
-                <div v-if="itemsStore.isCompleted(status)" class="v-field-group relative mt-1">
+                <div class="v-field-group relative mt-1">
                   <div @focusin="focusedFields.rating = true" @focusout="focusedFields.rating = false"
                     class="w-full bg-surface border border-line rounded-xl px-4 py-2 min-h-[48px] flex items-center justify-center gap-1.5 transition-all"
                     :class="[

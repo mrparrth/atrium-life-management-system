@@ -342,7 +342,7 @@ async function openDailyJournal() {
   const title = `Journal - ${today}`
   const existing = notes.items.find(n => n.title === title)
   if (existing) {
-    router.push(`/notes/${existing.id}`)
+    router.push({ path: `/notes/${existing.id}`, query: { edit: 'true' } })
     return
   }
   const body = `[[Journal - ${yesterday}]]
@@ -361,7 +361,7 @@ async function openDailyJournal() {
 `
   const created = await notes.add({ title, body, tags: ['journal'] })
   ui.showToast('Journal opened', 'success')
-  router.push(`/notes/${created.id}`)
+  router.push({ path: `/notes/${created.id}`, query: { edit: 'true' } })
 }
 </script>
 
@@ -444,17 +444,17 @@ async function openDailyJournal() {
           <SectionHeader overline="Habits" :show-all-link="false" />
           <div class="flex flex-wrap items-center gap-3">
             <button v-for="habit in todayHabits" :key="habit.id" @click="habitsStore.toggleHabitLog(habit.id)"
-              class="px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer select-none"
+              class="h-10 px-4 rounded-xl border text-xs font-semibold inline-flex items-center gap-2 transition-all duration-200 cursor-pointer select-none"
               :class="[
                 habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD'))
-                  ? 'bg-canvas border-line-2 text-ink-3 shadow-sm'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-ink shadow-sm'
                   : 'bg-surface border-line hover:border-line-2 text-ink hover:bg-surface-2'
               ]">
               <span v-if="habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD'))"
-                class="w-4 h-4 rounded-full bg-ink-3 text-white flex items-center justify-center shrink-0">
+                class="w-4 h-4 rounded-full bg-emerald-200 dark:bg-emerald-800 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
                 <Check class="w-2.5 h-2.5 stroke-[3]" />
               </span>
-              <span v-else class="text-sm shrink-0">{{ habit.icon || '⚡' }}</span>
+              <span v-else class="w-4 h-4 flex items-center justify-center text-sm leading-none shrink-0">{{ habit.icon || '⚡' }}</span>
               <span>
                 {{ habitsStore.isCompletedOn(habit.id, dayjs().format('YYYY-MM-DD')) ? habit.title : `Log
                 ${habit.title}` }}
