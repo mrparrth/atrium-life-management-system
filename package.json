@@ -1,0 +1,12 @@
+{
+  "name": "atrium-life-management-system",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "build:app": "npm --prefix frontend run build:app",
+    "export:app": "npm --prefix frontend run export:app",
+    "tauri:app": "npm --prefix frontend run tauri:build:app"
+  }
+}

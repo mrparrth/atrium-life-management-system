@@ -11,7 +11,7 @@ import ClientPopup from '@/components/work/ClientPopup.vue'
 import VCheckbox from '@/components/VCheckbox.vue'
 import {
   Plus, User, MessageSquare, Star, Search, LayoutGrid, List,
-  SlidersHorizontal
+  SlidersHorizontal, ExternalLink
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -108,11 +108,15 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
 })
 
-function getHealthStatus(client) {
-  const diff = dayjs().diff(dayjs(client.lastInteractionAt), 'day')
-  if (diff >= 45) return { label: 'Danger', class: 'bg-pri-critical-bg text-pri-critical border-pri-critical-bd' }
-  if (diff >= 30) return { label: 'Stale', class: 'bg-pri-interruptive-bg text-pri-interruptive border-pri-interruptive-bd' }
-  return { label: 'Healthy', class: 'bg-pri-strategic-bg text-pri-strategic border-pri-strategic-bd' }
+
+function getClientDriveUrl(client) {
+  if (!client?.driveFolderId) return null
+  const idOrUrl = String(client.driveFolderId).trim()
+  if (!idOrUrl) return null
+  if (idOrUrl.startsWith('http://') || idOrUrl.startsWith('https://')) {
+    return idOrUrl
+  }
+  return `https://drive.google.com/drive/folders/${idOrUrl}`
 }
 
 function getClientTotalCharged(client) {
@@ -369,7 +373,7 @@ onUnmounted(() => {
                 <span class="flex items-center gap-1.5 flex-wrap leading-snug">
                   {{ client.name }}
                 </span>
-                <span class="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-sm shrink-0"
+                <span class="font-normal text-emerald-600 dark:text-emerald-400 font-mono text-sm shrink-0"
                   title="Total Task Scope Charges">
                   ${{ getClientTotalCharged(client).toLocaleString() }}
                 </span>
@@ -423,7 +427,7 @@ onUnmounted(() => {
                 <th class="p-4">Client Contact Name</th>
                 <th class="p-4">Workspace / Company</th>
                 <th class="p-4">Status</th>
-                <th class="p-4">Health</th>
+                <th class="p-4">Drive URL</th>
                 <th class="p-4">Tasks</th>
                 <th class="p-4">Source</th>
                 <th class="p-4 text-right">Scope Value</th>
@@ -448,10 +452,20 @@ onUnmounted(() => {
                   </span>
                 </td>
                 <td class="p-4">
-                  <span class="px-2 py-0.5 rounded text-[9px] uppercase font-bold border"
-                    :class="getHealthStatus(client).class">
-                    {{ getHealthStatus(client).label }}
-                  </span>
+                  <a v-if="getClientDriveUrl(client)"
+                    :href="getClientDriveUrl(client)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    @click.stop
+                    class="inline-flex items-center gap-1.5 text-xs text-pri-strategic hover:underline font-medium group/drive"
+                    :title="getClientDriveUrl(client)">
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 shrink-0 fill-current text-pri-strategic group-hover/drive:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
+                    </svg>
+                    <span>Drive Folder</span>
+                    <ExternalLink class="w-3 h-3 shrink-0 text-ink-3/70" />
+                  </a>
+                  <span v-else class="text-ink-3/40 font-mono text-[10px]">—</span>
                 </td>
                 <td class="p-4">
                   <span class="flex items-center gap-1.5">
@@ -469,7 +483,7 @@ onUnmounted(() => {
                   </span>
                 </td>
                 <td class="p-4 text-ink-3 font-mono text-[10px]">{{ client.clientSource || '-' }}</td>
-                <td class="p-4 text-right text-ink font-semibold font-mono">${{
+                <td class="p-4 text-right text-ink font-normal font-mono">${{
                   getClientTotalCharged(client).toLocaleString() }}</td>
               </tr>
             </tbody>

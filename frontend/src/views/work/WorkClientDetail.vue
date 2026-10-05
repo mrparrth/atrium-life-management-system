@@ -22,7 +22,7 @@ import {
   ArrowLeft, User, FolderKanban, FileText, Receipt,
   Calendar, Settings, Sparkles, Plus, Clock, MessageSquare,
   HardDrive, ExternalLink, Trash2, Star, Link as LinkIcon, Key,
-  Eye, EyeOff, Copy, X, Pencil, Folder, Globe
+  Eye, EyeOff, Copy, X, Pencil, Folder, Globe, Table, Layout, Code, Database, File
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
@@ -257,9 +257,13 @@ const editingTask = ref(null)
 
 const linkTypeOptions = [
   { value: 'website', label: 'website' },
-  { value: 'file', label: 'file' },
+  { value: 'sheet', label: 'spreadsheet' },
+  { value: 'doc', label: 'document' },
   { value: 'folder', label: 'folder' },
-  { value: 'doc', label: 'document' }
+  { value: 'design', label: 'design' },
+  { value: 'code', label: 'code' },
+  { value: 'database', label: 'database' },
+  { value: 'file', label: 'file' }
 ]
 
 function openAddResourceModal(typeVal) {
@@ -270,7 +274,7 @@ function openAddResourceModal(typeVal) {
   resourceUsername.value = ''
   resourcePassword.value = ''
   resourceNotes.value = ''
-  resourceSubType.value = 'file'
+  resourceSubType.value = 'website'
   showAddResourceModal.value = true
 }
 
@@ -325,41 +329,98 @@ async function deleteResource(id) {
   })
 }
 
+function resolveResourceType(res) {
+  if (!res) return 'website'
+  const explicitType = typeof res === 'string' ? res : res.subType
+  if (explicitType && explicitType !== 'website' && explicitType !== 'other') {
+    return explicitType
+  }
+
+  const url = (typeof res === 'object' && res.url ? res.url : '').toLowerCase()
+  const title = (typeof res === 'object' && res.title ? res.title : '').toLowerCase()
+
+  if (url.includes('spreadsheets') || url.includes('airtable') || url.includes('.csv') || url.includes('.xlsx') ||
+      title.includes('sheet') || title.includes('kpi') || title.includes('spreadsheet') || title.includes('tracker')) {
+    return 'sheet'
+  }
+  if (url.includes('/document/') || url.includes('notion.so') || url.includes('.pdf') || url.includes('.docx') ||
+      title.includes('doc') || title.includes('spec') || title.includes('brief')) {
+    return 'doc'
+  }
+  if (url.includes('/drive/folders/') || url.includes('dropbox.com') || url.includes('box.com') ||
+      title.includes('folder') || title.includes('drive')) {
+    return 'folder'
+  }
+  if (url.includes('figma.com') || url.includes('miro.com') || url.includes('canva.com') ||
+      title.includes('figma') || title.includes('design') || title.includes('mockup') || title.includes('ui/ux')) {
+    return 'design'
+  }
+  if (url.includes('github.com') || url.includes('gitlab.com') || url.includes('bitbucket.org') ||
+      title.includes('github') || title.includes('repo') || title.includes('code')) {
+    return 'code'
+  }
+  if (url.includes('supabase') || url.includes('firebase') || url.includes('mongodb') || url.includes('postman') ||
+      title.includes('database') || title.includes('api') || title.includes('sql') || title.includes('db')) {
+    return 'database'
+  }
+  return explicitType || 'website'
+}
+
 function getDomainName(url) {
   if (!url) return ''
   try {
-    const parsed = new URL(url)
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
     return parsed.hostname.replace('www.', '')
   } catch (e) {
     return url
   }
 }
 
-function getSubtypeConfig(subType) {
-  switch (subType) {
-    case 'file':
-      return { label: 'file', colorClass: 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400', textClass: 'text-green-600 dark:text-green-400' }
-    case 'folder':
-      return { label: 'folder', colorClass: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400', textClass: 'text-amber-600 dark:text-amber-400' }
+function getSubtypeConfig(res) {
+  const typeKey = resolveResourceType(res)
+  switch (typeKey) {
+    case 'sheet':
+    case 'spreadsheet':
+      return { label: 'spreadsheet', colorClass: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400', textClass: 'text-emerald-600 dark:text-emerald-400' }
     case 'doc':
       return { label: 'document', colorClass: 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400', textClass: 'text-blue-600 dark:text-blue-400' }
+    case 'folder':
+      return { label: 'folder', colorClass: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400', textClass: 'text-amber-600 dark:text-amber-400' }
+    case 'design':
+      return { label: 'design', colorClass: 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400', textClass: 'text-rose-600 dark:text-rose-400' }
+    case 'code':
+      return { label: 'code', colorClass: 'bg-violet-500/10 border-violet-500/20 text-violet-600 dark:text-violet-400', textClass: 'text-violet-600 dark:text-violet-400' }
+    case 'database':
+      return { label: 'database', colorClass: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400', textClass: 'text-indigo-600 dark:text-indigo-400' }
+    case 'file':
+      return { label: 'file', colorClass: 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400', textClass: 'text-purple-600 dark:text-purple-400' }
     case 'website':
     default:
       return { label: 'website', colorClass: 'bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400', textClass: 'text-teal-600 dark:text-teal-400' }
   }
 }
 
-function getSubtypeIcon(subType) {
-  switch (subType) {
-    case 'file':
+function getSubtypeIcon(res) {
+  const typeKey = resolveResourceType(res)
+  switch (typeKey) {
+    case 'sheet':
+    case 'spreadsheet':
+      return Table
     case 'doc':
       return FileText
     case 'folder':
       return Folder
+    case 'design':
+      return Layout
+    case 'code':
+      return Code
+    case 'database':
+      return Database
+    case 'file':
+      return File
     case 'website':
-      return Globe
     default:
-      return LinkIcon
+      return Globe
   }
 }
 
@@ -593,7 +654,8 @@ watch(showAddResourceModal, (open) => {
               </button>
             </div>
             <div v-if="clientNotes.length" class="space-y-2">
-              <div v-for="n in clientNotes.slice(0, 3)" :key="n.id" @click="router.push({ path: '/work/notes', query: { id: n.id, edit: 'true' } })"
+              <div v-for="n in clientNotes.slice(0, 3)" :key="n.id"
+                @click="router.push({ path: '/work/notes', query: { id: n.id, edit: 'true' } })"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center gap-2.5 group">
                 <FileText class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
                 <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{
@@ -616,7 +678,7 @@ watch(showAddResourceModal, (open) => {
               <div v-for="res in clientReferences.slice(0, 3)" :key="res.id" @click="openEditResourceModal(res)"
                 class="p-2.5 bg-canvas/30 border border-line rounded-lg hover:border-line-2 cursor-pointer transition-all flex items-center justify-between group">
                 <div class="min-w-0 flex-1 flex items-center gap-2.5">
-                  <component :is="getSubtypeIcon(res.subType || 'website')"
+                  <component :is="getSubtypeIcon(res)"
                     class="w-4 h-4 text-ink-3 shrink-0 group-hover:text-pri-strategic transition-colors" />
                   <span class="text-xs text-ink truncate group-hover:text-pri-strategic transition-colors flex-1">{{
                     res.title }}</span>
@@ -743,7 +805,8 @@ watch(showAddResourceModal, (open) => {
       </div>
 
       <div v-if="clientNotes.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div v-for="n in clientNotes" :key="n.id" @click="router.push({ path: '/work/notes', query: { id: n.id, edit: 'true' } })"
+        <div v-for="n in clientNotes" :key="n.id"
+          @click="router.push({ path: '/work/notes', query: { id: n.id, edit: 'true' } })"
           class="card p-4 border bg-surface hover:border-line-2 cursor-pointer transition-all duration-300">
           <div class="flex items-center gap-2">
             <FileText class="w-4 h-4 text-ink-3" />
@@ -809,14 +872,14 @@ watch(showAddResourceModal, (open) => {
         </button>
       </div>
 
-      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
+      <div v-if="clientReferences.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div v-for="res in clientReferences" :key="res.id" @click="openEditResourceModal(res)"
-          class="p-4 bg-surface border border-line rounded-2xl flex items-center justify-between hover:border-line-2 hover:bg-canvas/5 transition-all duration-300 relative group cursor-pointer">
+          class="p-2 bg-surface border border-line rounded-2xl flex items-center justify-between hover:border-line-2 hover:bg-canvas/5 transition-all duration-300 relative group cursor-pointer">
           <div class="flex items-center gap-3.5 min-w-0 flex-1 pr-14">
             <!-- Icon container representing the link/resource -->
             <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-all"
-              :class="getSubtypeConfig(res.subType || 'website').colorClass">
-              <component :is="getSubtypeIcon(res.subType || 'website')" class="w-5 h-5" />
+              :class="getSubtypeConfig(res).colorClass">
+              <component :is="getSubtypeIcon(res)" class="w-5 h-5" />
             </div>
 
             <!-- Details: Title & Domain -->

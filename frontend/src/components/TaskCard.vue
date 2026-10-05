@@ -9,7 +9,8 @@ import { isSnoozed } from '@/lib/resurface'
 import PriorityBadge from './PriorityBadge.vue'
 import VSelect from './VSelect.vue'
 import VTooltip from './VTooltip.vue'
-import { Calendar, Clock, MoonStar, Trash2, Circle, CheckCircle2, BellOff, MoreVertical, Edit3, AlertCircle } from 'lucide-vue-next'
+import DueDatePicker from './DueDatePicker.vue'
+import { Calendar, Clock, MoonStar, Trash2, Circle, CheckCircle2, BellOff, MoreVertical, Edit3, AlertCircle, ChevronLeft, ChevronRight, Check } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
 const props = defineProps({
@@ -27,11 +28,13 @@ const ui = useUIStore()
 
 const showMenu = ref(false)
 const showStatusMenu = ref(false)
+const showDatePicker = ref(false)
 
 const project = computed(() => projects.items.find(p => p.id === props.task.projectId))
 const priority = computed(() => derivePriority(props.task.important, props.task.urgent))
 const isDone = computed(() => props.task.status === 'done')
 const snoozed = computed(() => isSnoozed(props.task))
+
 const isOverdue = computed(() => {
   if (isDone.value || !props.task.dueDate) return false
   return dayjs(props.task.dueDate).isBefore(dayjs(), 'day')
@@ -105,6 +108,15 @@ function closeMenus() {
   showStatusMenu.value = false
 }
 
+async function updateDueDate(newDate) {
+  await tasks.update(props.task.id, { dueDate: newDate })
+  if (newDate) {
+    ui.showToast(`Due date updated to ${dayjs(newDate).format('MMM D, YYYY')}`, 'success')
+  } else {
+    ui.showToast('Due date cleared', 'info')
+  }
+}
+
 onMounted(() => {
   window.addEventListener('click', closeMenus)
 })
@@ -116,8 +128,12 @@ onUnmounted(() => {
 
 <template>
   <div v-if="!singleLine"
-    class="card p-4 flex flex-col gap-2.5 border transition-all duration-300 hover:shadow-sm"
-    :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '', (showMenu || showStatusMenu) ? 'z-30' : '']"
+    class="card p-4 flex flex-col gap-2.5 border transition-all duration-300 hover:shadow-sm relative overflow-visible has-[.date-picker-open]:!z-40"
+    :class="[
+      (showDatePicker || showStatusMenu || showMenu) ? '!z-40' : 'z-10',
+      isDone || snoozed ? 'opacity-60' : '',
+      isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : ''
+    ]"
     :data-testid="`task-card-${task.id}`">
 
     <div class="flex items-center justify-between gap-4 w-full">
@@ -183,14 +199,16 @@ onUnmounted(() => {
             <span v-if="task.scheduledDate" class="flex items-center gap-1 text-ink-2 font-medium">
               <Calendar class="w-3.5 h-3.5" /> {{ inFuture(task.scheduledDate) }}
             </span>
-            <span v-if="task.dueDate" class="flex items-center gap-1 text-ink-2 font-medium"
-              :class="{ 'text-pri-critical font-bold': isOverdue }">
-              <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
-              <Clock v-else class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
-            </span>
-            <span v-else class="flex items-center gap-1 text-ink-3">
-              <Clock class="w-3.5 h-3.5" /> no due date
-            </span>
+            
+            <!-- Due Date Badge with Interactive Calendar Popover -->
+            <DueDatePicker
+              v-model:open="showDatePicker"
+              :modelValue="task.dueDate"
+              :isOverdue="isOverdue"
+              iconType="clock"
+              labelPrefix="due"
+              useInFutureFormat
+              @update:modelValue="updateDueDate" />
             <!-- Closed date for completed tasks -->
             <span v-if="isDone && task.completedAt" class="flex items-center gap-1 text-pri-strategic font-semibold">
               <CheckCircle2 class="w-3.5 h-3.5" /> Closed {{ dayjs(task.completedAt).format('MMM D, YYYY') }}
@@ -232,11 +250,9 @@ onUnmounted(() => {
 
         <!-- Snooze / Delete Menu -->
         <div class="relative">
-          <VTooltip text="More options" position="top-right">
-            <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-2" data-testid="task-menu-btn">
-              <MoreVertical class="w-4 h-4 text-ink-3" />
-            </button>
-          </VTooltip>
+          <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-2" data-testid="task-menu-btn">
+            <MoreVertical class="w-4 h-4 text-ink-3" />
+          </button>
 
           <div v-if="showMenu"
             class="absolute right-0 top-10 w-40 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
@@ -281,8 +297,12 @@ onUnmounted(() => {
   </div>
 
   <div v-else
-    class="card py-1.5 px-4 flex flex-col gap-1.5 border transition-all duration-300 hover:shadow-sm"
-    :class="[isDone || snoozed ? 'opacity-60' : '', isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : '']"
+    class="card py-1.5 px-4 flex flex-col gap-1.5 border transition-all duration-300 hover:shadow-sm relative overflow-visible has-[.date-picker-open]:!z-40"
+    :class="[
+      (showDatePicker || showStatusMenu || showMenu) ? '!z-40' : 'z-10',
+      isDone || snoozed ? 'opacity-60' : '',
+      isOverdue ? '!bg-rose-50 !border-rose-400 dark:!bg-rose-950/30 dark:!border-rose-400' : ''
+    ]"
     :data-testid="`task-card-${task.id}`">
 
     <div class="flex items-center justify-between gap-2 w-full">
@@ -346,14 +366,16 @@ onUnmounted(() => {
               data-testid="task-project-tag">
               {{ project.title }}
             </span>
-            <span v-if="task.dueDate" class="flex items-center gap-1 font-medium"
-              :class="isOverdue ? 'text-pri-critical font-bold' : 'text-ink-3'">
-              <AlertCircle v-if="isOverdue" class="w-3.5 h-3.5 text-pri-critical shrink-0" />
-              <Clock v-else class="w-3.5 h-3.5" /> due {{ inFuture(task.dueDate) }}
-            </span>
-            <span v-else class="flex items-center gap-1 text-ink-3">
-              <Clock class="w-3.5 h-3.5" /> no due date
-            </span>
+            
+            <!-- Due Date Badge with Interactive Calendar Popover -->
+            <DueDatePicker
+              v-model:open="showDatePicker"
+              :modelValue="task.dueDate"
+              :isOverdue="isOverdue"
+              iconType="clock"
+              labelPrefix="due"
+              useInFutureFormat
+              @update:modelValue="updateDueDate" />
             <!-- Closed date for completed tasks -->
             <span v-if="isDone && task.completedAt" class="flex items-center gap-1 text-pri-strategic font-semibold">
               <CheckCircle2 class="w-3.5 h-3.5" /> Closed {{ dayjs(task.completedAt).format('MMM D') }}
@@ -396,11 +418,9 @@ onUnmounted(() => {
 
         <!-- Snooze / Delete Menu -->
         <div class="relative">
-          <VTooltip text="More options" position="top-right">
-            <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-1.5" data-testid="task-menu-btn">
-              <MoreVertical class="w-3.5 h-3.5 text-ink-3" />
-            </button>
-          </VTooltip>
+          <button @click.stop="showMenu = !showMenu" class="btn-ghost !p-1.5" data-testid="task-menu-btn">
+            <MoreVertical class="w-3.5 h-3.5 text-ink-3" />
+          </button>
 
           <div v-if="showMenu"
             class="absolute right-0 top-8 w-40 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">

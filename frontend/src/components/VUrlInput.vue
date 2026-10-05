@@ -34,9 +34,16 @@ function onInput(e) {
 function openUrl() {
   if (!props.modelValue) return
   let target = props.modelValue.trim()
-  if (!/^https?:\/\//i.test(target)) {
+
+  // Convert bare Drive Folder IDs (e.g. 1W_e-Xt0tGX1pg7kmDA2dnv5k-Q4c) or URLs without protocol
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(target) && !target.includes('.') && !target.includes('/')) {
+    target = `https://drive.google.com/drive/folders/${target}`
+    emit('update:modelValue', target)
+  } else if (!/^https?:\/\//i.test(target)) {
     target = 'https://' + target
+    emit('update:modelValue', target)
   }
+
   window.open(target, '_blank', 'noopener,noreferrer')
 }
 </script>

@@ -6,17 +6,22 @@ import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
 import {
-  Play, Pause, Clock, AlertCircle, Sparkles, ChevronRight,
+  Play, Pause, Clock, AlertCircle, Sparkles, ChevronRight, ChevronLeft,
   Trash, Calendar, MoreVertical, CheckCircle2, Circle, BellOff, Star, HardDrive, Edit3,
-  X, CheckCircle
+  X, CheckCircle, Check
 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import VTooltip from '@/components/VTooltip.vue'
 import WorkItemPopup from '@/components/work/WorkItemPopup.vue'
+import DueDatePicker from '@/components/DueDatePicker.vue'
+import { createClientDriveFolder, createClientDriveFolderInParent } from '@/services/drive'
+import drivePresentIcon from '@/assets/icons/drive-present.png'
+import driveAddIcon from '@/assets/icons/drive-add.png'
 
 const route = useRoute()
 const router = useRouter()
 const showStatusMenu = ref(false)
+const showDatePicker = ref(false)
 const targetCompletedStatus = ref('complete')
 
 const statusGroups = {
@@ -57,6 +62,15 @@ function updateStatus(statusKey) {
 function closeMenus() {
   showStatusMenu.value = false
   showMenu.value = false
+}
+
+async function updateDueDate(newDate) {
+  await itemsStore.update(props.item.id, { dueDate: newDate })
+  if (newDate) {
+    ui.showToast(`Due date updated to ${dayjs(newDate).format('MMM D, YYYY')}`, 'success')
+  } else {
+    ui.showToast('Due date cleared', 'info')
+  }
 }
 
 onMounted(() => {
@@ -120,73 +134,6 @@ const clientLocalTime = computed(() => {
 
 const quadrant = computed(() => itemsStore.getQuadrant(props.item))
 
-const clientInitials = computed(() => {
-  if (!client.value || !client.value.name) return ''
-  const parts = client.value.name.trim().split(/\s+/)
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return parts[0].slice(0, 2).toUpperCase()
-})
-
-const clientAvatarBg = computed(() => {
-  if (!client.value || !client.value.name) return 'bg-[#ff8da1] text-white'
-  const name = client.value.name
-  const colors = [
-    'bg-[#ff8da1] text-white',
-    'bg-[#ffbe5b] text-white',
-    'bg-[#8b7ff7] text-white',
-    'bg-[#4dd0a1] text-white',
-    'bg-[#54c3f1] text-white',
-    'bg-[#f085e6] text-white'
-  ]
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  const index = Math.abs(hash) % colors.length
-  return colors[index]
-})
-
-const accentBarColor = computed(() => {
-  const status = props.item.status || 'in_progress'
-  if (itemsStore.isCompleted(status)) return 'bg-neutral-300 dark:bg-neutral-700'
-  if (isOverdue.value || status === 'critical' || quadrant.value === 'critical') return 'bg-[#ff3b68]'
-  if (status === 'on_hold') return 'bg-[#ff9500]'
-  if (status === 'waiting_feedback' || status === 'ask_milestone') return 'bg-[#3478f6]'
-  return 'bg-[#10b981]'
-})
-
-const cardBgStyle = computed(() => {
-  if (itemsStore.isCompleted(props.item.status)) return 'bg-surface/50 opacity-60 border-line/60'
-  const status = props.item.status || 'in_progress'
-  if (isOverdue.value || status === 'critical' || quadrant.value === 'critical' || status === 'in_progress') {
-    return 'bg-[#fff5f7] dark:bg-rose-950/20 border-[#ffe2e8] dark:border-rose-900/40'
-  }
-  if (status === 'on_hold') {
-    return 'bg-[#fffdf5] dark:bg-amber-950/20 border-[#fff3d6] dark:border-amber-900/40'
-  }
-  return 'bg-surface border-line/70 hover:border-line-2 shadow-2xs'
-})
-
-const formattedTags = computed(() => {
-  const tagsSet = new Set()
-  if (client.value && Array.isArray(client.value.tags)) {
-    client.value.tags.forEach(t => tagsSet.add(t.replace(/^#/, '')))
-  }
-  if (props.item.tags) {
-    if (Array.isArray(props.item.tags)) {
-      props.item.tags.forEach(t => tagsSet.add(t.replace(/^#/, '')))
-    } else if (typeof props.item.tags === 'string') {
-      props.item.tags.split(',').forEach(t => {
-        const clean = t.trim().replace(/^#/, '')
-        if (clean) tagsSet.add(clean)
-      })
-    }
-  }
-  return Array.from(tagsSet)
-})
-
 const priorityClass = computed(() => {
   switch (quadrant.value) {
     case 'critical':
@@ -204,21 +151,46 @@ const isOverran = computed(() => {
   return props.item.estimatedHours > 0 && props.item.actualHours > props.item.estimatedHours
 })
 
+const clientInitials = computed(() => {
+  if (!client.value || !client.value.name) return ''
+  const parts = client.value.name.trim().split(/\s+/)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return client.value.name.substring(0, 2).toUpperCase()
+})
+
+const clientAvatarBg = computed(() => {
+  if (!client.value) return 'bg-canvas text-ink-3 border-line'
+  const status = props.item.status || 'in_progress'
+  if (isOverdue.value || status === 'critical') return 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30'
+  if (status === 'on_hold' || status === 'pending_closure') return 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30'
+  return 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+})
+
+const accentBarClass = computed(() => {
+  if (itemsStore.isCompleted(props.item.status)) return 'bg-ink-3/40'
+  if (isOverdue.value || props.item.status === 'critical') return 'bg-rose-500'
+  if (props.item.status === 'on_hold' || props.item.status === 'pending_closure' || props.item.status === 'waiting_feedback') return 'bg-amber-500'
+  if (props.item.status === 'in_progress') return 'bg-emerald-500'
+  return 'bg-emerald-500'
+})
+
 const isOverdue = computed(() => {
   if (itemsStore.isCompleted(props.item.status)) return false
-  
+
   const due = props.item.dueDate ? dayjs(props.item.dueDate) : null
   const snooze = props.item.snoozedUntil ? dayjs(props.item.snoozedUntil) : null
-  
+
   if (!due && !snooze) return false
-  
+
   let targetDate
   if (due && snooze) {
     targetDate = due.isAfter(snooze) ? due : snooze
   } else {
     targetDate = due || snooze
   }
-  
+
   return targetDate.isBefore(dayjs(), 'day')
 })
 
@@ -331,12 +303,20 @@ function deleteItem() {
 }
 
 async function triggerLinkDriveFolder() {
-  const rootDir = settings.get('work_drive_root', 'AtriumWork')
-  const mockFolderId = `mock-task-drive-${Date.now()}`
-  await itemsStore.update(props.item.id, {
-    driveFolderId: mockFolderId
-  })
-  ui.showToast(`Simulated task folder initialized at "${rootDir}/${props.item.title}"`, 'success')
+  ui.showToast('Connecting to Google Drive...', 'info')
+  try {
+    let folderId
+    if (client.value?.driveFolderId) {
+      folderId = await createClientDriveFolderInParent(props.item.title, client.value.driveFolderId)
+    } else {
+      const rootDir = settings.get('work_drive_root', 'AtriumWork')
+      folderId = await createClientDriveFolder(props.item.title, rootDir)
+    }
+    await itemsStore.update(props.item.id, { driveFolderId: folderId })
+    ui.showToast(`Drive folder created: "${props.item.title}"`, 'success')
+  } catch (e) {
+    ui.showToast(`Failed to create Drive folder: ${e.message}`, 'error')
+  }
 }
 
 onUnmounted(() => {
@@ -368,42 +348,64 @@ watch(showEditModal, (isOpen) => {
 </script>
 
 <template>
-  <div class="relative rounded-2xl p-4 md:p-4.5 border transition-all duration-300 hover:shadow-xs"
-    :class="[cardBgStyle, timerActive ? 'border-pri-strategic shadow-md shadow-pri-strategic/5' : '', (showMenu || showStatusMenu) ? 'z-30' : '']"
-    data-testid="work-item-card">
+  <div
+    class="card !p-0 flex items-stretch rounded-2xl border transition-all duration-300 hover:shadow-sm relative overflow-visible has-[.date-picker-open]:!z-40"
+    :class="[
+      (showDatePicker || showStatusMenu || showMenu) ? '!z-40' : 'z-10',
+      itemsStore.isCompleted(props.item.status) ? 'opacity-60 bg-surface/40 border-line/60' :
+        isOverdue ? '!bg-rose-50/50 !border-rose-300 dark:!bg-rose-950/20 dark:!border-rose-800/50' :
+          (props.item.status === 'on_hold' || props.item.status === 'pending_closure') ? '!bg-amber-50/50 !border-amber-300 dark:!bg-amber-950/20 dark:!border-amber-800/50' :
+            'bg-surface border-line hover:border-line-2'
+    ]" data-testid="work-item-card">
 
-    <!-- FAR LEFT VERTICAL ACCENT STRIPE -->
+    <!-- Inner Background Clip for Left Accent Strip (so it never sticks out of card border) -->
     <div class="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-      <div class="absolute left-0 top-0 bottom-0 w-1" :class="accentBarColor"></div>
+      <div class="w-1.5 h-full" :class="accentBarClass"></div>
     </div>
 
-    <div class="pl-1.5 space-y-2">
-      <!-- TOP METADATA ROW: CLIENT, TIME, STATUS, TAGS, DUE DATE, FOLDER LINK -->
-      <div class="flex items-center justify-between gap-3 text-xs flex-wrap sm:flex-nowrap">
-        <!-- LEFT: CLIENT AVATAR, NAME, TIME, STATUS PILL & TAGS -->
+    <!-- Layout Spacer for Left Accent Strip -->
+    <div class="w-1.5 shrink-0 self-stretch pointer-events-none"></div>
+
+    <!-- Main Card Content Area (2 Distinct Rows) -->
+    <div class="p-3.5 md:p-4 flex-1 min-w-0 flex flex-col justify-between space-y-1.5 cursor-pointer relative z-10"
+      @click="showEditModal = true">
+
+      <!-- ROW 1: Client Name & Tags on Left | Status & Drive Link on Right -->
+      <div class="flex items-center justify-between gap-2 flex-wrap min-w-0">
+        <!-- Left group: Avatar + Client Name/Time + Tags -->
         <div class="flex items-center gap-2 flex-wrap min-w-0">
-          <!-- Client Circle Avatar & Name -->
-          <div v-if="client" @click.stop="goToClientPage"
-            class="flex items-center gap-1.5 cursor-pointer group shrink-0"
+          <!-- Client Initials Avatar Circle -->
+          <span v-if="client" @click.stop="goToClientPage"
+            class="w-5 h-5 rounded-full text-[9px] font-bold shrink-0 flex items-center justify-center border transition-transform hover:scale-105"
+            :class="clientAvatarBg" title="Go to client details">
+            {{ clientInitials }}
+          </span>
+
+          <!-- Client Name & Local Time Tag -->
+          <span v-if="client" @click.stop="goToClientPage"
+            class="text-[10px] uppercase tracking-wider font-semibold text-ink-3 hover:text-ink transition-all cursor-pointer"
             title="Go to client details">
-            <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 shadow-2xs opacity-90"
-              :class="clientAvatarBg">
-              {{ clientInitials }}
-            </span>
-            <span class="text-[11px] font-medium uppercase tracking-wider text-ink-3 group-hover:text-ink-2 transition-colors">
-              {{ client.name }}
-            </span>
-            <span v-if="clientLocalTime" class="text-[11px] text-ink-3/80">
-              · {{ clientLocalTime }} LOCAL
-            </span>
-          </div>
+            {{ client.name }} <template v-if="clientLocalTime">· {{ clientLocalTime }} LOCAL</template>
+          </span>
 
-          <span v-if="client" class="text-line-2 text-xs select-none">|</span>
+          <!-- Separator if client exists and tags exist -->
+          <span v-if="client && client.tags && client.tags.length" class="text-line-2 text-xs select-none">|</span>
 
-          <!-- Status Dropdown Pill -->
-          <div class="relative inline-block shrink-0">
+          <!-- Individual Client Tag Badges -->
+          <template v-if="client && client.tags && client.tags.length">
+            <span v-for="tag in client.tags" :key="tag"
+              class="text-[10px] font-medium text-indigo-600/75 dark:text-indigo-300/80 bg-indigo-500/[0.05] dark:bg-indigo-400/10 border border-indigo-500/15 dark:border-indigo-400/20 px-2 py-0.5 rounded-full">
+              #{{ tag }}
+            </span>
+          </template>
+        </div>
+
+        <!-- Right group: Status Dropdown & Due Date Badge -->
+        <div class="flex items-center gap-2 text-[11px] text-ink-3 shrink-0">
+          <!-- Status Tag with Dropdown Menu -->
+          <div class="relative inline-block">
             <button @click.stop="showStatusMenu = !showStatusMenu"
-              class="text-[11px] font-medium px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 hover:opacity-85 transition-all cursor-pointer"
+              class="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 hover:opacity-85 transition-all cursor-pointer"
               :class="statusStyle.color" title="Change status">
               <span class="w-1.5 h-1.5 rounded-full" :class="statusStyle.dotColor"></span>
               {{ statusStyle.label }}
@@ -411,7 +413,7 @@ watch(showEditModal, (isOpen) => {
 
             <!-- Status Dropdown Menu -->
             <div v-if="showStatusMenu"
-              class="absolute left-0 top-6 w-48 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
+              class="absolute right-0 top-6 w-48 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
               <div class="overline px-2.5 py-1">Change status</div>
 
               <!-- To-do Group -->
@@ -423,7 +425,9 @@ watch(showEditModal, (isOpen) => {
               </button>
 
               <!-- In Progress Group -->
-              <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">In progress</div>
+              <div
+                class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
+                In progress</div>
               <button v-for="st in statusGroups.in_progress" :key="st.key" @click.stop="updateStatus(st.key)"
                 class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
@@ -431,7 +435,9 @@ watch(showEditModal, (isOpen) => {
               </button>
 
               <!-- Complete Group -->
-              <div class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">Complete</div>
+              <div
+                class="text-[9px] uppercase tracking-wider text-ink-3 font-bold px-2.5 py-1 border-t border-line/40 mt-1">
+                Complete</div>
               <button v-for="st in statusGroups.complete" :key="st.key" @click.stop="updateStatus(st.key)"
                 class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full" :class="st.dotColor"></span>
@@ -440,74 +446,77 @@ watch(showEditModal, (isOpen) => {
             </div>
           </div>
 
-          <!-- Hashtag Tag Pills -->
-          <template v-if="formattedTags.length">
-            <span v-for="tag in formattedTags" :key="tag"
-              class="text-[11px] font-medium text-indigo-600 dark:text-indigo-300 bg-[#eeebff] dark:bg-indigo-950/40 border border-[#dcd6ff] dark:border-indigo-800/40 px-2.5 py-0.5 rounded-full">
-              #{{ tag }}
-            </span>
-          </template>
-        </div>
-
-        <!-- RIGHT: DUE DATE & DRIVE FOLDER LINK -->
-        <div class="flex items-center gap-2.5 shrink-0 text-[11px]">
-          <!-- Due Date Alert -->
-          <span v-if="props.item.dueDate" class="flex items-center gap-1 font-semibold"
-            :class="isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-rose-500/90 dark:text-rose-400/90'">
-            <AlertCircle class="w-3.5 h-3.5 text-rose-500 shrink-0" />
-            Due {{ dayjs(props.item.dueDate).format('MMM D') }}
-          </span>
-
-          <!-- Closed Date Badge -->
-          <span v-if="itemsStore.isCompleted(props.item.status)" class="flex items-center gap-1 text-pri-strategic font-semibold">
-            <CheckCircle2 class="w-3.5 h-3.5" /> Closed {{ dayjs(props.item.closedDate || props.item.updatedAt).format('MMM D') }}
-          </span>
-
-          <span v-if="props.item.dueDate || itemsStore.isCompleted(props.item.status)" class="text-line-2 text-xs select-none">|</span>
-
-          <!-- Drive Folder Link -->
-          <div @click.stop class="inline-flex items-center">
-            <a v-if="driveFolderUrl" :href="driveFolderUrl" target="_blank"
-              class="text-[11px] text-ink-2 hover:text-ink flex items-center gap-1 font-medium transition-colors">
-              <HardDrive class="w-3.5 h-3.5 text-ink-3" /> Folder
-            </a>
-            <button v-else-if="!itemsStore.isCompleted(props.item.status)" @click="triggerLinkDriveFolder"
-              class="text-[11px] text-ink-3 hover:text-ink flex items-center gap-1 font-medium transition-colors">
-              + Link Drive
-            </button>
-          </div>
+          <!-- Due Date Badge with Interactive Calendar Popover -->
+          <DueDatePicker
+            v-model:open="showDatePicker"
+            :modelValue="props.item.dueDate"
+            :isOverdue="isOverdue"
+            iconType="calendar"
+            labelPrefix="Due"
+            @update:modelValue="updateDueDate" />
         </div>
       </div>
 
-      <!-- BOTTOM ROW: TASK TITLE, DESCRIPTION & RIGHT ACTION BUTTONS -->
-      <div class="flex items-start justify-between gap-4">
-        <!-- Title & Description (Clickable to Edit) -->
-        <div class="min-w-0 flex-1 cursor-pointer" @click="showEditModal = true">
-          <h4 class="font-semibold text-base text-ink leading-snug font-sans"
-            :class="{ 'line-through text-ink-3': itemsStore.isCompleted(props.item.status) }">
-            {{ props.item.title }}
-          </h4>
-          <p v-if="props.item.description" class="text-xs text-ink-3 mt-0.5 line-clamp-1 leading-snug">
+      <!-- ROW 2 (Slightly Taller Height): Title on Left | Action Buttons (Drive, Snooze, Menu) on Right -->
+      <div class="flex items-center justify-between gap-4 min-w-0">
+        <!-- Left: Title + Description -->
+        <div class="min-w-0 flex-1 space-y-0.5">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h4 class="font-medium text-ink text-sm leading-snug"
+              :class="{ 'line-through text-ink-3': itemsStore.isCompleted(props.item.status) }">
+              {{ props.item.title }}
+            </h4>
+
+            <!-- Closed date badge next to title -->
+            <span v-if="itemsStore.isCompleted(props.item.status)"
+              class="flex items-center gap-1 text-[11px] text-pri-strategic font-semibold shrink-0">
+              <CheckCircle2 class="w-3.5 h-3.5" /> Closed {{ dayjs(props.item.closedDate ||
+                props.item.updatedAt).format('MMM D, YYYY') }}
+            </span>
+          </div>
+
+          <p v-if="props.item.description" class="text-xs text-ink-2 mt-1 line-clamp-1">
             {{ props.item.description }}
           </p>
         </div>
 
-        <!-- Action Icons Group -->
-        <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
-          <!-- Circle Mark Done Button -->
-          <VTooltip :text="itemsStore.isCompleted(props.item.status) ? 'Mark incomplete' : 'Mark complete'">
-            <button @click.stop="toggleStatus"
-              class="p-1 text-ink-3 hover:text-ink flex items-center justify-center cursor-pointer transition-colors shrink-0">
-              <CheckCircle2 v-if="itemsStore.isCompleted(props.item.status)" class="w-5 h-5 text-pri-strategic fill-pri-strategic-bg" />
-              <Circle v-else class="w-5 h-5" />
+        <!-- Right: Action Buttons (Checkmark, Google Drive Icon, Snooze, Menu) -->
+        <div class="flex items-center gap-2 shrink-0 self-center" @click.stop>
+          <!-- Google Drive Icon Button (Matching User Uploaded Icons, Transparent Vector SVG) -->
+          <VTooltip v-if="driveFolderUrl" text="Open Google Drive folder" position="top-right">
+            <a :href="driveFolderUrl" target="_blank"
+              class="p-2 rounded-xl border border-line bg-surface text-ink-3 hover:text-ink hover:bg-canvas transition-all shadow-sm flex items-center justify-center cursor-pointer shrink-0"
+              title="Open Google Drive folder">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0 fill-current text-ink-2 hover:text-ink transition-colors"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
+              </svg>
+            </a>
+          </VTooltip>
+          <VTooltip v-else-if="!itemsStore.isCompleted(props.item.status)" text="Generate Google Drive folder"
+            position="top-right">
+            <button @click="triggerLinkDriveFolder"
+              class="p-2 rounded-xl border border-dashed border-line bg-surface text-ink-3 hover:text-ink hover:bg-canvas transition-all shadow-sm flex items-center justify-center cursor-pointer shrink-0"
+              title="Generate Google Drive folder">
+              <span class="relative flex items-center justify-center">
+                <svg viewBox="0 0 24 24"
+                  class="w-4 h-4 shrink-0 fill-none stroke-current text-ink-3 hover:text-ink transition-colors"
+                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
+                </svg>
+                <span
+                  class="absolute -top-2 -right-2 text-[10px] font-extrabold text-pri-strategic bg-surface rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none border border-pri-strategic/40 shadow-xs select-none">+</span>
+              </span>
             </button>
           </VTooltip>
 
-          <!-- Easy Snooze Bell Button -->
+          <!-- Easy One-Click Snooze Button -->
           <VTooltip v-if="!itemsStore.isCompleted(props.item.status)" text="Snooze until tomorrow">
             <button @click.stop="oneClickSnooze"
-              class="w-7 h-7 rounded-lg border border-line bg-surface/80 text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-2xs flex items-center justify-center cursor-pointer shrink-0">
-              <BellOff class="w-3.5 h-3.5" />
+              class="p-2 rounded-xl border border-line bg-surface text-ink-3 hover:text-pri-interruptive hover:bg-canvas transition-all shadow-sm flex items-center justify-center cursor-pointer shrink-0">
+              <BellOff class="w-4 h-4" />
             </button>
           </VTooltip>
 
@@ -515,28 +524,34 @@ watch(showEditModal, (isOpen) => {
           <div class="relative shrink-0">
             <VTooltip text="More options" position="top-right">
               <button @click.stop="showMenu = !showMenu"
-                class="p-1 text-ink-3 hover:text-ink flex items-center justify-center cursor-pointer transition-colors shrink-0">
-                <MoreVertical class="w-5 h-5" />
+                class="btn-ghost !p-2 text-ink-3 hover:text-ink cursor-pointer">
+                <MoreVertical class="w-4 h-4" />
               </button>
             </VTooltip>
 
             <div v-if="showMenu"
-              class="absolute right-0 top-9 w-40 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
+              class="absolute right-0 top-10 w-40 rounded-xl bg-surface border border-line p-1 shadow-lg z-30 animate-rise-in font-sans">
               <div class="overline px-2.5 py-1">Snooze options</div>
-              <button @click.stop="snooze(1)" class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">Tomorrow</button>
-              <button @click.stop="snooze(3)" class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">3 Days</button>
-              <button @click.stop="snooze(7)" class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">1 Week</button>
+              <button @click.stop="snooze(1)"
+                class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">Tomorrow</button>
+              <button @click.stop="snooze(3)"
+                class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">3 Days</button>
+              <button @click.stop="snooze(7)"
+                class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg">1 Week</button>
               <div class="border-t border-line my-1"></div>
-              <button @click.stop="showEditModal = true" class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+              <button @click.stop="showEditModal = true"
+                class="w-full text-left text-xs text-ink hover:bg-canvas px-3 py-1.5 rounded-lg flex items-center gap-1.5">
                 <Edit3 class="w-3.5 h-3.5 text-ink-3" /> Edit Details
               </button>
-              <button @click.stop="deleteItem" class="w-full text-left text-xs text-pri-critical hover:bg-pri-critical-bg/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+              <button @click.stop="deleteItem"
+                class="w-full text-left text-xs text-pri-critical hover:bg-pri-critical-bg/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
                 <Trash class="w-3.5 h-3.5" /> Delete
               </button>
             </div>
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- Rating modal upon closing a task -->
@@ -562,7 +577,8 @@ watch(showEditModal, (isOpen) => {
           <div class="flex gap-2">
             <button @click="skipRating" class="flex-1 btn-ghost text-xs">Skip Feedback</button>
             <button @click="submitRating" class="flex-1 btn-primary text-xs flex items-center justify-center gap-1">
-              Confirm Done <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px]">↵</span>
+              Confirm Done <span
+                class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px]">↵</span>
             </button>
           </div>
         </div>

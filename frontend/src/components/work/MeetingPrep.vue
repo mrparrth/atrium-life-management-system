@@ -298,7 +298,7 @@ async function startMeetingNote(meeting) {
 
           <!-- Details inline -->
           <div class="min-w-0 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
-            <h4 class="font-serif text-sm truncate text-ink" :title="meeting.title">
+            <h4 class="font-sans text-sm font-normal truncate text-ink" :title="meeting.title">
               {{ meeting.title }}
             </h4>
 

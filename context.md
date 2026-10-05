@@ -190,13 +190,16 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - BUGFIX: Added missing `import dayjs from 'dayjs'` to `stores/tasks.js` to fix runtime `ReferenceError` during task sorting.
 - DOCS: Updated context.md checkpoint log.
 
-### September 26, 2026
-- REDESIGN: Overhauled Work Item Cards (`WorkItemCard.vue`) with custom left accent bars, soft tinted backgrounds, client initials avatar badge, and hashtag pills.
-- UX: Reduced title boldness (`font-semibold text-base`), reduced top padding, and adjusted client name typography.
-- UX: Configured note creation from Client pages (`WorkClientDetail.vue`) to open notes in Edit mode by default with auto-growing text containers.
-- BUGFIX: Fixed social link parser where URLs containing `/all/` incorrectly extracted `@all` as user mentions.
-- UX: Removed outer border rings from completion checkbox and 3-dots option menu buttons across task cards.
-- UX: Added `<VTooltip>` to status and options buttons with right-aligned (`position="top-right"`) positioning support to prevent edge clipping.
-- UX: Resolved dropdown menu clipping by removing `overflow-hidden` from `WorkItemCard.vue` container and wrapping the left accent stripe in a isolated `pointer-events-none` clipping mask overlay. Elevated card z-index (`z-30`) when dropdown menus are open.
-- DOCS: Updated context.md checkpoint log.
+### October 4, 2026
+- FEATURE: Built reusable, self-contained `<DueDatePicker />` calendar popover component (`DueDatePicker.vue`) unifying date selection across `TaskCard.vue` (both standard card and singleLine card modes) and `WorkItemCard.vue`.
+- UX: Calendar popover now stays open when clicking interactive presets (`Today`, `+1D`, `+7D`) and only closes on click-outside, `Escape`, or clicking the checkmark/confirm button.
+- UX: Positioned the calendar popover dynamically to open to the right of the trigger button (`left-full ml-2`) and align its bottom edge flush with the element's bottom (`bottom-0`), extending upwards without covering the trigger element. Added viewport bounds checking to fall back gracefully when screen boundaries are exceeded.
+- UX: Solved z-index stacking issues (`has-[.date-picker-open]:!z-40`) ensuring calendar popovers never render behind adjacent cards.
+- BUILD: Added `"build:app"`, `"export:app"`, and `"tauri:build:app"` scripts running `"tauri build --bundles app"` to `package.json` and `frontend/package.json` for lightweight single-command macOS `.app` bundling. Built release bundle at `frontend/src-tauri/target/release/bundle/macos/Atrium.app`.
+
+### October 5, 2026
+- UX: Changed Scope Value typography in `WorkClients.vue` (both table list view and grid cards) to regular weight (`font-normal`), removing the bold emphasis.
+- UX: Removed the redundant **Health** column (`Danger`/`Stale`/`Healthy`) from the client directory table view in `WorkClients.vue`.
+- UX: Added **Drive URL** column to the client directory table view in `WorkClients.vue`, providing 1-click external navigation to each client's Google Drive folder directly from the list.
+- BUILD: Rebuilt and packaged the macOS application bundle (`Atrium.app`) with the updated client directory view.
 

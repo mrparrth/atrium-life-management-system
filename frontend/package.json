@@ -10,7 +10,10 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:build:app": "tauri build --bundles app",
+    "build:app": "tauri build --bundles app",
+    "export:app": "tauri build --bundles app"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
