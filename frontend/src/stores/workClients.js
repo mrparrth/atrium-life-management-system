@@ -60,10 +60,21 @@ export const useWorkClientsStore = defineStore("workClients", () => {
     await db.work_clients.put(plain(c));
   }
 
+  async function touchInteraction(id, timestamp = now()) {
+    const c = items.value.find((x) => x.id === id);
+    if (!c) return;
+    // Only bump forward if timestamp is more recent
+    if (!c.lastInteractionAt || new Date(timestamp) > new Date(c.lastInteractionAt)) {
+      c.lastInteractionAt = timestamp;
+      c.updatedAt = now();
+      await db.work_clients.put(plain(c));
+    }
+  }
+
   async function remove(id) {
     await db.work_clients.delete(id);
     items.value = items.value.filter((x) => x.id !== id);
   }
 
-  return { items, load, add, update, remove, STATUS_MAP, getStatusStyle };
+  return { items, load, add, update, touchInteraction, STATUS_MAP, getStatusStyle };
 });

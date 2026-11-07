@@ -263,7 +263,22 @@ const workAlertsCount = computed(() => {
     if (hasActiveTask) return
     const key = `client-stale-${c.id}`
     if (isSnoozed(key)) return
-    const daysSince = currentDate.value.diff(dayjs(c.lastInteractionAt), 'day')
+
+    let latestActivity = c.lastInteractionAt ? dayjs(c.lastInteractionAt) : null
+    workItemsStore.items.forEach(item => {
+      if (item.clientId === c.id) {
+        const itemDate = item.closedDate || item.updatedAt || item.createdAt
+        if (itemDate) {
+          const d = dayjs(itemDate)
+          if (!latestActivity || d.isAfter(latestActivity)) {
+            latestActivity = d
+          }
+        }
+      }
+    })
+
+    if (!latestActivity) return
+    const daysSince = currentDate.value.diff(latestActivity, 'day')
     if (daysSince >= 30) count++
   })
 

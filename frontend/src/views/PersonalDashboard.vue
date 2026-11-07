@@ -21,6 +21,7 @@ import { inr } from '@/lib/money'
 import { derivePriority } from '@/lib/priority'
 
 import { backup as driveBackup } from '@/services/drive'
+import { executeOfflineBackup, isTauriEnv } from '@/services/offlineSync'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import TaskCard from '@/components/TaskCard.vue'
@@ -54,7 +55,8 @@ const backupAlert = ref(null)
 const retryingBackup = ref(false)
 
 function checkBackupStatus() {
-  const driveNeedsIntervention = localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
+  const isDesktop = isTauriEnv()
+  const driveNeedsIntervention = !isDesktop && localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
   const offlineNeedsIntervention = localStorage.getItem('atrium.offline.backupNeedsIntervention') === 'true'
   const driveError = localStorage.getItem('atrium.drive.lastBackupError')
 
@@ -78,7 +80,11 @@ function checkBackupStatus() {
 async function retryBackupNow() {
   retryingBackup.value = true
   try {
-    await driveBackup()
+    if (isTauriEnv()) {
+      await executeOfflineBackup()
+    } else {
+      await driveBackup()
+    }
     ui.showToast('Backup completed successfully!', 'success')
     checkBackupStatus()
   } catch (err) {

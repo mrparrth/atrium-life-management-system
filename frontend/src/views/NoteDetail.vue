@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '@/stores/notes'
 import { useProjectsStore } from '@/stores/projects'
@@ -17,10 +17,15 @@ const notes = useNotesStore()
 const projects = useProjectsStore()
 const ui = useUIStore()
 
-const note = computed(() => notes.items.find(n => n.id === props.id))
+const isNew = computed(() => props.id === 'new')
+const note = computed(() => {
+  if (isNew.value) return null
+  return notes.items.find(n => n.id === props.id)
+})
 const editing = ref(false)
 const draftTitle = ref('')
 const draftBody = ref('')
+const titleInputRef = ref(null)
 
 function startEdit() {
   if (!note.value) return
@@ -30,6 +35,15 @@ function startEdit() {
 }
 
 function load() {
+  if (isNew.value) {
+    editing.value = true
+    draftTitle.value = ''
+    draftBody.value = ''
+    nextTick(() => {
+      titleInputRef.value?.focus()
+    })
+    return
+  }
   if (note.value) {
     notes.markViewed(note.value.id)
     draftTitle.value = note.value.title
@@ -40,13 +54,30 @@ function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+
 watch(() => [props.id, route.query.edit], ([newId, newEdit]) => {
   load()
   if (newEdit === 'true' || newEdit === '1') {
     editing.value = true
   }
 })
+
+function handleKeydown(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    if (editing.value || isNew.value) {
+      e.preventDefault()
+      save()
+    }
+  }
+}
 
 const html = computed(() => {
   const body = note.value?.body || ''
@@ -64,14 +95,26 @@ const outgoingLinks = computed(() => {
 const incomingLinks = computed(() => backlinksOf(note.value, notes.items))
 
 async function save() {
+  if (isNew.value) {
+    const title = draftTitle.value.trim() || 'Untitled'
+    const created = await notes.add({ title, body: draftBody.value })
+    ui.showToast('Note created', 'success')
+    router.replace(`/notes/${created.id}`)
+    return
+  }
   await notes.update(note.value.id, { title: draftTitle.value, body: draftBody.value })
   editing.value = false
   const query = { ...route.query }
   delete query.edit
   router.replace({ query })
+  ui.showToast('Note saved', 'success')
 }
 
 async function del() {
+  if (isNew.value) {
+    router.push('/notes')
+    return
+  }
   if (await ui.confirm({ message: 'Delete this note?', title: 'Delete Note' })) {
     await notes.remove(props.id)
     router.push('/notes')
@@ -89,32 +132,46 @@ function onArticleClick(e) {
 </script>
 
 <template>
-  <div>
-    <div v-if="note" class="px-6 md:px-10 pt-3 pb-10 max-w-4xl mx-auto transition-all duration-300" data-testid="note-detail">
-      <div class="flex items-center justify-between gap-2 mb-3">
-        <button @click="router.back()" class="btn-ghost text-xs">
+  <div class="flex-1 min-h-full flex flex-col">
+    <div v-if="note || isNew" class="px-6 md:px-10 pt-3 pb-8 max-w-4xl w-full mx-auto flex-1 flex flex-col transition-all duration-300" data-testid="note-detail">
+      <div class="flex items-center justify-between gap-2 mb-3 shrink-0">
+        <button @click="router.push('/notes')" class="btn-ghost text-xs">
           <ArrowLeft class="w-3.5 h-3.5" /> Back
         </button>
         <div class="flex items-center gap-2">
-          <button v-if="!editing" class="btn-ghost" @click="startEdit" data-testid="note-edit">
+          <button v-if="isNew" class="btn-ghost text-xs" @click="router.push('/notes')">
+            Cancel
+          </button>
+          <button v-if="!editing && !isNew" class="btn-ghost" @click="startEdit" data-testid="note-edit">
             <Edit3 class="w-4 h-4" /> Edit
           </button>
           <button v-else class="btn-primary" @click="save" data-testid="note-save">
             <Save class="w-4 h-4" /> Save
+            <span class="kbd !bg-canvas/20 !border-canvas/10 !text-canvas select-none text-[9px] ml-1">⌘Enter</span>
           </button>
-          <button class="btn-ghost !text-pri-critical" @click="del" data-testid="note-delete">
+          <button v-if="!isNew" class="btn-ghost !text-pri-critical" @click="del" data-testid="note-delete" title="Delete note">
             <Trash2 class="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      <template v-if="editing">
-        <input v-model="draftTitle" placeholder="Note title..." class="w-full bg-transparent font-serif text-3xl md:text-4xl font-semibold text-ink focus:outline-none placeholder:text-ink-3/40 mb-4 pb-1 border-b border-transparent focus:border-line-2 transition-colors" />
-        <TiptapEditor v-model="draftBody" heightClass="min-h-[450px]" />
-      </template>
+      <div v-if="editing || isNew" class="flex-1 flex flex-col min-h-0">
+        <input
+          ref="titleInputRef"
+          v-model="draftTitle"
+          placeholder="Note title..."
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          class="w-full shrink-0 bg-transparent font-serif text-2xl md:text-3xl font-medium text-ink focus:outline-none placeholder:text-ink-3/40 mb-4 pb-1 border-b border-transparent focus:border-line-2 transition-colors"
+          data-testid="note-title-input"
+        />
+        <TiptapEditor v-model="draftBody" heightClass="flex-1 min-h-[450px]" class="flex-1 flex flex-col min-h-0" />
+      </div>
 
       <template v-else>
-        <h1 @click="startEdit" class="font-serif text-3xl md:text-4xl font-semibold tracking-tight leading-tight mb-3 cursor-pointer hover:text-pri-strategic transition-colors" title="Click to edit title">{{ note.title }}</h1>
+        <h1 @click="startEdit" class="font-serif text-2xl md:text-3xl font-medium tracking-tight leading-tight mb-3 cursor-pointer hover:text-pri-strategic transition-colors" title="Click to edit title">{{ note.title }}</h1>
         <div v-if="linkedProject" class="text-sm text-ink-2 mb-4">Linked to <RouterLink
             :to="`/projects/${linkedProject.id}`" class="text-ink underline decoration-line-2 underline-offset-4">{{
               linkedProject.title }}</RouterLink>

@@ -163,17 +163,17 @@ input[type="number"] {
 
 /* Markdown prose */
 .prose-soft {
-  @apply text-ink leading-normal;
+  @apply text-ink text-sm leading-relaxed;
 }
 .prose-soft h1 { @apply font-serif text-2xl font-semibold mt-4 mb-2; }
 .prose-soft h2 { @apply font-serif text-xl font-semibold mt-3.5 mb-1.5; }
 .prose-soft h3 { @apply font-sans text-base font-semibold mt-3 mb-1.5; }
-.prose-soft p { @apply my-1.5; }
-.prose-soft ul { @apply list-disc pl-5 my-1.5; }
-.prose-soft ol { @apply list-decimal pl-5 my-1.5; }
+.prose-soft p { @apply my-1; }
+.prose-soft ul { @apply list-disc pl-5 my-1; }
+.prose-soft ol { @apply list-decimal pl-5 my-1; }
 .prose-soft a { @apply text-ink underline decoration-line-2 underline-offset-4 hover:decoration-ink-2; }
-.prose-soft code { @apply bg-elevated px-1.5 py-0.5 rounded text-sm; }
-.prose-soft blockquote { @apply border-l-2 border-line-2 pl-3.5 italic text-ink-2 my-1.5; }
+.prose-soft code { @apply bg-elevated px-1.5 py-0.5 rounded text-xs font-mono; }
+.prose-soft blockquote { @apply border-l-2 border-line-2 pl-3.5 italic text-ink-2 my-1; }
 
 /* Fade transition (Vue) */
 .fade-enter-active, .fade-leave-active { transition: opacity 250ms cubic-bezier(0.22, 0.61, 0.36, 1); }

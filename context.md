@@ -203,3 +203,23 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX: Added **Drive URL** column to the client directory table view in `WorkClients.vue`, providing 1-click external navigation to each client's Google Drive folder directly from the list.
 - BUILD: Rebuilt and packaged the macOS application bundle (`Atrium.app`) with the updated client directory view.
 
+### October 14, 2026
+- UX: Overhauled New Note creation modal in `Notes.vue`. Removed redundant `NEW NOTE` overline, static `A page of your own` heading, and bulky floating-label input container. Placed clean, borderless serif title input (`text-2xl md:text-3xl font-serif font-semibold`) directly at the top with auto-focus.
+- UX: Reduced excessive modal padding from `p-8` down to `p-5 md:p-6` and streamlined vertical margins/line breaks between title, editor canvas, and footer.
+- UX: Adjusted editor typography in `.prose-soft` and `TiptapEditor.vue` from 16px to `text-sm leading-relaxed` (14px) with tighter paragraph/list spacing (`my-1`).
+- UX: Removed duplicate floating question mark (`HelpCircle`) button and modal overlay from `TiptapEditor.vue`, leaving a single, clean `Markdown Guide` trigger in the modal footer.
+- UX: Replaced modal format for New Note creation with dedicated full-page editor flow at `/notes/new` matching `NoteDetail.vue` (top header bar with `Back`, `Save ⌘Enter`, and full-width serif title).
+- UX: Disabled native browser autocomplete / auto suggestions on note title inputs (`autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"`).
+- UX: Redesigned note directory cards in `Notes.vue`: reduced card width to 3 columns (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`), moved timestamp to the right side of the card header, and explicitly labeled it as `Updated [time]` (with exact tooltip timestamp) to eliminate ambiguity between creation date and update date.
+- BUILD: Rebuilt and packaged the macOS application bundle (`Atrium.app`).
+
+### November 7, 2026
+- FEATURE: Implemented Activity-Aware Client Staleness in `ResurfacingCockpit.vue` and `GrowthTree.vue`. Instead of relying solely on `c.lastInteractionAt`, staleness checks the latest timestamp across client interactions and associated work items (`closedDate`, `updatedAt`, or `createdAt`).
+- FEATURE: Added `touchInteraction(clientId)` to `workClientsStore` and hooked into `workItemsStore.update()` to automatically refresh client interaction dates whenever tasks are completed or updated.
+- FEATURE: Added iCal / WebCal calendar subscription feed integration (`calendar.js`) allowing direct calendar sync via URL without Google Cloud OAuth dependencies. Integrated feed synchronization into `WorkDashboard.vue` and `App.vue` background timers.
+- UX / DESKTOP: Streamlined backup handling on desktop (Tauri) environment. Restricted automatic cloud OAuth prompts in desktop mode in favor of native offline disk snapshots (`isTauriEnv()` detection in `App.vue`, `WorkDashboard.vue`, and `Settings.vue`).
+- DOCS: Updated `context.md` checkpoint log.
+
+
+
+

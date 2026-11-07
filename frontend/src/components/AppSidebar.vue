@@ -191,7 +191,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
         </span>
         <div class="leading-tight">
           <div class="font-serif text-lg tracking-tight">Atrium</div>
-          <div class="text-[10px] uppercase tracking-overline text-ink-3">quiet system</div>
         </div>
       </RouterLink>
 

@@ -10,7 +10,8 @@ import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import { downloadLocalBackup, getClientId, setClientId, setManualToken, connect as driveConnect, backup as driveBackup, restore as driveRestore, disconnect as driveDisconnect, isConnected, lastBackupAt } from '@/services/drive'
 import { fromNow } from '@/lib/date'
-import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote, Key } from 'lucide-vue-next'
+import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote, Key, Calendar } from 'lucide-vue-next'
+import { syncSubscribedCalendar } from '@/services/calendar'
 import { isNotificationSupported, requestNotificationPermission, areNotificationsEnabled, sendDesktopNotification } from '@/lib/notifications'
 
 const ui = useUIStore()
@@ -20,14 +21,14 @@ const origin = location.origin
 const searchQuery = ref('')
 const activeSection = ref('general')
 
-const tabs = [
+const tabs = computed(() => [
   { id: 'general', label: 'General', icon: Sliders },
   { id: 'memory', label: 'Resurfacing Memory', icon: Brain },
   { id: 'work', label: 'Work & Business', icon: Briefcase },
-  { id: 'sync', label: 'Sync & Backup', icon: Cloud },
+  { id: 'sync', label: isTauri.value ? 'Local Backup' : 'Sync & Backup', icon: isTauri.value ? HardDrive : Cloud },
   { id: 'data', label: 'Data & Reset', icon: Database },
   { id: 'about', label: 'About', icon: Info }
-]
+])
 
 const clientIdInput = ref('')
 const connected = ref(false)
@@ -182,6 +183,8 @@ async function refresh() {
   const url = settings.get('work_drive_folder_url', '')
   const root = settings.get('work_drive_root', 'AtriumWork')
   driveFolderInput.value = url || root
+  calendarFeedUrl.value = settings.get('calendar_feed_url', '')
+  calendarLastSync.value = localStorage.getItem('atrium.calendar.lastSync') || ''
 
   confettiDurationVal.value = String(settings.get('tree_confetti_duration', 20))
   spendingCurrencyInput.value = settings.get('default_spending_currency', '₹')
@@ -278,6 +281,28 @@ async function clearAll() {
 }
 
 const driveFolderInput = ref('')
+const calendarFeedUrl = ref('')
+const calendarLastSync = ref('')
+const syncingFeed = ref(false)
+
+async function triggerCalendarSync() {
+  if (!calendarFeedUrl.value.trim()) {
+    ui.showToast('Please enter a calendar feed URL first', 'warning')
+    return
+  }
+  syncingFeed.value = true
+  try {
+    await settings.set('calendar_feed_url', calendarFeedUrl.value.trim())
+    const res = await syncSubscribedCalendar(calendarFeedUrl.value.trim())
+    calendarLastSync.value = localStorage.getItem('atrium.calendar.lastSync') || new Date().toISOString()
+    ui.showToast(`Calendar synced: ${res.count} events loaded`, 'success')
+  } catch (err) {
+    ui.showToast(err.message || 'Failed to sync calendar feed', 'error')
+  } finally {
+    syncingFeed.value = false
+  }
+}
+
 const driveFolderLink = computed(() => {
   const val = driveFolderInput.value.trim()
   if (!val) return ''
@@ -300,6 +325,7 @@ function saveWorkSettings() {
     settings.set('work_drive_folder_url', '')
   }
   settings.set('work_default_currency', defaultCurrencyInput.value)
+  settings.set('calendar_feed_url', calendarFeedUrl.value.trim())
   settings.set('sync_mode', syncModeInput.value)
   settings.set('sync_interval', String(syncIntervalInput.value))
   ui.showToast('Preferences saved', 'success')
@@ -814,10 +840,10 @@ function matchesSearch(text) {
 
         <!-- 3. WORK & BUSINESS -->
         <section
-          v-if="(activeSection === 'work' || searchQuery.trim()) && matchesSearch('work business drive billing folder currency clients sync')"
+          v-if="(activeSection === 'work' || searchQuery.trim()) && matchesSearch('work business drive billing folder currency clients sync calendar ics webcal')"
           id="sec-work" class="space-y-6">
           <SectionHeader overline="Work Workspace" title="Work & Client Preferences"
-            hint="Configure default billing currency, Drive root directory, and work sync mode." />
+            hint="Configure default billing currency, Drive root directory, and calendar subscription feed." />
 
           <div class="card p-6 space-y-4">
             <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
@@ -829,6 +855,35 @@ function matchesSearch(text) {
               <div class="flex-grow flex items-center gap-2 max-w-md w-full">
                 <VUrlInput v-model="driveFolderInput" placeholder="https://drive.google.com/drive/folders/..."
                   class="w-full" />
+              </div>
+            </div>
+
+            <hr class="border-line/40" />
+
+            <!-- Subscribed Public / iCal Calendar Feed -->
+            <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+              <div class="shrink-0 max-w-xs">
+                <p class="text-sm text-ink font-medium">Calendar Subscription Feed (iCal / .ics)</p>
+                <p class="text-xs text-ink-3 mt-0.5 leading-relaxed">
+                  Subscribe to your Google Calendar, Apple iCloud, Outlook, or public calendar feed.
+                  Events sync directly into your Work Meeting Prep cockpit.
+                </p>
+              </div>
+              <div class="flex-grow flex flex-col gap-2 max-w-md w-full">
+                <div class="flex items-center gap-2">
+                  <VUrlInput v-model="calendarFeedUrl" placeholder="https://.../basic.ics or webcal://..." class="w-full" />
+                  <button @click="triggerCalendarSync" :disabled="syncingFeed || !calendarFeedUrl.trim()"
+                    class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5 shrink-0"
+                    title="Sync Calendar Feed Now">
+                    <Loader2 v-if="syncingFeed" class="w-3.5 h-3.5 animate-spin" />
+                    <Calendar v-else class="w-3.5 h-3.5" />
+                    <span>Sync</span>
+                  </button>
+                </div>
+                <p v-if="calendarLastSync" class="text-[11px] text-ink-3 flex items-center gap-1">
+                  <Check class="w-3 h-3 text-emerald-500" />
+                  <span>Last synced {{ fromNow(calendarLastSync) }}</span>
+                </p>
               </div>
             </div>
 
@@ -859,13 +914,15 @@ function matchesSearch(text) {
 
         <!-- 4. SYNC & BACKUP -->
         <section
-          v-if="(activeSection === 'sync' || searchQuery.trim()) && matchesSearch('sync cloud backup google drive client id restore offline disk folder')"
+          v-if="(activeSection === 'sync' || searchQuery.trim()) && matchesSearch(isTauri ? 'backup local disk folder snapshots restore auto' : 'sync cloud backup google drive client id restore offline disk folder')"
           id="sec-sync" class="space-y-6">
-          <SectionHeader overline="Data Synchronization" title="Sync & Backup"
-            hint="Manage Google Drive cloud sync and offline disk backup schedules." />
+          <SectionHeader
+            :overline="isTauri ? 'Local Data Storage' : 'Data Synchronization'"
+            :title="isTauri ? 'Local Disk Backup' : 'Sync & Backup'"
+            :hint="isTauri ? 'Configure automated timestamped snapshots to your local drive.' : 'Manage Google Drive cloud sync and offline disk backup schedules.'" />
 
-          <!-- Google Drive Sync Card -->
-          <div class="card p-6 space-y-6">
+          <!-- Google Drive Sync Card (Only shown in Web / PWA mode) -->
+          <div v-if="!isTauri" class="card p-6 space-y-6">
             <div v-if="needsIntervention"
               class="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-xs text-amber-600 dark:text-amber-400">
               <ShieldAlert class="w-4 h-4 shrink-0 mt-0.5" />
@@ -876,7 +933,7 @@ function matchesSearch(text) {
             </div>
 
             <!-- OAuth Client ID (Only shown when running in web browser mode) -->
-            <div v-if="!isTauri">
+            <div>
               <p class="text-sm text-ink font-medium">Google OAuth Client ID</p>
               <p class="text-xs text-ink-3 mt-1 leading-relaxed">
                 Create a Web OAuth Client in <a href="https://console.cloud.google.com/apis/credentials" target="_blank"
@@ -900,7 +957,7 @@ function matchesSearch(text) {
               </div>
             </div>
 
-            <hr v-if="!isTauri" class="border-line/40" />
+            <hr class="border-line/40" />
 
             <!-- Connection Actions -->
             <div class="flex items-center justify-between gap-4 flex-wrap">
@@ -917,7 +974,7 @@ function matchesSearch(text) {
               </div>
               <div class="flex flex-col items-end gap-2">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <button v-if="!connected" @click="connect" :disabled="busy || (!isTauri && !clientIdInput.trim())"
+                  <button v-if="!connected" @click="connect" :disabled="busy || !clientIdInput.trim()"
                     class="btn-primary !py-2 px-4 text-xs flex items-center gap-1.5">
                     <Loader2 v-if="connecting" class="w-3.5 h-3.5 animate-spin" />
                     <Cloud v-else class="w-3.5 h-3.5" />
@@ -955,11 +1012,11 @@ function matchesSearch(text) {
             </div>
           </div>
 
-          <!-- Offline Disk Backup Card inside Sync & Backup -->
+          <!-- Offline / Local Disk Backup Card -->
           <div class="card p-6 space-y-4">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm text-ink font-medium">Automatic Offline Disk Backups</p>
+                <p class="text-sm text-ink font-medium">{{ isTauri ? 'Automatic Local Disk Snapshots' : 'Automatic Offline Disk Backups' }}</p>
                 <p class="text-xs text-ink-3">Keep regular timestamped JSON snapshots in a local folder on your
                   computer.</p>
               </div>
@@ -1020,14 +1077,14 @@ function matchesSearch(text) {
 
             <div class="flex items-center justify-between gap-4 flex-wrap">
               <div>
-                <p class="text-sm text-ink font-medium">Last Offline Backup</p>
+                <p class="text-sm text-ink font-medium">{{ isTauri ? 'Last Local Snapshot' : 'Last Offline Backup' }}</p>
                 <p class="text-xs text-ink-3">
-                  {{ offlineLastBackup ? fromNow(offlineLastBackup) : 'No offline backups created yet' }}</p>
+                  {{ offlineLastBackup ? fromNow(offlineLastBackup) : 'No backups created yet' }}</p>
               </div>
               <button @click="triggerOfflineBackup" :disabled="offlineBusy || !offlineFolderName"
-                class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5">
+                class="btn-primary !py-2 px-3 text-xs flex items-center gap-1.5">
                 <Loader2 v-if="offlineBusy" class="w-3.5 h-3.5 animate-spin" />
-                <Save v-else class="w-3.5 h-3.5" /> Trigger Offline Backup
+                <Save v-else class="w-3.5 h-3.5" /> {{ isTauri ? 'Backup Now to Disk' : 'Trigger Offline Backup' }}
               </button>
             </div>
           </div>

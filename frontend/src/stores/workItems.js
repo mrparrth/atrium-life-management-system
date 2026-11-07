@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { db, newId, now, plain } from '@/db'
+import { useWorkClientsStore } from '@/stores/workClients'
 
 export const useWorkItemsStore = defineStore('workItems', () => {
   const items = ref([])
@@ -66,6 +67,13 @@ export const useWorkItemsStore = defineStore('workItems', () => {
     Object.assign(item, patch, { updatedAt: now() })
     await db.work_items.put(plain(item))
     sortWorkItems(items.value)
+
+    // Bump client interaction timestamp if client is associated
+    const targetClientId = patch.clientId || item.clientId
+    if (targetClientId) {
+      const clientsStore = useWorkClientsStore()
+      await clientsStore.touchInteraction(targetClientId, now())
+    }
   }
 
   async function remove(id) {

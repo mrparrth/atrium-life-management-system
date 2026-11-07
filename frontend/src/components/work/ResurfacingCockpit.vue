@@ -85,7 +85,7 @@ function goToItem(alert) {
 const alerts = computed(() => {
   const list = []
 
-  // 1. Stale Clients (> 30 days since last interaction)
+  // 1. Stale Clients (> 30 days since last interaction or activity)
   clientsStore.items.forEach(c => {
     if (c.status === 'inactive' || c.status === 'do_not_follow_up') return
     const hasActiveTask = itemsStore.items.some(item =>
@@ -94,7 +94,23 @@ const alerts = computed(() => {
     if (hasActiveTask) return
     const key = `client-stale-${c.id}`
     if (isSnoozed(key)) return
-    const daysSince = dayjs().diff(dayjs(c.lastInteractionAt), 'day')
+
+    // Find latest activity timestamp across client record, work items, and invoices
+    let latestActivity = c.lastInteractionAt ? dayjs(c.lastInteractionAt) : null
+    itemsStore.items.forEach(item => {
+      if (item.clientId === c.id) {
+        const itemDate = item.closedDate || item.updatedAt || item.createdAt
+        if (itemDate) {
+          const d = dayjs(itemDate)
+          if (!latestActivity || d.isAfter(latestActivity)) {
+            latestActivity = d
+          }
+        }
+      }
+    })
+
+    if (!latestActivity) return
+    const daysSince = dayjs().diff(latestActivity, 'day')
     if (daysSince >= 30) {
       list.push({
         id: key,

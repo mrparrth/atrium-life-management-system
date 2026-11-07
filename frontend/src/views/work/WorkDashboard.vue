@@ -12,6 +12,9 @@ import { useNotesStore } from '@/stores/notes'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { useUIStore } from '@/stores/ui'
 import { backup as driveBackup, isConnected as isGoogleConnected, syncGoogleCalendar } from '@/services/drive'
+import { executeOfflineBackup, isTauriEnv } from '@/services/offlineSync'
+import { syncSubscribedCalendar } from '@/services/calendar'
+import { useSettingsStore } from '@/stores/settings'
 
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
@@ -31,7 +34,8 @@ const backupAlert = ref(null)
 const retryingBackup = ref(false)
 
 function checkBackupStatus() {
-  const driveNeedsIntervention = localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
+  const isDesktop = isTauriEnv()
+  const driveNeedsIntervention = !isDesktop && localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
   const offlineNeedsIntervention = localStorage.getItem('atrium.offline.backupNeedsIntervention') === 'true'
   const driveError = localStorage.getItem('atrium.drive.lastBackupError')
 
@@ -55,7 +59,11 @@ function checkBackupStatus() {
 async function retryBackupNow() {
   retryingBackup.value = true
   try {
-    await driveBackup()
+    if (isTauriEnv()) {
+      await executeOfflineBackup()
+    } else {
+      await driveBackup()
+    }
     ui.showToast('Backup completed successfully!', 'success')
     checkBackupStatus()
   } catch (err) {
@@ -69,12 +77,21 @@ function dismissBackupAlert() {
   backupAlert.value = null
 }
 
+const settingsStore = useSettingsStore()
 const syncingCalendar = ref(false)
 async function manualCalendarSync() {
   syncingCalendar.value = true
   try {
-    await syncGoogleCalendar({ force: true })
-    ui.showToast('Google Calendar synced', 'success')
+    const feedUrl = settingsStore.get('calendar_feed_url', '')
+    if (feedUrl) {
+      const res = await syncSubscribedCalendar(feedUrl)
+      ui.showToast(`Calendar synced (${res.count} events)`, 'success')
+    } else if (!isTauriEnv() && isGoogleConnected()) {
+      await syncGoogleCalendar({ force: true })
+      ui.showToast('Google Calendar synced', 'success')
+    } else {
+      ui.showToast('Add a calendar feed in Settings > Work & Business', 'info')
+    }
   } catch (err) {
     ui.showToast(`Calendar sync failed: ${err.message}`, 'error')
   } finally {
@@ -207,7 +224,18 @@ onMounted(async () => {
   checkBackupStatus()
   window.addEventListener('atrium-backup-failed-alert', checkBackupStatus)
   window.addEventListener('atrium-backup-success', checkBackupStatus)
-  await syncGoogleCalendar()
+
+  // Auto-sync calendar if configured
+  const feedUrl = settingsStore.get('calendar_feed_url', '')
+  if (feedUrl) {
+    try {
+      await syncSubscribedCalendar(feedUrl)
+    } catch (e) {
+      console.warn('Silent calendar feed auto-sync skipped:', e.message)
+    }
+  } else if (!isTauriEnv()) {
+    await syncGoogleCalendar()
+  }
 })
 
 onUnmounted(() => {

@@ -27,7 +27,8 @@ import { toLocalDateStr } from '@/lib/resurface'
 import { useHabitsStore } from '@/stores/habits'
 import { db, seedIfEmpty } from '@/db'
 import { autoBackup, checkAndCaptureOAuthRedirect } from '@/services/drive'
-import { autoOfflineBackup } from '@/services/offlineSync'
+import { autoOfflineBackup, isTauriEnv } from '@/services/offlineSync'
+import { syncSubscribedCalendar } from '@/services/calendar'
 import { initNotificationsOnLoad } from '@/lib/notifications'
 
 
@@ -142,8 +143,29 @@ onMounted(async () => {
   ])
 
   // Dynamic periodic auto-backup check (runs silent checks in the background)
-  setTimeout(() => { autoBackup(); autoOfflineBackup(); }, 5000)
-  setInterval(() => { autoBackup(); autoOfflineBackup(); }, 60000) // check every minute, actual backup respects interval setting
+  // On desktop (Tauri), we only run local offline backup to avoid unwanted Google OAuth flows
+  const isDesktopApp = isTauriEnv()
+  async function checkCalendarFeed() {
+    const feedUrl = settingsStore.get('calendar_feed_url', '')
+    if (feedUrl) {
+      try {
+        await syncSubscribedCalendar(feedUrl)
+      } catch (e) {
+        console.warn('Periodic calendar sync skipped:', e.message)
+      }
+    }
+  }
+
+  setTimeout(() => {
+    if (!isDesktopApp) autoBackup();
+    autoOfflineBackup();
+    checkCalendarFeed();
+  }, 5000)
+  setInterval(() => {
+    if (!isDesktopApp) autoBackup();
+    autoOfflineBackup();
+  }, 60000) // check every minute, actual backup respects interval setting
+  setInterval(checkCalendarFeed, 15 * 60 * 1000) // check calendar feed every 15 minutes
 
   // Check if first run or reset
   const isFirstRun = localStorage.getItem('atrium.initialized') !== 'true'
@@ -356,7 +378,7 @@ watch(() => ui.mode, (newMode) => {
       </div>
 
       <!-- Main Scrollable Content Container (Starts BELOW Top Banner) -->
-      <div class="flex-1 min-h-0 relative overflow-y-auto" style="scrollbar-gutter: stable;">
+      <div class="flex-1 min-h-0 relative overflow-y-auto flex flex-col" style="scrollbar-gutter: stable;">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />

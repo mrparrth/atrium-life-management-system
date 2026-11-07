@@ -13,6 +13,7 @@ const routes = [
   { path: '/goals/:id', name: 'goal', component: () => import('@/views/GoalDetail.vue'), props: true },
   { path: '/notes', name: 'notes', component: () => import('@/views/Notes.vue') },
   { path: '/notes/graph', name: 'note-graph', component: () => import('@/views/NoteGraph.vue') },
+  { path: '/notes/new', name: 'note-new', component: () => import('@/views/NoteDetail.vue'), props: { id: 'new' } },
   { path: '/notes/:id', name: 'note', component: () => import('@/views/NoteDetail.vue'), props: true },
   { path: '/bookmarks', name: 'bookmarks', component: () => import('@/views/Bookmarks.vue') },
   { path: '/bookmarks/page/:id', name: 'bookmark-page', component: () => import('@/views/BookmarkPageDetail.vue'), props: true },
