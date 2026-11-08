@@ -8,11 +8,12 @@ import VSelect from '@/components/VSelect.vue'
 import VUrlInput from '@/components/VUrlInput.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
-import { downloadLocalBackup, getClientId, setClientId, setManualToken, connect as driveConnect, backup as driveBackup, restore as driveRestore, disconnect as driveDisconnect, isConnected, lastBackupAt } from '@/services/drive'
+import { downloadLocalBackup } from '@/services/drive'
 import { fromNow } from '@/lib/date'
-import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote, Key, Calendar } from 'lucide-vue-next'
+import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote, Key, Calendar, RefreshCw, LogIn, LogOut } from 'lucide-vue-next'
 import { syncSubscribedCalendar } from '@/services/calendar'
 import { isNotificationSupported, requestNotificationPermission, areNotificationsEnabled, sendDesktopNotification } from '@/lib/notifications'
+import { cloudUrl, cloudUser, cloudSyncState, isConfigured as isCloudConfigured, cloudError, loginCloudWithUrl, logoutCloud, disconnectCloud } from '@/services/dexieCloud'
 
 const ui = useUIStore()
 const settings = useSettingsStore()
@@ -25,20 +26,15 @@ const tabs = computed(() => [
   { id: 'general', label: 'General', icon: Sliders },
   { id: 'memory', label: 'Resurfacing Memory', icon: Brain },
   { id: 'work', label: 'Work & Business', icon: Briefcase },
-  { id: 'sync', label: isTauri.value ? 'Local Backup' : 'Sync & Backup', icon: isTauri.value ? HardDrive : Cloud },
+  { id: 'sync', label: 'Sync & Backup', icon: Cloud },
   { id: 'data', label: 'Data & Reset', icon: Database },
   { id: 'about', label: 'About', icon: Info }
 ])
 
-const clientIdInput = ref('')
-const connected = ref(false)
-const lastBackup = ref(null)
-const busy = ref(false)
-const connecting = ref(false)
-const backingUp = ref(false)
-const restoring = ref(false)
-const isEditingClientId = ref(false)
-const needsIntervention = ref(false)
+const dexieCloudUrlInput = ref(cloudUrl.value || '')
+const isEditingCloudUrl = ref(!isCloudConfigured.value)
+const cloudLoginEmail = ref('')
+const cloudBusy = ref(false)
 
 const notificationsSupported = ref(isNotificationSupported())
 const notificationsEnabled = ref(areNotificationsEnabled())
@@ -174,11 +170,6 @@ function toggleNameEdit() {
 
 async function refresh() {
   await settings.load()
-  clientIdInput.value = getClientId()
-  connected.value = !!localStorage.getItem('atrium.drive.connected')
-  lastBackup.value = lastBackupAt()
-  isEditingClientId.value = !clientIdInput.value.trim()
-  needsIntervention.value = localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
 
   const url = settings.get('work_drive_folder_url', '')
   const root = settings.get('work_drive_root', 'AtriumWork')
@@ -211,42 +202,34 @@ async function refresh() {
 }
 onMounted(refresh)
 
-function handleClientIdAction() {
-  if (isEditingClientId.value) {
-    setClientId(clientIdInput.value.trim())
-    ui.showToast('Client ID saved', 'success')
-    isEditingClientId.value = false
-    refresh()
-  } else {
-    isEditingClientId.value = true
+async function handleCloudConnectAndLogin() {
+  if (!dexieCloudUrlInput.value.trim()) {
+    ui.showToast('Please enter your Dexie Cloud URL', 'warning')
+    return
+  }
+  cloudBusy.value = true
+  try {
+    await loginCloudWithUrl(dexieCloudUrlInput.value.trim())
+    ui.showToast('Connected to Dexie Cloud', 'success')
+  } catch (e) {
+    ui.showToast(e.message || 'Cloud connection failed', 'error')
+  } finally {
+    cloudBusy.value = false
   }
 }
 
-async function connect() {
-  busy.value = true
-  connecting.value = true
-  try { await driveConnect(); ui.showToast('Drive connected', 'success'); refresh() }
-  catch (e) { ui.showToast(`Connect failed: ${e.message}`, 'error') }
-  finally { busy.value = false; connecting.value = false }
-}
-async function backup() {
-  busy.value = true
-  backingUp.value = true
-  try { await driveBackup(); ui.showToast('Backed up to Drive', 'success'); refresh() }
-  catch (e) { ui.showToast(`Backup failed: ${e.message}`, 'error') }
-  finally { busy.value = false; backingUp.value = false }
-}
-async function restore() {
-  if (!await ui.confirm({ message: 'Replace ALL local data with the Drive backup? This cannot be undone.', title: 'Restore Backup' })) return
-  busy.value = true
-  restoring.value = true
-  try { await driveRestore(); ui.showToast('Restored - reloading…', 'success'); setTimeout(() => location.reload(), 800) }
-  catch (e) { ui.showToast(`Restore failed: ${e.message}`, 'error') }
-  finally { busy.value = false; restoring.value = false }
-}
-async function disconnect() {
-  if (!await ui.confirm({ message: 'Disconnect Drive from this device?', title: 'Disconnect Drive' })) return
-  driveDisconnect(); refresh(); ui.showToast('Disconnected', 'success')
+async function handleCloudDisconnect() {
+  if (!await ui.confirm({ message: 'Disconnect Dexie Cloud database from this device? Local data remains safe.', title: 'Disconnect Dexie Cloud' })) return
+  cloudBusy.value = true
+  try {
+    await disconnectCloud()
+    dexieCloudUrlInput.value = ''
+    ui.showToast('Dexie Cloud disconnected', 'success')
+  } catch (e) {
+    ui.showToast(e.message || 'Disconnect failed', 'error')
+  } finally {
+    cloudBusy.value = false
+  }
 }
 
 async function exportJson() { await downloadLocalBackup(); ui.showToast('Exported', 'success') }
@@ -475,7 +458,7 @@ function matchesSearch(text) {
 </script>
 
 <template>
-  <div class="px-6 md:px-12 py-10 max-w-6xl mx-auto" data-testid="settings-view">
+  <div class="w-full px-6 md:px-12 py-10 max-w-6xl mx-auto" data-testid="settings-view">
     <!-- Top Header Bar with Search -->
     <div class="flex items-center justify-between gap-4 flex-wrap pb-6 border-b border-line">
       <div>
@@ -846,34 +829,34 @@ function matchesSearch(text) {
             hint="Configure default billing currency, Drive root directory, and calendar subscription feed." />
 
           <div class="card p-6 space-y-4">
-            <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
-              <div class="shrink-0 max-w-xs">
+            <div class="flex items-center gap-4 flex-wrap md:flex-nowrap">
+              <div class="shrink-0 w-72">
                 <p class="text-sm text-ink font-medium">Work Drive Folder URL or Name</p>
                 <p class="text-xs text-ink-3 mt-0.5 leading-relaxed">Paste a Google Drive folder link or folder name for
                   client files.</p>
               </div>
-              <div class="flex-grow flex items-center gap-2 max-w-md w-full">
+              <div class="flex-grow min-w-0 flex items-center gap-2">
                 <VUrlInput v-model="driveFolderInput" placeholder="https://drive.google.com/drive/folders/..."
-                  class="w-full" />
+                  class="w-full min-w-0" />
               </div>
             </div>
 
             <hr class="border-line/40" />
 
             <!-- Subscribed Public / iCal Calendar Feed -->
-            <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
-              <div class="shrink-0 max-w-xs">
+            <div class="flex items-center gap-4 flex-wrap md:flex-nowrap">
+              <div class="shrink-0 w-72">
                 <p class="text-sm text-ink font-medium">Calendar Subscription Feed (iCal / .ics)</p>
                 <p class="text-xs text-ink-3 mt-0.5 leading-relaxed">
                   Subscribe to your Google Calendar, Apple iCloud, Outlook, or public calendar feed.
                   Events sync directly into your Work Meeting Prep cockpit.
                 </p>
               </div>
-              <div class="flex-grow flex flex-col gap-2 max-w-md w-full">
-                <div class="flex items-center gap-2">
-                  <VUrlInput v-model="calendarFeedUrl" placeholder="https://.../basic.ics or webcal://..." class="w-full" />
+              <div class="flex-grow min-w-0 flex flex-col gap-2">
+                <div class="flex items-center gap-2 w-full min-w-0">
+                  <VUrlInput v-model="calendarFeedUrl" placeholder="https://.../basic.ics or webcal://..." class="w-full min-w-0" />
                   <button @click="triggerCalendarSync" :disabled="syncingFeed || !calendarFeedUrl.trim()"
-                    class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5 shrink-0"
+                    class="btn-secondary !py-2.5 px-3.5 text-xs flex items-center gap-1.5 shrink-0"
                     title="Sync Calendar Feed Now">
                     <Loader2 v-if="syncingFeed" class="w-3.5 h-3.5 animate-spin" />
                     <Calendar v-else class="w-3.5 h-3.5" />
@@ -895,10 +878,10 @@ function matchesSearch(text) {
                 <p class="text-xs text-ink-3 mt-0.5 leading-relaxed">Default currency for client invoices, leads, and
                   work items.</p>
               </div>
-              <div class="w-36 shrink-0">
+              <div class="flex items-center gap-2 shrink-0">
                 <VSelect v-model="defaultCurrencyInput" id="settings-work-currency"
                   :options="[{ id: 'USD', label: 'USD ($)' }, { id: 'INR', label: 'INR (₹)' }, { id: 'EUR', label: 'EUR (€)' }, { id: 'GBP', label: 'GBP (£)' }]"
-                  option-value="id" option-label="label" @change="saveWorkSettings" />
+                  option-value="id" option-label="label" @change="saveWorkSettings" class="!w-36" />
               </div>
             </div>
 
@@ -914,100 +897,83 @@ function matchesSearch(text) {
 
         <!-- 4. SYNC & BACKUP -->
         <section
-          v-if="(activeSection === 'sync' || searchQuery.trim()) && matchesSearch(isTauri ? 'backup local disk folder snapshots restore auto' : 'sync cloud backup google drive client id restore offline disk folder')"
+          v-if="(activeSection === 'sync' || searchQuery.trim()) && matchesSearch('sync cloud backup dexie real-time multi-device offline disk folder snapshots')"
           id="sec-sync" class="space-y-6">
           <SectionHeader
-            :overline="isTauri ? 'Local Data Storage' : 'Data Synchronization'"
-            :title="isTauri ? 'Local Disk Backup' : 'Sync & Backup'"
-            :hint="isTauri ? 'Configure automated timestamped snapshots to your local drive.' : 'Manage Google Drive cloud sync and offline disk backup schedules.'" />
+            overline="Data Synchronization"
+            title="Sync & Backup"
+            hint="Connect optional real-time Dexie Cloud multi-device synchronization and manage local automated backups." />
 
-          <!-- Google Drive Sync Card (Only shown in Web / PWA mode) -->
-          <div v-if="!isTauri" class="card p-6 space-y-6">
-            <div v-if="needsIntervention"
+          <!-- Dexie Cloud Synchronization Card -->
+          <div class="card p-6 space-y-5">
+            <div v-if="cloudError"
               class="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-xs text-amber-600 dark:text-amber-400">
               <ShieldAlert class="w-4 h-4 shrink-0 mt-0.5" />
               <div>
-                <p class="font-semibold">Re-authorization required</p>
-                <p class="mt-0.5">Google Drive session expired. Please reconnect below to resume automatic sync.</p>
+                <p class="font-semibold">Dexie Cloud Notice</p>
+                <p class="mt-0.5">{{ cloudError }}</p>
               </div>
             </div>
 
-            <!-- OAuth Client ID (Only shown when running in web browser mode) -->
+            <!-- Database URL and Sign In controls -->
             <div>
-              <p class="text-sm text-ink font-medium">Google OAuth Client ID</p>
-              <p class="text-xs text-ink-3 mt-1 leading-relaxed">
-                Create a Web OAuth Client in <a href="https://console.cloud.google.com/apis/credentials" target="_blank"
-                  class="underline decoration-line-2 underline-offset-2 hover:text-ink">Google Cloud Console</a>.
-                Add <code
-                  class="bg-surface border border-line px-1.5 py-0.5 rounded text-xs font-mono">{{ origin }}</code> as
-                an Authorized JavaScript origin.
-                Enable the Drive API and Calendar API on the project.
-              </p>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <p class="text-sm text-ink font-medium">Dexie Cloud Database</p>
+                  <p class="text-xs text-ink-3 mt-0.5 leading-relaxed">
+                    Enter your database URL to enable real-time, multi-device encrypted sync across web & desktop.
+                  </p>
+                </div>
+                <a href="https://dexie.org/cloud/" target="_blank" class="text-xs text-pri-strategic hover:underline flex items-center gap-1 shrink-0">
+                  <span>Learn about Dexie Cloud</span>
+                  <ExternalLink class="w-3 h-3" />
+                </a>
+              </div>
+
+              <!-- Streamlined Single-Row URL & Action Buttons -->
               <div class="flex items-center gap-2 mt-3">
-                <input v-model="clientIdInput" :disabled="!isEditingClientId"
-                  placeholder="Enter your Google OAuth Client ID"
-                  class="flex-grow bg-surface border border-line rounded-xl px-4 py-2.5 text-sm text-ink font-mono outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 transition-all disabled:opacity-60" />
-                <button type="button"
-                  class="btn-secondary !py-2.5 px-4 text-xs flex items-center gap-1.5 shrink-0 h-[42px]"
-                  @click="handleClientIdAction">
-                  <Check v-if="isEditingClientId" class="w-3.5 h-3.5 text-pri-strategic" />
-                  <Edit3 v-else class="w-3.5 h-3.5" />
-                  <span>{{ isEditingClientId ? 'Save ID' : 'Edit ID' }}</span>
+                <VUrlInput
+                  v-model="dexieCloudUrlInput"
+                  :disabled="cloudBusy || isCloudConfigured"
+                  placeholder="https://<your-db>.dexie.cloud"
+                  class="flex-grow min-w-0"
+                />
+
+                <!-- Connect Button (when not configured) -->
+                <button v-if="!isCloudConfigured" @click="handleCloudConnectAndLogin" :disabled="cloudBusy || !dexieCloudUrlInput.trim()"
+                  class="btn-primary !py-2.5 px-4 text-xs flex items-center gap-1.5 shrink-0 h-[42px]">
+                  <Loader2 v-if="cloudBusy" class="w-3.5 h-3.5 animate-spin" />
+                  <Cloud v-else class="w-3.5 h-3.5" />
+                  <span>Connect</span>
+                </button>
+
+                <!-- Simple Disconnect Icon Button (when configured) -->
+                <button v-else @click="handleCloudDisconnect" :disabled="cloudBusy"
+                  class="btn-ghost !p-2.5 text-ink-3 hover:text-red-500 hover:bg-red-500/10 rounded-xl flex items-center justify-center shrink-0 h-[42px] w-[42px] border border-line transition-all"
+                  title="Disconnect Dexie Cloud">
+                  <Loader2 v-if="cloudBusy" class="w-4 h-4 animate-spin text-ink-3" />
+                  <Unlink v-else class="w-4 h-4" />
                 </button>
               </div>
-            </div>
 
-            <hr class="border-line/40" />
-
-            <!-- Connection Actions -->
-            <div class="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p class="text-sm text-ink font-medium">Drive Connection Status</p>
-                <p class="text-xs text-ink-3">
-                  <span v-if="connected"
-                    class="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 mt-0.5">
-                    <Check class="w-3.5 h-3.5" /> Connected · Last synced {{ lastBackup ? fromNow(lastBackup) : 'never'
-                    }}
-                  </span>
-                  <span v-else class="text-ink-3 mt-0.5 block">Not connected</span>
-                </p>
-              </div>
-              <div class="flex flex-col items-end gap-2">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <button v-if="!connected" @click="connect" :disabled="busy || !clientIdInput.trim()"
-                    class="btn-primary !py-2 px-4 text-xs flex items-center gap-1.5">
-                    <Loader2 v-if="connecting" class="w-3.5 h-3.5 animate-spin" />
-                    <Cloud v-else class="w-3.5 h-3.5" />
-                    <span>Connect Drive</span>
-                  </button>
-                  <button v-if="!connected" @click="showManualTokenInput = !showManualTokenInput" type="button"
-                    class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1">
-                    <Key class="w-3.5 h-3.5" />
-                    <span>{{ showManualTokenInput ? 'Hide Token Field' : 'Paste Token' }}</span>
-                  </button>
-                  <template v-else>
-                    <button @click="disconnect" :disabled="busy"
-                      class="btn-ghost !py-2 px-3 text-xs text-red-500 hover:text-red-600 flex items-center gap-1.5">
-                      <Unlink class="w-3.5 h-3.5" /> Disconnect
-                    </button>
-                    <button @click="backup" :disabled="busy"
-                      class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5">
-                      <CloudUpload class="w-3.5 h-3.5" /> Backup Now
-                    </button>
-                    <button @click="restore" :disabled="busy"
-                      class="btn-secondary !py-2 px-3 text-xs flex items-center gap-1.5">
-                      <CloudDownload class="w-3.5 h-3.5" /> Restore
-                    </button>
-                  </template>
-                </div>
-                <div v-if="!connected && showManualTokenInput" class="flex items-center gap-2 w-full max-w-sm">
-                  <input v-model="manualTokenText" placeholder="Paste access token or Google redirect URL..."
-                    class="flex-grow min-w-0 bg-canvas/30 border border-line rounded-xl px-3 py-1.5 text-xs font-mono text-ink outline-none" />
-                  <button @click="handleManualTokenSubmit" type="button"
-                    class="btn-secondary !py-1.5 px-3 text-xs shrink-0">
-                    Submit
-                  </button>
-                </div>
+              <!-- Connection status indicator below input -->
+              <div class="flex items-center gap-2 mt-2.5 text-xs">
+                <span class="inline-block w-2 h-2 rounded-full"
+                  :class="{
+                    'bg-emerald-500': cloudSyncState === 'in-sync' || cloudSyncState === 'syncing',
+                    'bg-amber-500': cloudSyncState === 'connecting',
+                    'bg-ink-3/40': cloudSyncState === 'offline' || !isCloudConfigured,
+                    'bg-red-500': cloudSyncState === 'error'
+                  }"></span>
+                <span class="capitalize text-ink font-medium">
+                  {{ !isCloudConfigured ? 'Not Connected' : cloudSyncState }}
+                </span>
+                <span v-if="cloudUser?.email" class="text-ink-3">
+                  · Signed in as <strong class="text-ink font-normal">{{ cloudUser.email }}</strong>
+                </span>
+                <span v-else-if="cloudUser?.userId && cloudUser?.userId !== 'unauthorized'" class="text-ink-3">
+                  · User: {{ cloudUser.userId }}
+                </span>
               </div>
             </div>
           </div>

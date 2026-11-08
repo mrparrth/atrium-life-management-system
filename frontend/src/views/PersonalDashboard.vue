@@ -20,7 +20,6 @@ import { fromNow, isToday, daysSince } from '@/lib/date'
 import { inr } from '@/lib/money'
 import { derivePriority } from '@/lib/priority'
 
-import { backup as driveBackup } from '@/services/drive'
 import { executeOfflineBackup, isTauriEnv } from '@/services/offlineSync'
 import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
@@ -55,18 +54,9 @@ const backupAlert = ref(null)
 const retryingBackup = ref(false)
 
 function checkBackupStatus() {
-  const isDesktop = isTauriEnv()
-  const driveNeedsIntervention = !isDesktop && localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
   const offlineNeedsIntervention = localStorage.getItem('atrium.offline.backupNeedsIntervention') === 'true'
-  const driveError = localStorage.getItem('atrium.drive.lastBackupError')
 
-  if (driveNeedsIntervention) {
-    backupAlert.value = {
-      type: 'drive',
-      title: 'Google Drive Auto-Backup Failed',
-      message: driveError || 'Auto-backup to Google Drive failed multiple times. Manual intervention or re-authentication required.'
-    }
-  } else if (offlineNeedsIntervention) {
+  if (offlineNeedsIntervention) {
     backupAlert.value = {
       type: 'offline',
       title: 'Local Disk Backup Failed',
@@ -80,11 +70,7 @@ function checkBackupStatus() {
 async function retryBackupNow() {
   retryingBackup.value = true
   try {
-    if (isTauriEnv()) {
-      await executeOfflineBackup()
-    } else {
-      await driveBackup()
-    }
+    await executeOfflineBackup()
     ui.showToast('Backup completed successfully!', 'success')
     checkBackupStatus()
   } catch (err) {

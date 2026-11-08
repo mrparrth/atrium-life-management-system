@@ -11,7 +11,6 @@ import { useWorkLeadsStore } from '@/stores/workLeads'
 import { useNotesStore } from '@/stores/notes'
 import { useWorkResourcesStore } from '@/stores/workResources'
 import { useUIStore } from '@/stores/ui'
-import { backup as driveBackup, isConnected as isGoogleConnected, syncGoogleCalendar } from '@/services/drive'
 import { executeOfflineBackup, isTauriEnv } from '@/services/offlineSync'
 import { syncSubscribedCalendar } from '@/services/calendar'
 import { useSettingsStore } from '@/stores/settings'
@@ -34,18 +33,9 @@ const backupAlert = ref(null)
 const retryingBackup = ref(false)
 
 function checkBackupStatus() {
-  const isDesktop = isTauriEnv()
-  const driveNeedsIntervention = !isDesktop && localStorage.getItem('atrium.drive.backupNeedsIntervention') === 'true'
   const offlineNeedsIntervention = localStorage.getItem('atrium.offline.backupNeedsIntervention') === 'true'
-  const driveError = localStorage.getItem('atrium.drive.lastBackupError')
 
-  if (driveNeedsIntervention) {
-    backupAlert.value = {
-      type: 'drive',
-      title: 'Google Drive Auto-Backup Failed',
-      message: driveError || 'Auto-backup to Google Drive failed multiple times. Manual intervention or re-authentication required.'
-    }
-  } else if (offlineNeedsIntervention) {
+  if (offlineNeedsIntervention) {
     backupAlert.value = {
       type: 'offline',
       title: 'Local Disk Backup Failed',
@@ -59,11 +49,7 @@ function checkBackupStatus() {
 async function retryBackupNow() {
   retryingBackup.value = true
   try {
-    if (isTauriEnv()) {
-      await executeOfflineBackup()
-    } else {
-      await driveBackup()
-    }
+    await executeOfflineBackup()
     ui.showToast('Backup completed successfully!', 'success')
     checkBackupStatus()
   } catch (err) {
@@ -78,6 +64,7 @@ function dismissBackupAlert() {
 }
 
 const settingsStore = useSettingsStore()
+const hasCalendarFeed = computed(() => !!settingsStore.get('calendar_feed_url', '').trim())
 const syncingCalendar = ref(false)
 async function manualCalendarSync() {
   syncingCalendar.value = true
@@ -86,9 +73,6 @@ async function manualCalendarSync() {
     if (feedUrl) {
       const res = await syncSubscribedCalendar(feedUrl)
       ui.showToast(`Calendar synced (${res.count} events)`, 'success')
-    } else if (!isTauriEnv() && isGoogleConnected()) {
-      await syncGoogleCalendar({ force: true })
-      ui.showToast('Google Calendar synced', 'success')
     } else {
       ui.showToast('Add a calendar feed in Settings > Work & Business', 'info')
     }
@@ -233,8 +217,6 @@ onMounted(async () => {
     } catch (e) {
       console.warn('Silent calendar feed auto-sync skipped:', e.message)
     }
-  } else if (!isTauriEnv()) {
-    await syncGoogleCalendar()
   }
 })
 
@@ -291,14 +273,14 @@ onUnmounted(() => {
     <PageHeader :overline="todayDate" :title="`${greeting}.`"
       :sub="capacity.burnoutRisk ? '⚠️ Your schedule indicates a high burnout risk. Take it slow.' : 'A focused operational space for your work.'">
       <template #right>
-        <button v-if="isGoogleConnected()" class="relative group btn-secondary text-xs flex items-center gap-1.5"
+        <button v-if="hasCalendarFeed" class="relative group btn-secondary text-xs flex items-center gap-1.5"
           @click="manualCalendarSync" :disabled="syncingCalendar">
           <Calendar class="w-3.5 h-3.5" />
           <span>Sync Calendar</span>
           <RefreshCw class="w-3.5 h-3.5 text-ink-3" :class="{ 'animate-spin': syncingCalendar }" />
           <span
             class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
-            Sync Google Calendar
+            Sync Calendar Feed
             <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
           </span>
         </button>

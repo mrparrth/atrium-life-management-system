@@ -13,7 +13,7 @@ const props = defineProps({
   },
   label: {
     type: String,
-    required: true
+    default: ''
   },
   id: {
     type: String,
@@ -60,7 +60,7 @@ function openUrl() {
       v-bind="$attrs"
       @input="onInput"
     />
-    <label :for="id" class="v-field-label text-sm">
+    <label v-if="label" :for="id" class="v-field-label text-sm">
       {{ label }}
     </label>
     

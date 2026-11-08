@@ -110,7 +110,7 @@ async function onDrop(targetId) {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto animate-fade-in" data-testid="next-steps-view">
+  <div class="w-full px-8 md:px-12 py-10 max-w-7xl mx-auto animate-fade-in" data-testid="next-steps-view">
     <PageHeader overline="Horizon" title="Next steps" sub="A quiet space for planning your next steps in your life.">
       <template #right>
         <button class="btn-primary text-sm" @click="showNewSectionModal = true" data-testid="ns-add-section-btn">

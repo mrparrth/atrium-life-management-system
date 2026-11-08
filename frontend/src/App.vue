@@ -26,7 +26,6 @@ import { useWorkResourcesStore } from '@/stores/workResources'
 import { toLocalDateStr } from '@/lib/resurface'
 import { useHabitsStore } from '@/stores/habits'
 import { db, seedIfEmpty } from '@/db'
-import { autoBackup, checkAndCaptureOAuthRedirect } from '@/services/drive'
 import { autoOfflineBackup, isTauriEnv } from '@/services/offlineSync'
 import { syncSubscribedCalendar } from '@/services/calendar'
 import { initNotificationsOnLoad } from '@/lib/notifications'
@@ -89,9 +88,6 @@ function switchSpace() {
 
 
 onMounted(async () => {
-  if (checkAndCaptureOAuthRedirect()) {
-    ui.showToast('Connected to Google Drive successfully', 'success')
-  }
   try {
     const { onOpenUrl } = await import('@tauri-apps/plugin-deep-link')
     await onOpenUrl((urls) => {
@@ -101,8 +97,7 @@ onMounted(async () => {
           const params = new URLSearchParams(hash)
           const token = params.get('access_token')
           if (token) {
-            setManualToken(token)
-            ui.showToast('Connected to Google Drive successfully', 'success')
+            ui.showToast('Auth token received', 'success')
           }
         }
       }
@@ -157,12 +152,10 @@ onMounted(async () => {
   }
 
   setTimeout(() => {
-    if (!isDesktopApp) autoBackup();
     autoOfflineBackup();
     checkCalendarFeed();
   }, 5000)
   setInterval(() => {
-    if (!isDesktopApp) autoBackup();
     autoOfflineBackup();
   }, 60000) // check every minute, actual backup respects interval setting
   setInterval(checkCalendarFeed, 15 * 60 * 1000) // check calendar feed every 15 minutes
