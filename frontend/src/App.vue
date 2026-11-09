@@ -41,7 +41,7 @@ import ToastHost from '@/components/ToastHost.vue'
 import GrowthTree from '@/components/GrowthTree.vue'
 import DailyGoalsSplash from '@/components/DailyGoalsSplash.vue'
 import DownloadModal from '@/components/DownloadModal.vue'
-import { X } from 'lucide-vue-next'
+import { X, Menu, Sparkles, Briefcase, Plus, Search } from 'lucide-vue-next'
 
 const ui = useUIStore()
 const route = useRoute()
@@ -364,9 +364,53 @@ const isLandingRoute = computed(() => route.path === '/')
   </div>
 
   <!-- Standard Application Layout -->
-  <div v-else class="h-screen w-screen overflow-hidden bg-canvas text-ink flex" data-testid="app-root">
+  <div v-else class="h-screen w-screen overflow-hidden bg-canvas text-ink flex flex-col md:flex-row" data-testid="app-root">
     <AppSidebar />
     <main class="flex-1 min-w-0 h-full relative flex flex-col overflow-hidden">
+      <!-- Mobile Top Bar (Only visible on small screens < md) -->
+      <header class="md:hidden flex items-center justify-between px-4 py-3 bg-surface/90 backdrop-blur border-b border-line shrink-0 z-30 select-none">
+        <div class="flex items-center gap-2.5">
+          <button
+            type="button"
+            class="p-2 -ml-1.5 rounded-xl text-ink-2 hover:text-ink hover:bg-canvas transition-colors"
+            @click="ui.mobileSidebarOpen = true"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu class="w-5 h-5" />
+          </button>
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-ink flex items-center justify-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-canvas"></span>
+            </span>
+            <span class="font-serif text-lg font-semibold tracking-tight">Atrium</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Mobile Work/Personal Mode Switcher -->
+          <button
+            type="button"
+            class="px-2.5 py-1.5 rounded-full border border-line bg-canvas flex items-center gap-1.5 text-xs text-ink-2 font-medium"
+            @click="ui.toggleMode"
+            :title="`Switch to ${ui.mode === 'work' ? 'Personal' : 'Work'} Mode`"
+          >
+            <Sparkles v-if="ui.mode === 'personal'" class="w-3.5 h-3.5 text-amber-500" />
+            <Briefcase v-else class="w-3.5 h-3.5 text-pri-strategic" />
+            <span class="capitalize">{{ ui.mode }}</span>
+          </button>
+
+          <!-- Mobile Search Trigger -->
+          <button
+            type="button"
+            class="p-2 rounded-xl text-ink-2 hover:text-ink hover:bg-canvas transition-colors"
+            @click="ui.openCommand"
+            aria-label="Search"
+          >
+            <Search class="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
       <!-- Cross-Workspace Task Alert Banner -->
       <div v-if="showBanner"
         class="w-full bg-surface border-b border-line px-6 py-2.5 flex items-center justify-between text-xs text-ink-2 select-none z-30 animate-fade-in shrink-0">
@@ -395,6 +439,16 @@ const isLandingRoute = computed(() => route.path === '/')
           </transition>
         </router-view>
       </div>
+
+      <!-- Mobile Floating Quick Capture Action Button (FAB) -->
+      <button
+        type="button"
+        class="md:hidden fixed bottom-6 right-6 z-40 w-13 h-13 rounded-full bg-ink text-canvas shadow-xl shadow-black/25 flex items-center justify-center active:scale-95 transition-transform"
+        @click="ui.mode === 'work' ? router.push('/work/items?new=true') : ui.openQuickCapture()"
+        :aria-label="ui.mode === 'work' ? 'New Task' : 'Quick Capture'"
+      >
+        <Plus class="w-6 h-6 stroke-[2.5]" />
+      </button>
     </main>
     <CommandPalette v-if="ui.commandOpen" />
     <QuickCapture v-if="ui.quickCaptureOpen" />

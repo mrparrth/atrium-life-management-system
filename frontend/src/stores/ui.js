@@ -26,6 +26,7 @@ export const useUIStore = defineStore("ui", () => {
   });
 
   const sidebarOpen = ref(true);
+  const mobileSidebarOpen = ref(false);
   const commandOpen = ref(false);
   const quickCaptureOpen = ref(false);
   const downloadModalOpen = ref(false);
@@ -105,6 +106,7 @@ export const useUIStore = defineStore("ui", () => {
     theme,
     mode,
     sidebarOpen,
+    mobileSidebarOpen,
     commandOpen,
     quickCaptureOpen,
     downloadModalOpen,

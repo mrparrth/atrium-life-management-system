@@ -7,7 +7,7 @@ import {
   LayoutGrid, Sun, Moon, CheckSquare, FolderKanban, Compass,
   BookOpen, Archive, Calendar, Target, NotebookPen, Bookmark,
   Wallet, Sparkles, Settings, Command, Plus, ListChecks, GitFork,
-  TrendingUp, Briefcase, Receipt, BarChart2, Flame, Download
+  TrendingUp, Briefcase, Receipt, BarChart2, Flame, Download, X
 } from 'lucide-vue-next'
 
 const ui = useUIStore()
@@ -191,10 +191,26 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 </script>
 
 <template>
-  <aside class="w-64 shrink-0 hidden md:flex flex-col bg-elevated border-r border-line h-screen sticky top-0"
+  <!-- Mobile Drawer Backdrop -->
+  <div
+    v-if="ui.mobileSidebarOpen"
+    class="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm md:hidden animate-fade-in"
+    @click="ui.mobileSidebarOpen = false"
+  ></div>
+
+  <!-- Sidebar (Desktop static + Mobile slide-over drawer) -->
+  <aside
+    :class="[
+      'w-72 md:w-64 shrink-0 flex flex-col bg-elevated border-r border-line h-screen z-50 transition-transform duration-300 ease-in-out',
+      // Desktop: always visible in normal flow
+      'md:sticky md:top-0 md:translate-x-0',
+      // Mobile: fixed slide-over drawer
+      'fixed top-0 bottom-0 left-0',
+      ui.mobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+    ]"
     data-testid="sidebar">
     <div class="px-5 pt-6 pb-4 flex items-center justify-between">
-      <RouterLink to="/" class="flex items-center gap-2 group" data-testid="brand-link">
+      <RouterLink to="/" class="flex items-center gap-2 group" data-testid="brand-link" @click="ui.mobileSidebarOpen = false">
         <span class="w-7 h-7 rounded-full bg-ink flex items-center justify-center">
           <span class="w-2 h-2 rounded-full bg-canvas"></span>
         </span>
@@ -203,27 +219,38 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
         </div>
       </RouterLink>
 
-      <!-- Pill sliding switch for Work/Personal Mode -->
-      <div
-        class="flex items-center bg-canvas border border-line-2 rounded-full p-1 relative cursor-pointer select-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] hover:border-ink-3 transition-colors"
-        @click="ui.toggleMode" :title="`Switch to ${ui.mode === 'work' ? 'Personal' : 'Work'} Mode`"
-        data-testid="mode-toggle">
-        <!-- Sliding background block (tactile 3D thumb) -->
+      <div class="flex items-center gap-2">
+        <!-- Pill sliding switch for Work/Personal Mode -->
         <div
-          class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-gradient-to-b from-ink/90 to-ink rounded-full transition-all duration-300 transform shadow-[0_3px_6px_rgba(0,0,0,0.35),_0_1px_3px_rgba(0,0,0,0.2),_inset_0_1.5px_0_rgba(255,255,255,0.25)] border border-black/50"
-          :class="ui.mode === 'work' ? 'translate-x-[100%]' : 'translate-x-0'"></div>
+          class="flex items-center bg-canvas border border-line-2 rounded-full p-1 relative cursor-pointer select-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] hover:border-ink-3 transition-colors"
+          @click="ui.toggleMode" :title="`Switch to ${ui.mode === 'work' ? 'Personal' : 'Work'} Mode`"
+          data-testid="mode-toggle">
+          <!-- Sliding background block (tactile 3D thumb) -->
+          <div
+            class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-gradient-to-b from-ink/90 to-ink rounded-full transition-all duration-300 transform shadow-[0_3px_6px_rgba(0,0,0,0.35),_0_1px_3px_rgba(0,0,0,0.2),_inset_0_1.5px_0_rgba(255,255,255,0.25)] border border-black/50"
+            :class="ui.mode === 'work' ? 'translate-x-[100%]' : 'translate-x-0'"></div>
 
-        <!-- Personal Icon (Sparkles) -->
-        <div class="relative z-10 flex items-center justify-center w-7 h-7 rounded-full transition-colors duration-300"
-          :class="ui.mode === 'personal' ? 'text-canvas' : 'text-ink-3 hover:text-ink-2'">
-          <Sparkles class="w-3.5 h-3.5" />
+          <!-- Personal Icon (Sparkles) -->
+          <div class="relative z-10 flex items-center justify-center w-7 h-7 rounded-full transition-colors duration-300"
+            :class="ui.mode === 'personal' ? 'text-canvas' : 'text-ink-3 hover:text-ink-2'">
+            <Sparkles class="w-3.5 h-3.5" />
+          </div>
+
+          <!-- Work Icon (Briefcase) -->
+          <div class="relative z-10 flex items-center justify-center w-7 h-7 rounded-full transition-colors duration-300"
+            :class="ui.mode === 'work' ? 'text-canvas' : 'text-ink-3 hover:text-ink-2'">
+            <Briefcase class="w-3.5 h-3.5" />
+          </div>
         </div>
 
-        <!-- Work Icon (Briefcase) -->
-        <div class="relative z-10 flex items-center justify-center w-7 h-7 rounded-full transition-colors duration-300"
-          :class="ui.mode === 'work' ? 'text-canvas' : 'text-ink-3 hover:text-ink-2'">
-          <Briefcase class="w-3.5 h-3.5" />
-        </div>
+        <!-- Mobile Close Drawer Button -->
+        <button
+          type="button"
+          class="md:hidden p-1.5 rounded-lg text-ink-3 hover:text-ink hover:bg-surface/80"
+          @click="ui.mobileSidebarOpen = false"
+        >
+          <X class="w-5 h-5" />
+        </button>
       </div>
     </div>
 
@@ -254,7 +281,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </span>
     </button>
 
-    <nav class="flex-1 overflow-y-auto px-3 pb-4 space-y-3.5">
+    <nav class="flex-1 overflow-y-auto px-3 pb-4 space-y-3.5" @click="ui.mobileSidebarOpen = false">
       <ul class="mb-2">
         <li>
           <RouterLink to="/" data-testid="nav-dashboard"
@@ -288,7 +315,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </div>
     </nav>
 
-    <div class="px-3 pb-5 pt-2 border-t border-line flex items-center justify-between gap-1.5">
+    <div class="px-3 pb-5 pt-2 border-t border-line flex items-center justify-between gap-1.5" @click="ui.mobileSidebarOpen = false">
       <RouterLink to="/settings"
         class="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-ink-2 hover:text-ink hover:bg-surface/60 transition-all duration-300"
         data-testid="nav-settings">
