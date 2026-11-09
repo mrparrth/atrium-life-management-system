@@ -124,7 +124,7 @@ const personalTasksHandled = computed(() => {
   return personalTasks.value.filter(t => isTaskHandledToday(t, today)).length
 })
 const personalScore = computed(() => {
-  if (personalTasksTotal.value === 0) return 1
+  if (personalTasksTotal.value === 0) return 0
   return personalTasksHandled.value / personalTasksTotal.value
 })
 
@@ -351,7 +351,7 @@ const workTasksHandled = computed(() => {
   }).length
 })
 const workTasksScore = computed(() => {
-  if (workTasksTotal.value === 0) return 1
+  if (workTasksTotal.value === 0) return 0
   return workTasksHandled.value / workTasksTotal.value
 })
 // 6. Review Reminders (Optional, does not affect tree score)
@@ -463,13 +463,15 @@ const progress = computed(() => {
   totalWeight += memoryWeight
   weightedScore += memoryScore.value * memoryWeight
 
-  // Tasks
-  totalWeight += tasksWeight
+  // Tasks (only factored into weight if there are actually tasks or briefings)
   const hasWorkBriefing = workAlertsCount.value > 0
   const totalTaskUnits = personalTasksTotal.value + workTasksTotal.value + (hasWorkBriefing ? 1 : 0)
-  const completedTaskUnits = personalTasksHandled.value + workTasksHandled.value + (hasWorkBriefing && workBriefingScore.value >= 1 ? 1 : 0)
-  const tasksScore = totalTaskUnits > 0 ? (completedTaskUnits / totalTaskUnits) : 1
-  weightedScore += tasksScore * tasksWeight
+  if (totalTaskUnits > 0) {
+    totalWeight += tasksWeight
+    const completedTaskUnits = personalTasksHandled.value + workTasksHandled.value + (hasWorkBriefing && workBriefingScore.value >= 1 ? 1 : 0)
+    const tasksScore = completedTaskUnits / totalTaskUnits
+    weightedScore += tasksScore * tasksWeight
+  }
 
   const finalScore = totalWeight > 0 ? (weightedScore / totalWeight) : 1
   return Math.round(finalScore * 100)
@@ -578,8 +580,8 @@ watch(progress, (newVal, oldVal) => {
           </div>
         </div>
 
-        <!-- Work Tasks -->
-        <div class="flex items-start gap-2.5">
+        <!-- Work Tasks (only show when there are work tasks today) -->
+        <div v-if="workTasksTotal > 0" class="flex items-start gap-2.5">
           <CheckCircle2 v-if="workTasksScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
           <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
           <div class="min-w-0 flex-1">
@@ -588,8 +590,9 @@ watch(progress, (newVal, oldVal) => {
             <p class="text-[10px] text-ink-3 mt-0.5">{{ workTasksHandled }}/{{ workTasksTotal }} handled today</p>
           </div>
         </div>
-        <!-- Personal Tasks -->
-        <div class="flex items-start gap-2.5">
+
+        <!-- Personal Tasks (only show when there are personal tasks today) -->
+        <div v-if="personalTasksTotal > 0" class="flex items-start gap-2.5">
           <CheckCircle2 v-if="personalScore >= 1" class="w-4 h-4 text-pri-strategic shrink-0 mt-0.5" />
           <Circle v-else class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
           <div class="min-w-0 flex-1">

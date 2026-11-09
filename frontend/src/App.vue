@@ -27,6 +27,7 @@ import { toLocalDateStr } from '@/lib/resurface'
 import { useHabitsStore } from '@/stores/habits'
 import { db, seedIfEmpty } from '@/db'
 import { autoOfflineBackup, isTauriEnv } from '@/services/offlineSync'
+import { initDexieCloud } from '@/services/dexieCloud'
 import { syncSubscribedCalendar } from '@/services/calendar'
 import { initNotificationsOnLoad } from '@/lib/notifications'
 
@@ -39,6 +40,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ToastHost from '@/components/ToastHost.vue'
 import GrowthTree from '@/components/GrowthTree.vue'
 import DailyGoalsSplash from '@/components/DailyGoalsSplash.vue'
+import DownloadModal from '@/components/DownloadModal.vue'
 import { X } from 'lucide-vue-next'
 
 const ui = useUIStore()
@@ -104,6 +106,7 @@ onMounted(async () => {
     })
   } catch (e) {}
   initNotificationsOnLoad()
+  initDexieCloud()
   await db.open()
   await seedIfEmpty()
 
@@ -160,20 +163,27 @@ onMounted(async () => {
   }, 60000) // check every minute, actual backup respects interval setting
   setInterval(checkCalendarFeed, 15 * 60 * 1000) // check calendar feed every 15 minutes
 
-  // Check if first run or reset
-  const isFirstRun = localStorage.getItem('atrium.initialized') !== 'true'
-  if (isFirstRun) {
-    localStorage.setItem('atrium.initialized', 'true')
+  // Check if user has configured greeting name or backup
+  const hasConfiguredName = Boolean(settingsStore.get('user_name', localStorage.getItem('atrium.user_name') || ''))
+  const hasPromptedSetup = localStorage.getItem('atrium.setup_prompted') === 'true'
+
+  if (!hasConfiguredName && !hasPromptedSetup) {
+    localStorage.setItem('atrium.setup_prompted', 'true')
     setTimeout(async () => {
-      await ui.confirm({
-        title: 'Welcome',
-        message: 'Enter your preferences in Settings or restore from a backup',
-        confirmText: 'Go to Settings',
-        cancelText: 'Ignore',
+      // Don't interrupt if user is on the landing page
+      if (route.path === '/') return
+
+      const shouldSetup = await ui.confirm({
+        title: 'Welcome to Atrium',
+        message: 'Let’s set up your preferred name, greeting, and backup location in Settings to personalize your quiet space.',
+        confirmText: 'Configure Settings',
+        cancelText: 'Maybe Later',
         isDestructive: false
       })
-      router.push('/settings')
-    }, 1000)
+      if (shouldSetup) {
+        router.push('/settings')
+      }
+    }, 1200)
   }
 
   window.addEventListener('keydown', (e) => {
@@ -344,10 +354,17 @@ watch(() => ui.mode, (newMode) => {
     router.push(targetPath)
   }
 })
+const isLandingRoute = computed(() => route.path === '/')
 </script>
 
 <template>
-  <div class="h-screen w-screen overflow-hidden bg-canvas text-ink flex" data-testid="app-root">
+  <!-- Full-bleed Landing View without App Chrome -->
+  <div v-if="isLandingRoute" class="h-screen w-screen overflow-y-auto bg-canvas text-ink">
+    <router-view />
+  </div>
+
+  <!-- Standard Application Layout -->
+  <div v-else class="h-screen w-screen overflow-hidden bg-canvas text-ink flex" data-testid="app-root">
     <AppSidebar />
     <main class="flex-1 min-w-0 h-full relative flex flex-col overflow-hidden">
       <!-- Cross-Workspace Task Alert Banner -->
@@ -381,6 +398,7 @@ watch(() => ui.mode, (newMode) => {
     </main>
     <CommandPalette v-if="ui.commandOpen" />
     <QuickCapture v-if="ui.quickCaptureOpen" />
+    <DownloadModal />
 
     <!-- TASK EDIT MODAL -->
     <div v-if="ui.taskEditOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4"

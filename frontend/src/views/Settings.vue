@@ -13,7 +13,7 @@ import { fromNow } from '@/lib/date'
 import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote, Key, Calendar, RefreshCw, LogIn, LogOut } from 'lucide-vue-next'
 import { syncSubscribedCalendar } from '@/services/calendar'
 import { isNotificationSupported, requestNotificationPermission, areNotificationsEnabled, sendDesktopNotification } from '@/lib/notifications'
-import { cloudUrl, cloudUser, cloudSyncState, isConfigured as isCloudConfigured, cloudError, loginCloudWithUrl, logoutCloud, disconnectCloud } from '@/services/dexieCloud'
+import { cloudUrl, cloudUser, cloudSyncState, isConfigured as isCloudConfigured, cloudError, loginCloudWithUrl, logoutCloud, disconnectCloud, syncNow } from '@/services/dexieCloud'
 
 const ui = useUIStore()
 const settings = useSettingsStore()
@@ -38,6 +38,7 @@ const cloudBusy = ref(false)
 
 const notificationsSupported = ref(isNotificationSupported())
 const notificationsEnabled = ref(areNotificationsEnabled())
+const showNotificationHelpModal = ref(false)
 
 const confettiDurationVal = ref('20')
 const confettiOptions = [
@@ -125,6 +126,12 @@ async function toggleNotifications() {
     notificationsEnabled.value = false
     ui.showToast('Desktop notifications disabled', 'info')
   } else {
+    // If browser already marked it denied, requesting permission will instantly return 'denied' without showing a prompt
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied') {
+      showNotificationHelpModal.value = true
+      return
+    }
+
     const perm = await requestNotificationPermission()
     if (perm === 'granted') {
       notificationsEnabled.value = true
@@ -132,8 +139,10 @@ async function toggleNotifications() {
       sendDesktopNotification('Notifications Enabled', {
         body: 'You will now receive desktop alerts for strategic briefings and reminders.'
       })
+    } else if (perm === 'denied') {
+      showNotificationHelpModal.value = true
     } else {
-      ui.showToast('Permission denied for notifications', 'warning')
+      ui.showToast('Notification permission dismissed', 'info')
     }
   }
 }
@@ -213,6 +222,43 @@ async function handleCloudConnectAndLogin() {
     ui.showToast('Connected to Dexie Cloud', 'success')
   } catch (e) {
     ui.showToast(e.message || 'Cloud connection failed', 'error')
+  } finally {
+    cloudBusy.value = false
+  }
+}
+
+async function handleCloudLogin() {
+  cloudBusy.value = true
+  try {
+    await loginCloudWithUrl(dexieCloudUrlInput.value.trim() || cloudUrl.value)
+    ui.showToast('Authentication initiated', 'info')
+  } catch (e) {
+    ui.showToast(e.message || 'Login failed', 'error')
+  } finally {
+    cloudBusy.value = false
+  }
+}
+
+async function handleCloudSync() {
+  cloudBusy.value = true
+  try {
+    await syncNow()
+    ui.showToast('Cloud sync triggered', 'success')
+  } catch (e) {
+    ui.showToast(e.message || 'Sync failed', 'error')
+  } finally {
+    cloudBusy.value = false
+  }
+}
+
+async function handleCloudLogout() {
+  if (!await ui.confirm({ message: 'Sign out of your Dexie Cloud account on this device?', title: 'Log Out of Dexie Cloud' })) return
+  cloudBusy.value = true
+  try {
+    await logoutCloud()
+    ui.showToast('Signed out of Dexie Cloud', 'info')
+  } catch (e) {
+    ui.showToast(e.message || 'Logout failed', 'error')
   } finally {
     cloudBusy.value = false
   }
@@ -584,8 +630,7 @@ function matchesSearch(text) {
             <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
               <div>
                 <p class="text-sm text-ink ">Desktop System Notifications</p>
-                <p class="text-xs text-ink-3">Receive browser alerts for strategic briefings, due dates, and reminders.
-                  This feature is untested and will not work unless deployed to a server</p>
+                <p class="text-xs text-ink-3">Receive browser alerts for strategic briefings, due dates, and reminders.</p>
               </div>
               <div class="flex items-center gap-3 shrink-0">
                 <button v-if="notificationsEnabled" @click="testNotification"
@@ -930,49 +975,48 @@ function matchesSearch(text) {
                 </a>
               </div>
 
-              <!-- Streamlined Single-Row URL & Action Buttons -->
+              <!-- Streamlined Single-Row URL & Single Action Button -->
               <div class="flex items-center gap-2 mt-3">
                 <VUrlInput
                   v-model="dexieCloudUrlInput"
-                  :disabled="cloudBusy || isCloudConfigured"
+                  :disabled="cloudBusy"
                   placeholder="https://<your-db>.dexie.cloud"
                   class="flex-grow min-w-0"
                 />
 
-                <!-- Connect Button (when not configured) -->
-                <button v-if="!isCloudConfigured" @click="handleCloudConnectAndLogin" :disabled="cloudBusy || !dexieCloudUrlInput.trim()"
-                  class="btn-primary !py-2.5 px-4 text-xs flex items-center gap-1.5 shrink-0 h-[42px]">
+                <!-- Single Action Button: Connect / Log In or Sign Out -->
+                <button
+                  v-if="!cloudUser?.email"
+                  @click="handleCloudLogin"
+                  :disabled="cloudBusy || !dexieCloudUrlInput.trim()"
+                  class="btn-primary !py-2.5 px-4 text-xs flex items-center gap-1.5 h-[42px] shrink-0"
+                >
                   <Loader2 v-if="cloudBusy" class="w-3.5 h-3.5 animate-spin" />
                   <Cloud v-else class="w-3.5 h-3.5" />
                   <span>Connect</span>
                 </button>
 
-                <!-- Simple Disconnect Icon Button (when configured) -->
-                <button v-else @click="handleCloudDisconnect" :disabled="cloudBusy"
-                  class="btn-ghost !p-2.5 text-ink-3 hover:text-red-500 hover:bg-red-500/10 rounded-xl flex items-center justify-center shrink-0 h-[42px] w-[42px] border border-line transition-all"
-                  title="Disconnect Dexie Cloud">
-                  <Loader2 v-if="cloudBusy" class="w-4 h-4 animate-spin text-ink-3" />
-                  <Unlink v-else class="w-4 h-4" />
+                <button
+                  v-else
+                  @click="handleCloudLogout"
+                  :disabled="cloudBusy"
+                  class="btn-ghost !py-2.5 px-3.5 text-xs text-ink-3 hover:text-red-500 hover:bg-red-500/10 rounded-xl flex items-center gap-1.5 h-[42px] shrink-0 border border-line transition-all"
+                >
+                  <Loader2 v-if="cloudBusy" class="w-3.5 h-3.5 animate-spin" />
+                  <LogOut v-else class="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
                 </button>
               </div>
 
-              <!-- Connection status indicator below input -->
+              <!-- Clean Binary Status Indicator: Connected vs Not Connected -->
               <div class="flex items-center gap-2 mt-2.5 text-xs">
                 <span class="inline-block w-2 h-2 rounded-full"
-                  :class="{
-                    'bg-emerald-500': cloudSyncState === 'in-sync' || cloudSyncState === 'syncing',
-                    'bg-amber-500': cloudSyncState === 'connecting',
-                    'bg-ink-3/40': cloudSyncState === 'offline' || !isCloudConfigured,
-                    'bg-red-500': cloudSyncState === 'error'
-                  }"></span>
-                <span class="capitalize text-ink font-medium">
-                  {{ !isCloudConfigured ? 'Not Connected' : cloudSyncState }}
+                  :class="cloudUser?.email ? 'bg-emerald-500' : 'bg-ink-3/40'"></span>
+                <span class="text-ink font-medium">
+                  {{ cloudUser?.email ? 'Connected' : 'Not Connected' }}
                 </span>
                 <span v-if="cloudUser?.email" class="text-ink-3">
-                  · Signed in as <strong class="text-ink font-normal">{{ cloudUser.email }}</strong>
-                </span>
-                <span v-else-if="cloudUser?.userId && cloudUser?.userId !== 'unauthorized'" class="text-ink-3">
-                  · User: {{ cloudUser.userId }}
+                  · {{ cloudUser.email }}
                 </span>
               </div>
             </div>
@@ -1108,11 +1152,26 @@ function matchesSearch(text) {
 
           <div class="card p-6 space-y-3 text-sm text-ink-2">
             <div class="flex items-center justify-between"><span>App Version</span><span
-                class="font-mono text-xs font-semibold text-ink">v2.4.0 (PWA)</span></div>
+                class="font-mono text-xs font-semibold text-ink">v2.4.0 (PWA & Desktop)</span></div>
             <div class="flex items-center justify-between"><span>Storage Engine</span><span
                 class="font-mono text-xs text-ink-3">Dexie IndexedDB (36 tables)</span></div>
             <div class="flex items-center justify-between"><span>Architecture</span><span
-                class="font-mono text-xs text-ink-3">100% Client-Side Local Browser</span></div>
+                class="font-mono text-xs text-ink-3">Local-First Reactive</span></div>
+            <hr class="border-line/40 my-2" />
+            <div class="flex items-center justify-between pt-1">
+              <div>
+                <div class="font-medium text-ink">Install Native App</div>
+                <div class="text-xs text-ink-3">Install desktop app or add to phone home screen</div>
+              </div>
+              <button
+                type="button"
+                class="btn-primary text-xs !py-1.5 px-3 flex items-center gap-1.5"
+                @click="ui.downloadModalOpen = true"
+              >
+                <Download class="w-3.5 h-3.5" />
+                <span>Get App</span>
+              </button>
+            </div>
             <hr class="border-line/40 my-2" />
             <p class="text-xs text-ink-3 leading-relaxed">
               Atrium is a private, zero-tracking personal operating environment. All your goals, tasks, notes,
@@ -1122,6 +1181,58 @@ function matchesSearch(text) {
           </div>
         </section>
       </main>
+    </div>
+
+    <!-- Notification Permission Help Modal -->
+    <div
+      v-if="showNotificationHelpModal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+      @click.self="showNotificationHelpModal = false"
+    >
+      <div class="card max-w-md w-full p-6 shadow-2xl space-y-4 border border-line bg-surface">
+        <div class="flex items-start gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+            <BellOff class="w-5 h-5" />
+          </div>
+          <div>
+            <h3 class="font-semibold text-ink text-base">Notifications are Blocked</h3>
+            <p class="text-xs text-ink-3 mt-1 leading-relaxed">
+              Your browser has blocked notifications for Atrium. When blocked, browsers do not show the permission prompt again automatically.
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-3 p-3.5 rounded-xl bg-surface-2 border border-line/60 text-xs text-ink-2">
+          <div class="font-medium text-ink flex items-center gap-1.5">
+            <span>How to enable in Chrome / Brave / Edge:</span>
+          </div>
+          <ol class="list-decimal list-inside space-y-2 text-ink-2">
+            <li>
+              Look at the left side of your browser address bar and click the <strong class="text-ink">Tune / Settings / Padlock</strong> icon (next to <code class="px-1.5 py-0.5 rounded bg-surface border border-line font-mono text-[11px]">atrium-life-planner.vercel.app</code>).
+            </li>
+            <li>
+              Find <strong class="text-ink">Notifications</strong> and toggle it from <em>Block</em> to <strong class="text-emerald-600 dark:text-emerald-400">Allow</strong>.
+            </li>
+            <li>
+              Reload this page and click <strong class="text-ink">Enable</strong> again.
+            </li>
+          </ol>
+
+          <div class="pt-2 border-t border-line/40 text-[11px] text-ink-3">
+            <span>Using macOS? Also make sure Google Chrome (or Atrium) is allowed in <strong>System Settings → Notifications</strong>.</span>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-1">
+          <button
+            type="button"
+            class="btn-primary text-xs !py-2 px-4"
+            @click="showNotificationHelpModal = false"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

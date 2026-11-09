@@ -28,3 +28,9 @@ tauri-plugin-fs = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-deep-link = "2"
 urlencoding = "2.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
+

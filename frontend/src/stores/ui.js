@@ -28,6 +28,7 @@ export const useUIStore = defineStore("ui", () => {
   const sidebarOpen = ref(true);
   const commandOpen = ref(false);
   const quickCaptureOpen = ref(false);
+  const downloadModalOpen = ref(false);
   const taskEditOpen = ref(false);
   const taskToEdit = ref(null);
   const toasts = ref([]);
@@ -106,6 +107,7 @@ export const useUIStore = defineStore("ui", () => {
     sidebarOpen,
     commandOpen,
     quickCaptureOpen,
+    downloadModalOpen,
     taskEditOpen,
     taskToEdit,
     toasts,

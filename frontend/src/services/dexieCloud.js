@@ -98,12 +98,15 @@ export function getCloudDb(targetUrl = cloudUrl.value) {
 /**
  * Initializes Dexie Cloud state on app startup if a URL was previously configured.
  */
-export function initDexieCloud() {
+export async function initDexieCloud() {
   const savedUrl = localStorage.getItem("atrium.dexieCloud.url");
   if (savedUrl) {
     try {
-      getCloudDb(savedUrl);
+      const instance = getCloudDb(savedUrl);
       isConfigured.value = true;
+      if (instance && !instance.isOpen()) {
+        await instance.open();
+      }
     } catch (e) {
       console.warn("Failed to initialize Dexie Cloud on startup:", e);
     }

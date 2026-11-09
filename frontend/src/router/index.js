@@ -1,7 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
 const routes = [
-  { path: '/', name: 'dashboard', component: () => import('@/views/Dashboard.vue') },
+  { path: '/', name: 'landing', component: () => import('@/views/Landing.vue') },
+  { path: '/dashboard', name: 'dashboard', component: () => import('@/views/Dashboard.vue') },
   { path: '/today', name: 'today', component: () => import('@/views/Today.vue') },
   { path: '/tasks', name: 'tasks', component: () => import('@/views/Tasks.vue') },
   { path: '/next-steps', name: 'next-steps', component: () => import('@/views/NextSteps.vue') },
@@ -41,6 +42,32 @@ const router = createRouter({
   history: createWebHashHistory(),
   routes,
   scrollBehavior() { return { top: 0 } },
+})
+
+// Navigation Guard:
+// Desktop (Tauri) & installed standalone PWAs open straight to the Dashboard.
+// Web browsers visiting '/' always see the Landing Page with choices to download or launch.
+router.beforeEach((to, from, next) => {
+  // Ensure the page title is always cleanly set to "Atrium"
+  if (typeof document !== 'undefined') {
+    document.title = 'Atrium'
+  }
+
+  if (to.path === '/') {
+    const isDesktop = typeof window !== 'undefined' && (
+      Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__ || window.__TAURI_METADATA__)
+    )
+    const isStandalone = typeof window !== 'undefined' && (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator?.standalone === true
+    )
+
+    // Only skip landing if we are running as an installed desktop or mobile app
+    if (isDesktop || isStandalone) {
+      return next('/dashboard')
+    }
+  }
+  next()
 })
 
 export default router

@@ -228,3 +228,15 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - BUILD: Verified production Vite build (`npm run build`).
 - DOCS: Updated `context.md` checkpoint log.
 
+### November 9, 2026
+- FEATURE: Landing Page (`Landing.vue`) & Web Entry Flow. Added landing page at route `/` offering options to launch the web workspace or download the native app across macOS, Android (PWA), and iOS.
+- UX: Integrated persistent `DownloadModal.vue` triggered from sidebar and settings. Removed `.zip` option in favor of direct DMG installer (`Atrium-Installer.dmg`) with inline macOS Gatekeeper guidance (`xattr -cr /Applications/Atrium.app`).
+- UX: Hid sidebar download button once the app has been downloaded or launched in standalone/Tauri mode.
+- UX: Smart Onboarding Prompt in `App.vue` that gently prompts unconfigured users to set up greeting name, motto, and backup directories in Settings.
+- UX: Growth Tree daily calculation update in `GrowthTree.vue`: 0/0 tasks handled no longer counts as 100% completion; hidden Today's Personal/Work cards completely if 0 tasks exist for today.
+- UX & NOTIFICATIONS: Added explicit browser notification permission recovery modal in `Settings.vue` to assist users when the browser locks `Notification.permission = 'denied'`.
+- BRANDING & ICONS: Updated app icon across web, PWA manifest, and desktop bundles to a transparent-background brain icon. Replaced cached `.icns` in `~/Applications/Chrome Apps.localized/Atrium Life Planner.app` and `/Applications/Atrium.app`.
+- BRANDING: Renamed browser document title and HTML `<title>` to `"Atrium"`.
+- BUILD & DEPLOY: Rebuilt native macOS DMG package with standard drag-to-Applications symlink layout; built and deployed production updates to Vercel at `https://atrium-life-planner.vercel.app`.
+
+

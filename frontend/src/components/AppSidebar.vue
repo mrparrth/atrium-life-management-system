@@ -2,16 +2,25 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
+import { isTauriEnv } from '@/services/offlineSync'
 import {
   LayoutGrid, Sun, Moon, CheckSquare, FolderKanban, Compass,
   BookOpen, Archive, Calendar, Target, NotebookPen, Bookmark,
   Wallet, Sparkles, Settings, Command, Plus, ListChecks, GitFork,
-  TrendingUp, Briefcase, Receipt, BarChart2, Flame
+  TrendingUp, Briefcase, Receipt, BarChart2, Flame, Download
 } from 'lucide-vue-next'
 
 const ui = useUIStore()
 const route = useRoute()
 const router = useRouter()
+
+const isAppInstalled = computed(() => {
+  if (typeof window === 'undefined') return false
+  const isDesktop = Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__ || window.__TAURI_METADATA__ || isTauriEnv())
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator?.standalone === true
+  const hasDownloaded = localStorage.getItem('atrium.app_downloaded') === 'true'
+  return isDesktop || isStandalone || hasDownloaded
+})
 
 const RAW_SECTIONS_PERSONAL = [
   {
@@ -289,6 +298,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
             :class="{ 'underline decoration-ink/40 underline-offset-2': part.highlight }">{{ part.text }}</span>
         </span>
       </RouterLink>
+
+      <!-- Download App Button (only shown in web browser if not downloaded/installed) -->
+      <button
+        v-if="!isAppInstalled"
+        class="p-2 rounded-xl border border-line bg-surface/90 text-ink-3 hover:text-ink shadow-sm cursor-pointer hover:border-line-2 transition-colors flex items-center justify-center shrink-0"
+        @click="ui.downloadModalOpen = true"
+        title="Download / Install Atrium App"
+        data-testid="download-app-trigger"
+      >
+        <Download class="w-4 h-4 text-ink-3" />
+      </button>
 
       <!-- Theme Toggle button positioned to the right of Settings -->
       <button

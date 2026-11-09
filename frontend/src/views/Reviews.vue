@@ -52,7 +52,7 @@ watch(showNew, (open) => {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-4xl mx-auto" data-testid="reviews-view">
+  <div class="w-full px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="reviews-view">
     <PageHeader overline="Reflection" title="Reviews" sub="Daily, weekly, monthly, yearly - gentle rituals." />
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
