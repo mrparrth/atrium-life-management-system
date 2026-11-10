@@ -36,9 +36,14 @@ const isEditingCloudUrl = ref(!isCloudConfigured.value)
 const cloudLoginEmail = ref('')
 const cloudBusy = ref(false)
 
-const notificationsSupported = ref(isNotificationSupported())
-const notificationsEnabled = ref(areNotificationsEnabled())
+const notificationsSupported = ref(true)
+const notificationsEnabled = ref(false)
 const showNotificationHelpModal = ref(false)
+
+onMounted(async () => {
+  notificationsSupported.value = await isNotificationSupported()
+  notificationsEnabled.value = await areNotificationsEnabled()
+})
 
 const confettiDurationVal = ref('20')
 const confettiOptions = [
@@ -139,8 +144,8 @@ async function toggleNotifications() {
     notificationsEnabled.value = false
     ui.showToast('Desktop notifications disabled', 'info')
   } else {
-    // If browser already marked it denied, requesting permission will instantly return 'denied' without showing a prompt
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied') {
+    // In web browser mode: if already explicitly denied, prompt help modal
+    if (!isTauri.value && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied') {
       showNotificationHelpModal.value = true
       return
     }
@@ -1214,12 +1219,32 @@ function matchesSearch(text) {
           <div>
             <h3 class="font-semibold text-ink text-base">Notifications are Blocked</h3>
             <p class="text-xs text-ink-3 mt-1 leading-relaxed">
-              Your browser has blocked notifications for Atrium. When blocked, browsers do not show the permission prompt again automatically.
+              {{ isTauri ? 'macOS has disabled notifications for Atrium in your system settings.' : 'Your browser has blocked notifications for Atrium. When blocked, browsers do not show the permission prompt again automatically.' }}
             </p>
           </div>
         </div>
 
-        <div class="space-y-3 p-3.5 rounded-xl bg-surface-2 border border-line/60 text-xs text-ink-2">
+        <div v-if="isTauri" class="space-y-3 p-3.5 rounded-xl bg-surface-2 border border-line/60 text-xs text-ink-2">
+          <div class="font-medium text-ink flex items-center gap-1.5">
+            <span>How to enable notifications in macOS:</span>
+          </div>
+          <ol class="list-decimal list-inside space-y-2 text-ink-2">
+            <li>
+              Open <strong class="text-ink">System Settings</strong> on your Mac.
+            </li>
+            <li>
+              Navigate to <strong class="text-ink">Notifications</strong> in the left sidebar.
+            </li>
+            <li>
+              Find and click <strong class="text-ink">Atrium</strong> in the application list.
+            </li>
+            <li>
+              Toggle <strong class="text-emerald-600 dark:text-emerald-400">Allow Notifications</strong> to ON.
+            </li>
+          </ol>
+        </div>
+
+        <div v-else class="space-y-3 p-3.5 rounded-xl bg-surface-2 border border-line/60 text-xs text-ink-2">
           <div class="font-medium text-ink flex items-center gap-1.5">
             <span>How to enable in Chrome / Brave / Edge:</span>
           </div>
