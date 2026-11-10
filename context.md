@@ -240,5 +240,15 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - BUILD & DEPLOY: Rebuilt native macOS DMG package with standard drag-to-Applications symlink layout; built and deployed production updates to Vercel at `https://atrium-life-planner.vercel.app`.
 - MOBILE & PWA NAVIGATION: Implemented mobile responsive navigation layer for phones and Android. Added top mobile bar with hamburger toggle, slide-over drawer sidebar with background backdrop, quick work/personal context switcher, search trigger, and bottom-right floating action button (FAB) for 1-tap quick capture.
 
+### November 10, 2026
+- BUGFIX (Offline Auto-Backup): Fixed offline auto-backup bypass where `autoOfflineBackup()` strictly verified `localStorage.getItem("atrium.offline.enabled") === "1"`, whereas settings store serialization wrote `"true"`. Normalized boolean checking across `"1"`, `"true"`, and added direct fallback to IndexedDB `db.settings` row.
+- FEATURE (Backup Retention Pruning): Restored automated snapshot pruning (`pruneOldBackups`) honoring user retention policy (`Keep 7 Days`, etc.) across both Tauri desktop (`@tauri-apps/plugin-fs`) and Web (`FileSystemDirectoryHandle`).
+- FEATURE (Backup Intervention Events): Automated backups now dispatch `atrium-offline-backup-needs-intervention` and set `atrium.offline.backupNeedsIntervention` when browser permissions lapse, immediately alerting users via the dashboard with a 1-click re-authorization action rather than failing silently.
+- UX (Dexie Cloud Whitelist Guidance): Intercepted Dexie Cloud `userInteraction` stream in `services/dexieCloud.js`. If origin verification fails on desktop, dynamically provides formatted 2-step terminal commands (`npx dexie-cloud connect <db-url>` followed by `npx dexie-cloud whitelist tauri://localhost --force`) with a chained 1-click copy shortcut.
+- FEATURE (Desktop Native Notifications): Integrated native macOS notifications via `tauri-plugin-notification` / `@tauri-apps/plugin-notification` v2.4.0 in `frontend/src-tauri/Cargo.toml`, `lib.rs`, and `default.json` capability permissions. Replaced web `window.Notification` constructor calls with native desktop notifications in Tauri mode.
+- UX (Settings Notification Guidance): Replaced browser-specific permission help (padlock icon, URL bar, web domain) in `Settings.vue` with native macOS System Settings instructions (**System Settings → Notifications → Atrium**) when running the desktop app.
+- BUILD & DEPLOY: Rebuilt native macOS application bundle (`/Applications/Atrium.app`) and deployed all changes to remote GitHub / Vercel production.
+
+
 
 
