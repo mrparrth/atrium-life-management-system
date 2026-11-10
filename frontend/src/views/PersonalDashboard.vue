@@ -362,7 +362,7 @@ async function openDailyJournal() {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto" data-testid="dashboard">
+  <div class="px-4 sm:px-8 md:px-12 py-6 sm:py-10 max-w-7xl mx-auto" data-testid="dashboard">
     <!-- BACKUP FAILURE ALERT BANNER -->
     <div v-if="backupAlert"
       class="p-4 mb-6 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-between gap-4 text-xs text-red-900 dark:text-red-200 shadow-sm animate-fade-in"

@@ -432,7 +432,7 @@ const isLandingRoute = computed(() => route.path === '/')
       </div>
 
       <!-- Main Scrollable Content Container (Starts BELOW Top Banner) -->
-      <div class="flex-1 min-h-0 relative overflow-y-auto flex flex-col" style="scrollbar-gutter: stable;">
+      <div class="flex-1 min-h-0 relative overflow-y-auto flex flex-col pb-24 md:pb-0" style="scrollbar-gutter: stable;">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />

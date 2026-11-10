@@ -231,7 +231,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="px-8 md:px-12 py-10 max-w-7xl mx-auto space-y-8" data-testid="work-dashboard">
+  <div class="px-4 sm:px-8 md:px-12 py-6 sm:py-10 max-w-7xl mx-auto space-y-8" data-testid="work-dashboard">
 
     <!-- BACKUP FAILURE ALERT BANNER -->
     <div v-if="backupAlert"

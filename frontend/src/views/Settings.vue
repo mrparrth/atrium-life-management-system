@@ -542,10 +542,10 @@ function matchesSearch(text) {
 
     <!-- 2-Column Sidebar Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-8">
-      <!-- Left Sidebar Navigation -->
-      <aside class="lg:col-span-3 lg:sticky lg:top-8 space-y-1">
+      <!-- Left Sidebar Navigation (Horizontal scroll on mobile, vertical stack on desktop) -->
+      <aside class="lg:col-span-3 lg:sticky lg:top-8 flex lg:flex-col gap-1.5 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
         <button v-for="tab in tabs" :key="tab.id" @click="activeSection = tab.id"
-          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 text-left font-normal"
+          class="shrink-0 flex items-center gap-2.5 px-3.5 py-2 lg:py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-200 text-left font-normal whitespace-nowrap"
           :class="[
             activeSection === tab.id && !searchQuery.trim()
               ? 'bg-pri-strategic/10 text-pri-strategic font-medium'
