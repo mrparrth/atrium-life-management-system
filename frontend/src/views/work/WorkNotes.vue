@@ -11,6 +11,7 @@ import dayjs from 'dayjs'
 import { marked } from 'marked'
 import MarkdownHelpModal from '@/components/MarkdownHelpModal.vue'
 import TiptapEditor from '@/components/TiptapEditor.vue'
+import Combobox from '@/components/Combobox.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -67,6 +68,13 @@ const activeClients = computed(() => {
   return clientsStore.items.filter(c => {
     return c.status !== 'inactive' || c.id === editClientId.value
   })
+})
+
+const clientComboboxOptions = computed(() => {
+  return [
+    { key: '', label: 'None (Standalone)' },
+    ...activeClients.value.map(c => ({ key: c.id, label: c.name }))
+  ]
 })
 
 // Prebuilt note templates
@@ -403,15 +411,13 @@ const renderedMarkdown = computed(() => {
             </div>
 
             <div class="flex items-center gap-2 shrink-0">
-              <!-- Inline Client Selector Pill (Edit mode only) -->
-              <div v-if="isEditing"
-                class="flex items-center gap-1.5 text-xs bg-canvas/60 border border-line rounded-xl px-2.5 py-1">
-                <span class="text-[10px] font-mono uppercase font-bold text-ink-3">Client</span>
-                <select v-model="editClientId"
-                  class="bg-transparent text-xs text-ink font-medium focus:outline-none cursor-pointer">
-                  <option value="">None (Standalone)</option>
-                  <option v-for="c in activeClients" :key="c.id" :value="c.id">{{ c.name }}</option>
-                </select>
+              <!-- Inline Searchable Client Combobox Selector (Edit mode only) -->
+              <div v-if="isEditing" class="w-48 sm:w-56">
+                <Combobox
+                  :options="clientComboboxOptions"
+                  v-model="editClientId"
+                  placeholder="Link Client..."
+                />
               </div>
 
               <!-- Icon Actions Group -->
@@ -459,6 +465,17 @@ const renderedMarkdown = computed(() => {
                   <span
                     class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
                     Save as Template
+                  </span>
+                </button>
+
+                <!-- Markdown Formatting Help Button -->
+                <button @click="showMarkdownHelp = true"
+                  class="p-2 text-ink-3/70 hover:text-ink hover:bg-canvas transition-colors rounded-xl shrink-0 relative group"
+                  title="Formatting & Shortcuts Guide">
+                  <HelpCircle class="w-4 h-4" />
+                  <span
+                    class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-30 px-2 py-1 text-[10px] font-semibold bg-ink text-canvas rounded-lg shadow-md whitespace-nowrap pointer-events-none select-none border border-canvas/10">
+                    Formatting Guide
                   </span>
                 </button>
 

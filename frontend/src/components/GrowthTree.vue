@@ -431,7 +431,7 @@ const todayHabitsList = computed(() => {
 })
 
 const habitScore = computed(() => {
-  if (todayHabitsList.value.length === 0) return 1
+  if (todayHabitsList.value.length === 0) return 0
   const todayStr = currentDate.value.format('YYYY-MM-DD')
   const completed = todayHabitsList.value.filter(h => habitsStore.isCompletedOn(h.id, todayStr)).length
   return completed / todayHabitsList.value.length
@@ -448,9 +448,12 @@ const progress = computed(() => {
   let totalWeight = 0
   let weightedScore = 0
 
-  // Habits (5%)
-  totalWeight += habitWeight
-  weightedScore += habitScore.value * habitWeight
+  // Habits (5%): only factor into totalWeight if habits exist today; otherwise distribute weight
+  const hasHabits = todayHabitsList.value.length > 0
+  if (hasHabits) {
+    totalWeight += habitWeight
+    weightedScore += habitScore.value * habitWeight
+  }
 
   // Projects (Drifting)
   const hasProjects = staleProjectsList.value.length > 0
@@ -473,7 +476,7 @@ const progress = computed(() => {
     weightedScore += tasksScore * tasksWeight
   }
 
-  const finalScore = totalWeight > 0 ? (weightedScore / totalWeight) : 1
+  const finalScore = totalWeight > 0 ? (weightedScore / totalWeight) : 0
   return Math.round(finalScore * 100)
 })
 

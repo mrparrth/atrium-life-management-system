@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
 import { db } from '@/db'
@@ -10,7 +10,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import SectionHeader from '@/components/SectionHeader.vue'
 import { downloadLocalBackup } from '@/services/drive'
 import { fromNow } from '@/lib/date'
-import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote, Key, Calendar, RefreshCw, LogIn, LogOut } from 'lucide-vue-next'
+import { Cloud, CloudUpload, CloudDownload, Unlink, Save, FileDown, FileUp, Edit3, Loader2, Bell, BellOff, ExternalLink, FolderOpen, ShieldAlert, Check, Sparkles, Target, Compass, Gift, NotebookPen, Bookmark, Search, Sliders, Brain, Briefcase, HardDrive, Info, Database, Quote, Key, Calendar, RefreshCw, LogIn, LogOut, Download } from 'lucide-vue-next'
 import { syncSubscribedCalendar } from '@/services/calendar'
 import { isNotificationSupported, requestNotificationPermission, areNotificationsEnabled, sendDesktopNotification } from '@/lib/notifications'
 import { cloudUrl, cloudUser, cloudSyncState, isConfigured as isCloudConfigured, cloudError, loginCloudWithUrl, logoutCloud, disconnectCloud, syncNow } from '@/services/dexieCloud'
@@ -91,6 +91,19 @@ const spendingCurrencyOptions = [
 
 async function saveSpendingCurrency() {
   await settings.set('default_spending_currency', spendingCurrencyInput.value)
+  const newCur = spendingCurrencyInput.value
+  try {
+    const wishes = await db.wishlist.toArray()
+    const currencySymbols = ['$', '₹', '€', '£', 'INR', 'USD', 'EUR', 'GBP']
+    for (const w of wishes) {
+      if (!w.unit || currencySymbols.includes(w.unit)) {
+        w.unit = newCur
+        await db.wishlist.put(w)
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to sync wishlist items to new currency:', e)
+  }
   ui.showToast(`Default spending currency set to ${spendingCurrencyInput.value}`, 'success')
 }
 
@@ -209,7 +222,23 @@ async function refresh() {
     isEditingName.value = true
   }
 }
-onMounted(refresh)
+
+function handleBackupSuccess(e) {
+  if (e?.detail?.timestamp) {
+    offlineLastBackup.value = e.detail.timestamp
+  } else {
+    offlineLastBackup.value = localStorage.getItem('atrium.offline.lastBackup')
+  }
+}
+
+onMounted(() => {
+  refresh()
+  window.addEventListener('atrium-offline-backup-success', handleBackupSuccess)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('atrium-offline-backup-success', handleBackupSuccess)
+})
 
 async function handleCloudConnectAndLogin() {
   if (!dexieCloudUrlInput.value.trim()) {
@@ -364,18 +393,6 @@ function saveWorkSettings() {
 import { saveDirectoryHandle, getDirectoryHandle, executeOfflineBackup, verifyPermission, isTauriEnv } from '@/services/offlineSync'
 
 const isTauri = ref(isTauriEnv())
-const showManualTokenInput = ref(false)
-const manualTokenText = ref('')
-
-function handleManualTokenSubmit() {
-  if (!manualTokenText.value.trim()) return
-  setManualToken(manualTokenText.value)
-  connected.value = isConnected()
-  lastBackup.value = lastBackupAt()
-  manualTokenText.value = ''
-  showManualTokenInput.value = false
-  ui.showToast('Connected to Google Drive!', 'success')
-}
 const offlineEnabled = ref(Boolean(settings.get('offline_enabled', false)))
 const offlineInterval = ref(Number(settings.get('offline_interval', 1440)))
 const offlineKeepDays = ref(Number(settings.get('offline_keep_days', 7)))

@@ -4,8 +4,6 @@ import { useWorkClientsStore } from '@/stores/workClients'
 import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
 import {
-  createClientDriveFolder,
-  createClientDriveFolderInParent,
   extractFolderIdFromUrl
 } from '@/services/drive'
 import {
@@ -199,27 +197,9 @@ async function saveClient() {
 
   // Extract Drive Folder ID if user pasted custom Drive URL or ID
   let folderId = ''
-  if (!createDriveFolder.value && customDriveUrlOrId.value.trim()) {
+  if (customDriveUrlOrId.value.trim()) {
     const extracted = extractFolderIdFromUrl(customDriveUrlOrId.value)
     folderId = extracted || customDriveUrlOrId.value.trim()
-  }
-
-  // Check if Drive folder creation was selected (only if folderId not already set)
-  if (!folderId && createDriveFolder.value) {
-    ui.showToast('Connecting to Google Drive...', 'info')
-    try {
-      const parentFolderUrl = settings.get('work_drive_folder_url', '')
-      const parentFolderId = extractFolderIdFromUrl(parentFolderUrl)
-
-      if (parentFolderId) {
-        folderId = await createClientDriveFolderInParent(name.value.trim(), parentFolderId)
-      } else {
-        const rootDir = settings.get('work_drive_root', 'AtriumWork')
-        folderId = await createClientDriveFolder(name.value.trim(), rootDir)
-      }
-    } catch (e) {
-      ui.showToast(`Failed to create Drive folder: ${e.message}`, 'error')
-    }
   }
 
   const payload = {
@@ -428,24 +408,19 @@ onUnmounted(() => {
               </VRow>
             </div>
 
-            <!-- Google Drive Directory Integration -->
+            <!-- Client Folder / Drive Link -->
             <div class="bg-canvas/30 p-4 rounded-2xl border border-line/45">
               <VRow dense>
                 <VCol cols="12">
                   <div class="flex items-center gap-1.5 text-ink-3">
                     <HardDrive class="w-4 h-4 text-pri-strategic" />
-                    <span class="text-[10px] font-semibold uppercase tracking-wider">Google Drive Connection</span>
+                    <span class="text-[10px] font-semibold uppercase tracking-wider">Client Storage / Drive Link</span>
                   </div>
                 </VCol>
 
-                <!-- Switch for Auto-generate -->
-                <VCol cols="12" class="flex items-center pt-2">
-                  <VCheckbox v-model="createDriveFolder" label="Auto-generate folder" />
-                </VCol>
-
                 <!-- Custom Folder Input -->
-                <VCol cols="12" v-if="!createDriveFolder" class="pt-2">
-                  <VUrlInput v-model="customDriveUrlOrId" label="Drive Folder URL or ID" id="client-drive-url" />
+                <VCol cols="12" class="pt-2">
+                  <VUrlInput v-model="customDriveUrlOrId" label="Folder Link (Drive / Dropbox / Local)" id="client-drive-url" placeholder="Paste link to client's folder..." />
                 </VCol>
               </VRow>
             </div>

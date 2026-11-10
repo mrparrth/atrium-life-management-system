@@ -391,7 +391,13 @@ function openEditWish(w) {
   editWishUrl.value = w.url || ''
   editWishImageUrl.value = w.imageUrl || ''
   editWishGoalId.value = w.goalId || null
-  editWishUnit.value = w.unit || ''
+  const defaultSym = settingsStore.get('default_spending_currency', '₹')
+  const currencySymbols = ['$', '₹', '€', '£', 'INR', 'USD', 'EUR', 'GBP']
+  if (!w.unit || (currencySymbols.includes(w.unit) && (w.unit === '$' || w.unit === 'USD' || defaultSym !== '$'))) {
+    editWishUnit.value = defaultSym
+  } else {
+    editWishUnit.value = w.unit
+  }
   editWishGoal.value = w.goalValue || 0
   editWishCurrent.value = w.currentValue || 0
   editWishPurchased.value = w.purchased || false
@@ -446,13 +452,18 @@ function displayUrl(url) {
 }
 
 function formatCurrency(val) {
-  if (val === undefined || val === null) return '$0'
-  return '$' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  const defaultSym = settingsStore.get('default_spending_currency', '₹')
+  if (val === undefined || val === null) return `${defaultSym}0`
+  return `${defaultSym}${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
 }
 
 function formatWishValue(val, unit) {
   const defaultSym = settingsStore.get('default_spending_currency', '₹')
-  const u = (unit?.trim() || defaultSym)
+  const currencySymbols = ['$', '₹', '€', '£', 'INR', 'USD', 'EUR', 'GBP']
+  let u = (unit?.trim() || defaultSym)
+  if (!u || (currencySymbols.includes(u) && (u === '$' || u === 'USD' || defaultSym !== '$'))) {
+    u = defaultSym
+  }
   if (u === '$' || u === '₹' || u === '€' || u === '£') {
     return `${u}${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
   }
@@ -468,7 +479,11 @@ function formatGoalProgress(g) {
   }
   const current = g.achievedNumber || 0
   const target = g.targetNumber || 0
-  const unit = g.unit?.trim() || ''
+  const defaultSym = settingsStore.get('default_spending_currency', '₹')
+  let unit = g.unit?.trim() || ''
+  if (unit === '$' && defaultSym !== '$') {
+    unit = defaultSym
+  }
 
   if (unit === '%') {
     return `${current}% / ${target}%`
@@ -505,14 +520,19 @@ function getWishProgressText(w) {
   if (!w.goalValue) return ''
   const current = w.currentValue || 0
   const target = w.goalValue || 0
-  const unit = w.unit || ''
+  const defaultSym = settingsStore.get('default_spending_currency', '₹')
+  const currencySymbols = ['$', '₹', '€', '£', 'INR', 'USD', 'EUR', 'GBP']
+  let unit = (w.unit || defaultSym).trim()
+  if (!unit || (currencySymbols.includes(unit) && (unit === '$' || unit === 'USD' || defaultSym !== '$'))) {
+    unit = defaultSym
+  }
   if (unit === '$' || unit === '₹' || unit === '€' || unit === '£') {
     return `${unit}${current.toLocaleString()} / ${unit}${target.toLocaleString()}`
   }
   if (unit) {
     return `${current.toLocaleString()} / ${target.toLocaleString()} ${unit}`
   }
-  return `${current} / ${target}`
+  return `${defaultSym}${current.toLocaleString()} / ${defaultSym}${target.toLocaleString()}`
 }
 
 function cleanImageUrl(url) {
@@ -524,7 +544,13 @@ function cleanImageUrl(url) {
 function formatWishPrice(w) {
   if (w.price === undefined || w.price === null || w.price === '') return ''
   const defaultSym = settingsStore.get('default_spending_currency', '₹')
-  const unit = (w.unit || (w.goalId ? goals.items.find(g => g.id === w.goalId)?.unit : '') || defaultSym).trim()
+  const currencySymbols = ['$', '₹', '€', '£', 'INR', 'USD', 'EUR', 'GBP']
+  let unit = (w.unit || (w.goalId ? goals.items.find(g => g.id === w.goalId)?.unit : '') || defaultSym).trim()
+
+  if (!unit || (currencySymbols.includes(unit) && (unit === '$' || unit === 'USD' || defaultSym !== '$'))) {
+    unit = defaultSym
+  }
+
   if (unit === '$' || unit === '₹' || unit === '€' || unit === '£' || unit === 'INR' || unit === 'USD') {
     const sym = unit === 'INR' ? '₹' : unit === 'USD' ? '$' : unit === 'EUR' ? '€' : unit === 'GBP' ? '£' : unit
     return `${sym}${Number(w.price).toLocaleString()}`

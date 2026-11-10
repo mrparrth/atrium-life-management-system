@@ -11,7 +11,7 @@ import { useUIStore } from '@/stores/ui'
 import { useSettingsStore } from '@/stores/settings'
 import WorkItemCard from '@/components/work/WorkItemCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { createClientDriveFolder, createClientDriveFolderInParent, extractFolderIdFromUrl } from '@/services/drive'
+import { extractFolderIdFromUrl } from '@/services/drive'
 import ClientPopup from '@/components/work/ClientPopup.vue'
 import VTooltip from '@/components/VTooltip.vue'
 import VUrlInput from '@/components/VUrlInput.vue'
@@ -130,30 +130,6 @@ function startEditPrefs() {
 function handleClientSaved(updated) {
   if (updated && updated.deleted) {
     router.push('/work/clients')
-  }
-}
-
-async function triggerCreateDriveFolder() {
-  if (!client.value) return
-  ui.showToast('Connecting to Google Drive...', 'info')
-  try {
-    const parentFolderUrl = settings.get('work_drive_folder_url', '')
-    const parentFolderId = extractFolderIdFromUrl(parentFolderUrl)
-    let folderId = ''
-
-    if (parentFolderId) {
-      folderId = await createClientDriveFolderInParent(client.value.name, parentFolderId)
-    } else {
-      const rootDir = settings.get('work_drive_root', 'AtriumWork')
-      folderId = await createClientDriveFolder(client.value.name, rootDir)
-    }
-
-    await clientsStore.update(props.id, {
-      driveFolderId: folderId
-    })
-    ui.showToast(`Folder created successfully in Google Drive`, 'success')
-  } catch (e) {
-    ui.showToast(`Failed to create Drive folder: ${e.message}`, 'error')
   }
 }
 
@@ -526,7 +502,7 @@ watch(showAddResourceModal, (open) => {
 
           <!-- Google Drive Folder Header Utility Button (in the middle) -->
           <VTooltip v-if="client.driveFolderId" text="Open Google Drive folder (⌘2)" position="bottom">
-            <a :href="`https://drive.google.com/drive/folders/${client.driveFolderId}`" target="_blank"
+            <a :href="client.driveFolderId.startsWith('http') ? client.driveFolderId : `https://drive.google.com/drive/folders/${client.driveFolderId}`" target="_blank"
               class="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface/50 text-ink-2 hover:text-ink hover:bg-surface transition-all shrink-0">
               <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                 <title>Google Drive</title>
@@ -534,16 +510,6 @@ watch(showAddResourceModal, (open) => {
                   d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
               </svg>
             </a>
-          </VTooltip>
-          <VTooltip v-else text="Initialize Google Drive folder" position="bottom">
-            <button @click="triggerCreateDriveFolder"
-              class="w-9 h-9 flex items-center justify-center rounded-xl border border-dashed border-line bg-surface/30 text-ink-3 hover:text-ink hover:bg-surface transition-all shrink-0">
-              <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <title>Google Drive</title>
-                <path
-                  d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
-              </svg>
-            </button>
           </VTooltip>
 
           <!-- Edit Profile (Pencil Icon) -->

@@ -208,6 +208,8 @@ onMounted(async () => {
   checkBackupStatus()
   window.addEventListener('atrium-backup-failed-alert', checkBackupStatus)
   window.addEventListener('atrium-backup-success', checkBackupStatus)
+  window.addEventListener('atrium-offline-backup-needs-intervention', checkBackupStatus)
+  window.addEventListener('atrium-offline-backup-success', checkBackupStatus)
 
   // Auto-sync calendar if configured
   const feedUrl = settingsStore.get('calendar_feed_url', '')
@@ -223,6 +225,8 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('atrium-backup-failed-alert', checkBackupStatus)
   window.removeEventListener('atrium-backup-success', checkBackupStatus)
+  window.removeEventListener('atrium-offline-backup-needs-intervention', checkBackupStatus)
+  window.removeEventListener('atrium-offline-backup-success', checkBackupStatus)
 })
 </script>
 

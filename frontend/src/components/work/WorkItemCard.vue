@@ -14,7 +14,6 @@ import dayjs from 'dayjs'
 import VTooltip from '@/components/VTooltip.vue'
 import WorkItemPopup from '@/components/work/WorkItemPopup.vue'
 import DueDatePicker from '@/components/DueDatePicker.vue'
-import { createClientDriveFolder, createClientDriveFolderInParent } from '@/services/drive'
 import drivePresentIcon from '@/assets/icons/drive-present.png'
 import driveAddIcon from '@/assets/icons/drive-add.png'
 
@@ -302,23 +301,6 @@ function deleteItem() {
   })
 }
 
-async function triggerLinkDriveFolder() {
-  ui.showToast('Connecting to Google Drive...', 'info')
-  try {
-    let folderId
-    if (client.value?.driveFolderId) {
-      folderId = await createClientDriveFolderInParent(props.item.title, client.value.driveFolderId)
-    } else {
-      const rootDir = settings.get('work_drive_root', 'AtriumWork')
-      folderId = await createClientDriveFolder(props.item.title, rootDir)
-    }
-    await itemsStore.update(props.item.id, { driveFolderId: folderId })
-    ui.showToast(`Drive folder created: "${props.item.title}"`, 'success')
-  } catch (e) {
-    ui.showToast(`Failed to create Drive folder: ${e.message}`, 'error')
-  }
-}
-
 onUnmounted(() => {
   window.removeEventListener('click', closeMenus)
   window.removeEventListener('keydown', handleEscKey)
@@ -493,23 +475,6 @@ watch(showEditModal, (isOpen) => {
                   d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
               </svg>
             </a>
-          </VTooltip>
-          <VTooltip v-else-if="!itemsStore.isCompleted(props.item.status)" text="Generate Google Drive folder"
-            position="top-right">
-            <button @click="triggerLinkDriveFolder"
-              class="p-2 rounded-xl border border-dashed border-line bg-surface text-ink-3 hover:text-ink hover:bg-canvas transition-all shadow-sm flex items-center justify-center cursor-pointer shrink-0"
-              title="Generate Google Drive folder">
-              <span class="relative flex items-center justify-center">
-                <svg viewBox="0 0 24 24"
-                  class="w-4 h-4 shrink-0 fill-none stroke-current text-ink-3 hover:text-ink transition-colors"
-                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z" />
-                </svg>
-                <span
-                  class="absolute -top-2 -right-2 text-[10px] font-extrabold text-pri-strategic bg-surface rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none border border-pri-strategic/40 shadow-xs select-none">+</span>
-              </span>
-            </button>
           </VTooltip>
 
           <!-- Easy One-Click Snooze Button -->

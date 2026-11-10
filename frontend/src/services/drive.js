@@ -314,19 +314,30 @@ const TABLES = [
   "finance_subscriptions",
   "finance_content_pipeline",
   "follows",
-  "wishlist"
+  "wishlist",
+  "habits",
+  "habit_logs"
 ];
 
 export async function exportAllData() {
+  await db.open();
   const data = {};
   const { DEFAULT_SETTINGS } = await import('@/stores/settings');
-  const tableNames = db.tables.map(t => t.name);
-  for (const t of tableNames) {
+  const allTableNames = Array.from(new Set([
+    ...TABLES,
+    ...db.tables.map(t => t.name)
+  ]));
+  for (const t of allTableNames) {
     if (t === 'settings') {
       const rows = await db.table('settings').toArray();
       data.settings = rows.map(r => r.id === 'app' ? { ...DEFAULT_SETTINGS, ...r } : r);
     } else {
-      data[t] = await db.table(t).toArray();
+      try {
+        data[t] = await db.table(t).toArray();
+      } catch (err) {
+        console.warn(`[exportAllData] Error exporting table ${t}:`, err);
+        data[t] = [];
+      }
     }
   }
   return data;
@@ -362,11 +373,20 @@ export async function syncSettingsToLocalStorage() {
 }
 
 export async function importAllData(data) {
-  const tableNames = db.tables.map(t => t.name);
-  for (const t of tableNames) {
-    if (!Array.isArray(data[t])) continue;
-    await db.table(t).clear();
-    if (data[t].length) await db.table(t).bulkAdd(data[t]);
+  await db.open();
+  const allTableNames = Array.from(new Set([
+    ...TABLES,
+    ...db.tables.map(t => t.name)
+  ]));
+  for (const t of allTableNames) {
+    const records = Array.isArray(data[t]) ? data[t] : (t === 'habits' && Array.isArray(data.habbits) ? data.habbits : null);
+    if (!records) continue;
+    try {
+      await db.table(t).clear();
+      if (records.length) await db.table(t).bulkAdd(records);
+    } catch (err) {
+      console.warn(`[importAllData] Error importing table ${t}:`, err);
+    }
   }
   await syncSettingsToLocalStorage();
 }

@@ -17,12 +17,19 @@ const cheatSheet = [
     ]
   },
   {
-    title: 'Text Style',
+    title: 'Text Style & Shortcuts',
     items: [
-      { label: 'Bold', syntax: '**text**', result: 'bold text' },
-      { label: 'Italic', syntax: '*text*', result: 'italic text' },
+      { label: 'Bold', syntax: '⌘B or **text**', result: 'bold text' },
+      { label: 'Italic', syntax: '⌘I or *text*', result: 'italic text' },
       { label: 'Strikethrough', syntax: '~~text~~', result: 'strikethrough' },
       { label: 'Inline Code', syntax: '`code`', result: 'monospace text' }
+    ]
+  },
+  {
+    title: 'Interactive Editor Features',
+    items: [
+      { label: 'Slash Commands', syntax: 'Type / anywhere', result: 'Inserts headings, lists, quotes, dividers' },
+      { label: 'Link Notes', syntax: 'Type [[ Note Title ]]', result: 'Auto-completes and links internal notes' }
     ]
   },
   {

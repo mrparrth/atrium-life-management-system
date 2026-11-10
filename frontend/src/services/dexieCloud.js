@@ -91,6 +91,30 @@ export function getCloudDb(targetUrl = cloudUrl.value) {
     });
   }
 
+  // Intercept Dexie Cloud userInteraction alerts to enrich origin/whitelist instructions for desktop
+  if (instance.cloud.userInteraction?.subscribe) {
+    instance.cloud.userInteraction.subscribe((interaction) => {
+      if (!interaction || !interaction.alerts) return;
+      const origin = typeof window !== "undefined" ? window.location.origin : "tauri://localhost";
+
+      for (const alert of interaction.alerts) {
+        if (alert.message && alert.message.includes("npx dexie-cloud whitelist")) {
+          const isCustomScheme = origin.startsWith("tauri://") || origin.startsWith("app://");
+          const forceFlag = isCustomScheme ? " --force" : "";
+          const step1 = `npx dexie-cloud connect ${cleanUrl}`;
+          const step2 = `npx dexie-cloud whitelist ${origin}${forceFlag}`;
+
+          alert.message = `Could not connect to Dexie Cloud because origin '${origin}' is not yet whitelisted.\n\n` +
+            `If '${origin}' is not listed in your whitelist, run these two commands in your terminal:\n\n` +
+            `Step 1: Connect your database\n> ${step1}\n\n` +
+            `Step 2: Whitelist origin (with --force)\n> ${step2}`;
+
+          alert.copyText = `${step1} && ${step2}`;
+        }
+      }
+    });
+  }
+
   cloudDbInstance = instance;
   return instance;
 }

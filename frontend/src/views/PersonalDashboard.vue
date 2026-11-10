@@ -115,6 +115,8 @@ onMounted(async () => {
   window.addEventListener('keydown', handleKeydown, { capture: true })
   window.addEventListener('atrium-backup-failed-alert', checkBackupStatus)
   window.addEventListener('atrium-backup-success', checkBackupStatus)
+  window.addEventListener('atrium-offline-backup-needs-intervention', checkBackupStatus)
+  window.addEventListener('atrium-offline-backup-success', checkBackupStatus)
   // Check for updates every 60 seconds to automatically transition dates and rotate creator inspiration
   timer = setInterval(() => {
     currentDate.value = dayjs()
@@ -125,6 +127,8 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, { capture: true })
   window.removeEventListener('atrium-backup-failed-alert', checkBackupStatus)
   window.removeEventListener('atrium-backup-success', checkBackupStatus)
+  window.removeEventListener('atrium-offline-backup-needs-intervention', checkBackupStatus)
+  window.removeEventListener('atrium-offline-backup-success', checkBackupStatus)
   if (timer) {
     clearInterval(timer)
   }

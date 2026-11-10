@@ -108,7 +108,8 @@ export const useSettingsStore = defineStore("settings", () => {
       offline_last_backup: "atrium.offline.lastBackup",
     };
     if (key in keysToCache) {
-      localStorage.setItem(keysToCache[key], typeof value === "boolean" ? String(value) : String(value));
+      const storedVal = typeof value === "boolean" ? (value ? "1" : "0") : String(value);
+      localStorage.setItem(keysToCache[key], storedVal);
     }
   }
 
