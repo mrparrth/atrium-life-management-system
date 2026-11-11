@@ -148,7 +148,8 @@ async function fetchCalendarFeedText(url) {
   }
 
   // 3. First-party Vercel serverless proxy (solves browser CORS seamlessly)
-  const isVercelHost = typeof window !== "undefined" && (window.location.hostname.includes("vercel.app") || window.location.hostname === "localhost");
+  // Note: in Tauri desktop or native app, origin is tauri:// or app://, so use absolute production proxy URL
+  const isVercelHost = typeof window !== "undefined" && window.location.hostname.includes("vercel.app");
   const proxyEndpoint = isVercelHost ? `/api/calendar-proxy?url=${encodeURIComponent(url)}` : `https://atrium-life-planner.vercel.app/api/calendar-proxy?url=${encodeURIComponent(url)}`;
   try {
     const proxyRes = await fetch(proxyEndpoint);
