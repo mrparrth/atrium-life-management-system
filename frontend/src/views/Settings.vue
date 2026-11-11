@@ -487,7 +487,8 @@ async function triggerOfflineBackup() {
     ui.showToast('Offline backup created successfully', 'success')
     await checkOfflineFolder()
   } catch (e) {
-    ui.showToast(`Backup failed: ${e.message}`, 'error')
+    const errorMsg = e?.message || (typeof e === 'string' ? e : JSON.stringify(e)) || 'Unknown filesystem error'
+    ui.showToast(`Backup failed: ${errorMsg}`, 'error')
   } finally {
     offlineBusy.value = false
   }
