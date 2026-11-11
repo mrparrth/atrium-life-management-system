@@ -113,27 +113,64 @@ export function extractMeetingLink(event) {
 }
 
 /**
+ * Robustly fetches calendar .ics text across both Tauri desktop (native HTTP plugin)
+ * and Web browser (via direct fetch and CORS proxy fallback)
+ */
+async function fetchCalendarFeedText(url) {
+  // 1. If running inside Tauri native desktop app, use tauri-plugin-http (no CORS restriction)
+  if (isTauriEnv()) {
+    try {
+      const { fetch: tauriFetch } = await import("@tauri-apps/plugin-http");
+      const res = await tauriFetch(url, {
+        method: "GET",
+        headers: { Accept: "text/calendar, text/plain, */*" },
+      });
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.includes("BEGIN:VCALENDAR")) return text;
+      }
+    } catch (e) {
+      console.warn("Tauri native http fetch failed, falling back:", e.message);
+    }
+  }
+
+  // 2. Direct browser fetch
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "text/calendar, text/plain, */*" },
+    });
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.includes("BEGIN:VCALENDAR")) return text;
+    }
+  } catch (e) {
+    console.warn("Direct fetch blocked (likely browser CORS):", e.message);
+  }
+
+  // 3. First-party Vercel serverless proxy (solves browser CORS seamlessly)
+  const isVercelHost = typeof window !== "undefined" && (window.location.hostname.includes("vercel.app") || window.location.hostname === "localhost");
+  const proxyEndpoint = isVercelHost ? `/api/calendar-proxy?url=${encodeURIComponent(url)}` : `https://atrium-life-planner.vercel.app/api/calendar-proxy?url=${encodeURIComponent(url)}`;
+  try {
+    const proxyRes = await fetch(proxyEndpoint);
+    if (proxyRes.ok) {
+      const text = await proxyRes.text();
+      if (text && text.includes("BEGIN:VCALENDAR")) return text;
+    }
+  } catch (e) {
+    console.warn("Serverless calendar proxy failed:", e.message);
+  }
+
+  throw new Error("Could not download calendar feed. Please ensure the calendar URL is accessible.");
+}
+
+/**
  * Fetches calendar .ics feed from URL and synchronizes events into work_meetings store
  */
 export async function syncSubscribedCalendar(feedUrl) {
   const url = normalizeCalendarUrl(feedUrl);
   if (!url) return { count: 0, error: null };
 
-  let icsText = "";
-  try {
-    // If running in Tauri desktop, we can use fetch natively without CORS issues
-    const res = await fetch(url, {
-      headers: {
-        Accept: "text/calendar, text/plain, */*",
-      },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    icsText = await res.text();
-  } catch (err) {
-    console.warn("Direct calendar fetch failed:", err.message);
-    throw new Error(`Failed to download calendar feed: ${err.message}`);
-  }
-
+  const icsText = await fetchCalendarFeedText(url);
   const parsedEvents = parseICal(icsText);
   if (!parsedEvents.length) {
     return { count: 0, error: null };
@@ -142,10 +179,10 @@ export async function syncSubscribedCalendar(feedUrl) {
   const meetingsStore = (await import("@/stores/workMeetings")).useWorkMeetingsStore();
   await meetingsStore.load();
 
-  // Filter events within reasonable window: from 3 days ago up to 30 days ahead
+  // Filter events within reasonable window: from 7 days ago up to 60 days ahead
   const nowMs = Date.now();
-  const pastLimit = nowMs - 3 * 24 * 60 * 60 * 1000;
-  const futureLimit = nowMs + 30 * 24 * 60 * 60 * 1000;
+  const pastLimit = nowMs - 7 * 24 * 60 * 60 * 1000;
+  const futureLimit = nowMs + 60 * 24 * 60 * 60 * 1000;
 
   const relevant = parsedEvents.filter((e) => {
     const startMs = new Date(e.startDateTime).getTime();
@@ -158,54 +195,43 @@ export async function syncSubscribedCalendar(feedUrl) {
     const uid = item.uid || `${item.title}_${item.startDateTime}`;
     const meetLink = extractMeetingLink(item);
 
-    const existing = meetingsStore.items.find((m) => m.googleCalendarId === uid);
+    // Look for existing meeting by Google Calendar ID / iCal UID
+    const existing = meetingsStore.items.find(
+      (m) => m.googleCalendarId === uid || m.googleEventId === uid
+    );
 
     if (existing) {
-      const timeChanged = existing.startDateTime !== item.startDateTime || existing.endDateTime !== item.endDateTime;
-      const detailsChanged =
-        existing.title !== (item.title || "Untitled Meeting") ||
-        existing.description !== (item.description || "") ||
-        existing.meetLink !== meetLink;
-
-      if (timeChanged || detailsChanged) {
-        await meetingsStore.update(existing.id, {
-          title: item.title || "Untitled Meeting",
-          description: item.description || "",
-          startDateTime: item.startDateTime,
-          endDateTime: item.endDateTime,
-          meetLink,
-        });
-
-        if (timeChanged) {
-          sendDesktopNotification("Meeting Rescheduled", {
-            body: `"${item.title || "Untitled"}" has been rescheduled to ${new Date(item.startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} on ${new Date(item.startDateTime).toLocaleDateString()}`,
-          });
-        }
-      }
-    } else {
-      await meetingsStore.add({
-        googleCalendarId: uid,
-        title: item.title || "Untitled Meeting",
-        description: item.description || "",
+      // Update existing meeting details
+      await meetingsStore.update(existing.id, {
+        title: item.title || existing.title || "Calendar Event",
         startDateTime: item.startDateTime,
         endDateTime: item.endDateTime,
-        meetLink,
+        meetingLink: meetLink || existing.meetingLink,
+        notes: item.description || existing.notes,
+        location: item.location || existing.location,
+        updatedAt: new Date().toISOString(),
       });
-
-      // Notify for new future meetings starting within next 48 hours
-      const startMs = new Date(item.startDateTime).getTime();
-      if (startMs > nowMs && startMs - nowMs < 48 * 60 * 60 * 1000) {
-        sendDesktopNotification("New Meeting Scheduled", {
-          body: `${item.title || "Untitled Meeting"} - ${new Date(item.startDateTime).toLocaleDateString()} at ${new Date(item.startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
-        });
-      }
+      syncedCount++;
+    } else {
+      // Add as new meeting
+      await meetingsStore.add({
+        title: item.title || "Calendar Event",
+        startDateTime: item.startDateTime,
+        endDateTime: item.endDateTime,
+        meetingLink: meetLink,
+        notes: item.description || "",
+        location: item.location || "",
+        googleCalendarId: uid,
+        associatedType: "subscribed_calendar",
+        createdAt: new Date().toISOString(),
+      });
       syncedCount++;
     }
   }
 
-  const nowIso = new Date().toISOString();
-  localStorage.setItem("atrium.calendar.lastSync", nowIso);
-  await db.settings.update("app", { calendar_last_sync: nowIso });
+  const lastSyncStr = new Date().toISOString();
+  localStorage.setItem("atrium.calendar.lastSync", lastSyncStr);
+  await db.settings.update("app", { calendar_last_sync: lastSyncStr });
 
-  return { count: relevant.length, newCount: syncedCount };
+  return { count: syncedCount, total: relevant.length };
 }
