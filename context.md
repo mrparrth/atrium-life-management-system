@@ -249,6 +249,13 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - UX (Settings Notification Guidance): Replaced browser-specific permission help (padlock icon, URL bar, web domain) in `Settings.vue` with native macOS System Settings instructions (**System Settings → Notifications → Atrium**) when running the desktop app.
 - BUILD & DEPLOY: Rebuilt native macOS application bundle (`/Applications/Atrium.app`) and deployed all changes to remote GitHub / Vercel production.
 
+### November 11, 2026
+- FEATURE (Mobile PWA & Phone Standalone): Configured standalone mobile PWA runtime for iPhone (iOS Safari) and Android (Chrome). Added `viewport-fit=cover`, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, and high-resolution `apple-touch-icon` links (192px and 512px).
+- UX (Mobile Safe Area Insets & Responsive Layout): Applied CSS safe-area insets (`env(safe-area-inset-top)` / `bottom` / `left` / `right`) to eliminate notch and home indicator clipping.
+- UX (Mobile Navigation & Quick Capture FAB): Added dynamic bottom scroll margin (`pb-24 md:pb-0`) preventing the floating quick capture action button (FAB) from obscuring dashboard content; updated Settings tabs to smooth horizontal scrolling pills on mobile viewports; compacted mobile horizontal padding to `px-4 sm:px-8 md:px-12`.
+- DEPLOY: Verified and deployed production bundle directly to Vercel at `https://atrium-life-planner.vercel.app`.
+
+
 
 
 
