@@ -173,7 +173,6 @@ async function testNotification() {
 }
 
 
-const isEditingName = ref(!ui.userName.trim())
 const nameInputVal = ref(ui.userName)
 
 const favoriteQuoteVal = ref(settings.get('favorite_quote', ''))
@@ -185,14 +184,8 @@ async function saveFavoriteQuote() {
   ui.showToast('Favorite quote saved', 'success')
 }
 
-function toggleNameEdit() {
-  if (isEditingName.value) {
-    ui.userName = nameInputVal.value.trim()
-    isEditingName.value = false
-    ui.showToast('Greeting name registered', 'success')
-  } else {
-    isEditingName.value = true
-  }
+function handleNameChange() {
+  ui.userName = nameInputVal.value.trim()
 }
 
 async function refresh() {
@@ -223,9 +216,6 @@ async function refresh() {
   offlineKeepDays.value = Number(settings.get('offline_keep_days', 7))
   checkOfflineFolder()
   nameInputVal.value = ui.userName
-  if (!ui.userName.trim()) {
-    isEditingName.value = true
-  }
 }
 
 function handleBackupSuccess(e) {
@@ -568,20 +558,15 @@ function matchesSearch(text) {
             hint="Configure your greeting name, celebrations, spending currency, and notifications." />
 
           <div class="card p-6 space-y-4">
-            <div class="flex items-center gap-4 flex-wrap md:flex-nowrap">
-              <div class="shrink-0 min-w-[280px]">
+            <div class="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+              <div>
                 <p class="text-sm text-ink">Greeting Name</p>
                 <p class="text-xs text-ink-3">Used to greet you across your personal dashboard</p>
               </div>
-              <div class="flex-grow flex items-center gap-2 w-full">
-                <input v-model="nameInputVal" :disabled="!isEditingName" placeholder="Your name" id="settings-user-name"
+              <div class="shrink-0">
+                <input v-model="nameInputVal" @change="handleNameChange" @blur="handleNameChange" placeholder="Your name" id="settings-user-name"
                   data-testid="settings-user-name"
-                  class="flex-grow bg-surface border border-line rounded-xl px-4 py-2.5 text-sm text-ink outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed" />
-                <button type="button" class="btn-secondary !p-3 shrink-0" @click="toggleNameEdit"
-                  data-testid="settings-toggle-name-edit" :title="isEditingName ? 'Register name' : 'Edit name'">
-                  <Check v-if="isEditingName" class="w-4 h-4 text-pri-strategic" />
-                  <Edit3 v-else class="w-4 h-4" />
-                </button>
+                  class="w-48 sm:w-56 bg-surface border border-line rounded-xl px-3.5 py-2 text-sm text-ink outline-none focus:border-pri-strategic/50 focus:ring-2 focus:ring-pri-strategic/10 transition-all" />
               </div>
             </div>
 
