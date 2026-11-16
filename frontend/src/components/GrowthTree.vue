@@ -544,7 +544,7 @@ watch(progress, (newVal, oldVal) => {
 
     <!-- Popover on Hover -->
     <div
-      class="absolute bottom-[110px] right-0 w-80 p-5 bg-surface border border-line rounded-2xl shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50 text-left flex flex-col gap-3.5">
+      class="absolute bottom-[160px] right-0 w-80 p-5 bg-surface border border-line rounded-2xl shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50 text-left flex flex-col gap-3.5">
       <!-- Popover Header -->
       <div class="flex items-center justify-between border-b border-line pb-2.5">
         <div class="flex items-center gap-2">
@@ -673,9 +673,9 @@ watch(progress, (newVal, oldVal) => {
       </div>
     </div>
 
-    <!-- Tree Image Mask Wrapper (Height: 100px) -->
+    <!-- Tree Image Mask Wrapper -->
     <div
-      class="w-24 h-24 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 relative select-none pointer-events-none"
+      class="w-36 h-36 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 relative select-none"
       :style="{
         maskImage: 'url(/progress-tree.svg)',
         webkitMaskImage: 'url(/progress-tree.svg)',
@@ -688,7 +688,7 @@ watch(progress, (newVal, oldVal) => {
       }">
       <!-- Base faint gray outline (always visible under the green) -->
       <div class="absolute inset-0 transition-all duration-300"
-        :class="ui.theme === 'dark' ? 'bg-white/10' : 'bg-ink/10'"></div>
+        :class="ui.theme === 'dark' ? 'bg-white/20' : 'bg-ink/20'"></div>
 
       <!-- Solid Green Fill (representing progress completed, rising from bottom to top) -->
       <div class="absolute inset-x-0 bottom-0 bg-[#1b4332] dark:bg-[#2d6a4f] transition-all duration-500 ease-out"
