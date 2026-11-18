@@ -253,7 +253,18 @@ Personal vs. Work mode toggles enforce local filtering of reactive data (notes, 
 - FEATURE (Mobile PWA & Phone Standalone): Configured standalone mobile PWA runtime for iPhone (iOS Safari) and Android (Chrome). Added `viewport-fit=cover`, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, and high-resolution `apple-touch-icon` links (192px and 512px).
 - UX (Mobile Safe Area Insets & Responsive Layout): Applied CSS safe-area insets (`env(safe-area-inset-top)` / `bottom` / `left` / `right`) to eliminate notch and home indicator clipping.
 - UX (Mobile Navigation & Quick Capture FAB): Added dynamic bottom scroll margin (`pb-24 md:pb-0`) preventing the floating quick capture action button (FAB) from obscuring dashboard content; updated Settings tabs to smooth horizontal scrolling pills on mobile viewports; compacted mobile horizontal padding to `px-4 sm:px-8 md:px-12`.
-- DEPLOY: Verified and deployed production bundle directly to Vercel at `https://atrium-life-planner.vercel.app`.
+- FEATURE (First-Party Serverless Calendar Proxy): Created `/api/calendar-proxy.js` on Vercel to bypass CORS restrictions when fetching public Google Calendar `.ics` subscription feeds in web/PWA mode.
+- FEATURE (Desktop Native HTTP & Scopes): Integrated `tauri-plugin-http` and `@tauri-apps/plugin-http` v2.9.0 with explicit capability scopes (`https://*`, `http://*`) in `src-tauri/capabilities/default.json` and multi-tier fallback (native Tauri HTTP -> direct browser fetch -> serverless proxy) in `services/calendar.js`.
+- AUTOMATION (Auto Calendar Sync): Configured automated background calendar synchronization in `App.vue` (5s startup sync + recurring 15-minute sync interval).
+- BUGFIX (Desktop Offline Backup Permissions): Resolved `Backup failed: undefined` error on macOS desktop app by granting recursive home filesystem scopes (`fs:allow-home-read-recursive`, `fs:allow-home-write-recursive`) in `capabilities/default.json`, allowing snapshot writes and pruning in user Documents folders.
+- UX (Settings Greeting Name): Streamlined Greeting Name input in `Settings.vue`. Removed the toggle edit button and shortened the textbox to `w-48 sm:w-56`, making it directly editable with auto-save on change/blur.
+- DEPLOY & BUILD: Built release app bundle, updated `/Applications/Atrium.app`, and deployed production web updates to Vercel.
+
+### November 16, 2026
+- UX (Tree of Daily Growth Widget Sizing): Enlarged floating Tree of Daily Growth widget in `frontend/src/components/GrowthTree.vue` from `w-24 h-24` (96px) to `w-36 h-36` (144px — 50% increase in dimensions, 2.25x in visible area).
+- UX (Tree Silhouette & Popover Alignment): Increased base silhouette opacity (`bg-ink/20` / `bg-white/20`) for clearer branch definition before daily tasks fill up, and shifted hover scorecard popover position to `bottom-[160px]` to hover cleanly over the enlarged tree.
+- BUILD & DEPLOY: Recompiled native macOS release bundle with updated widget dimensions and reinstalled into `/Applications/Atrium.app`.
+
 
 
 
